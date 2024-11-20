@@ -81,9 +81,43 @@ build: $(unity-simulator-full-name)
 		--build-arg NUM_BUILD_CORES=$(NUM_BUILD_CORES) \
 		-f ./${DOCKERFILE} .
 
+## ==== Running tests & cleanup ====
+.PHONY: test
+test: DOCKER_ARGS ?= -it
+test: PYTEST_FILTER ?= "py"
+test: build
+	@$(call xhost_activate)
+	@mkdir -p $(DATA_BASE_DIR)/test_logs
+	@$(DOCKER_PYTHON) \
+		-m py.test -vk $(PYTEST_FILTER) \
+		-rsx \
+		--full-trace \
+		--ignore-glob=**/pybind11/* \
+		--ignore-glob=**/scratch/* \
+		--html=/data/test_logs/report.html \
+		--xpassthrough=$(XPASSTHROUGH) \
+		--unity-path=/unity/$(UNITY_BASENAME).x86_64 \
+		$(TEST_ADDITIONAL_ARGS) \
+		/modules/
+
+flake8: DOCKER_ARGS = -it --workdir /modules
+flake8: build
+	@echo "Running flake8 format checker..."
+	@$(DOCKER_BASE) flake8
+	@echo "... no formatting issues discovered."
 
 ## ==== Other Targets ====
+.PHONY: kill
+kill:
+	@echo "Closing all running docker containers:"
+	@docker kill $(shell docker ps -q --filter ancestor=${IMAGE_NAME}:${VERSION})
 
+.PHONY: shell
+shell: DOCKER_ARGS ?= -it
+shell:
+	@$(DOCKER_BASE) bash
+
+.PHONY: notebook
 notebook: DOCKER_ARGS=-it -p 8889:8888
 notebook: build
 	@$(DOCKER_BASE) jupyter notebook \
