@@ -1,6 +1,6 @@
 FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04 AS base
 
-ENV VIRTUALGL_VERSION 2.5.2
+ENV VIRTUALGL_VERSION=2.5.2
 ARG NUM_BUILD_CORES
 
 # Install all apt dependencies
@@ -96,8 +96,11 @@ COPY --from=spot /usr/local/lib/python3.8/site-packages/*buddy* /usr/local/lib/p
 
 # Migrate files from our package installs
 COPY --from=pkg-core /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-core /modules/* /modules
 COPY --from=pkg-lsp /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-lsp /modules/* /modules
 COPY --from=pkg-environments /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-environments /modules/* /modules
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh

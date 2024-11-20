@@ -89,7 +89,7 @@ test: build
 	@$(call xhost_activate)
 	@mkdir -p $(DATA_BASE_DIR)/test_logs
 	@$(DOCKER_PYTHON) \
-		-m py.test -vk $(PYTEST_FILTER) \
+		-m pytest -vk $(PYTEST_FILTER) \
 		-rsx \
 		--full-trace \
 		--ignore-glob=**/pybind11/* \
