@@ -132,6 +132,7 @@ dmypy.json
 *.~undo-tree~
 
 
+.DS_Store
 
 /data/
 /resources/unity/

@@ -1,0 +1,30 @@
+# Core Requirements
+numpy
+scipy
+scikit-image
+sknw
+# shapely==1.6.4
+shapely
+# opencv-python
+pyyaml
+setuptools
+# tensorboard
+# pyscreenshot
+# pybullet
+# prior
+# ai2thor
+# procthor
+# sentence_transformers
+
+# Plotting & Data Handling
+matplotlib
+pandas
+ipython
+jupyter
+
+# Testing & formatting
+pytest
+pytest-timeout
+pytest-html
+flake8
+vulture
