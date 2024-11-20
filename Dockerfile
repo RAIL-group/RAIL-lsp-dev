@@ -1,4 +1,4 @@
-FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04
+FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04 AS base
 
 ENV VIRTUALGL_VERSION 2.5.2
 ARG NUM_BUILD_CORES
@@ -21,14 +21,65 @@ RUN curl -sSL https://downloads.sourceforge.net/project/virtualgl/"${VIRTUALGL_V
 	/opt/VirtualGL/bin/vglserver_config -config +s +f -t && \
 	rm virtualgl_*_amd64.deb
 
-# Install python dependencies
+FROM base AS base-python
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py && rm get-pip.py
 COPY modules/requirements.txt requirements.txt
-RUN pip3 install -r requirements.txt
-# RUN pip3 install torch==2.0.0+cu118 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-RUN pip3 install torch
-# RUN pip install torch_geometric -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
-# RUN pip3 install captum
+RUN pip3 install uv
+RUN pip3 install lit==15.0.7  # needed to help UV install torch
+RUN uv pip install -r requirements.txt --system
+RUN uv pip install torch==2.0.0+cu118 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --system
+RUN pip install torch_geometric -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+
+# Build Spot
+FROM base AS spot
+# Use gcc-10 and g++-10
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10 && \
+	update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+# Install spot (for LTL specifications and PO-TLP)
+RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
+    tar xvzf spot-2.12.tar.gz && rm spot-2.12.tar.gz && \
+    cd spot-2.12 && \
+    ./configure && \
+    make -j8 2>&1 | tee make.log && make install
+
+
+FROM base-python AS pkg-lsp
+RUN mkdir /temp
+COPY modules/lsp_accel modules/lsp_accel
+RUN pip3 install modules/lsp_accel
+COPY modules/lsp modules/lsp
+RUN pip3 install modules/lsp
+RUN cp -r /usr/local/lib/python3.8/dist-packages/lsp* /temp
+
+
+FROM base-python AS pkg-core
+RUN mkdir /temp
+COPY modules/common modules/common
+RUN pip3 install modules/common
+RUN cp -r /usr/local/lib/python3.8/dist-packages/common* /temp
+COPY modules/example modules/example
+RUN pip3 install modules/example
+RUN cp -r /usr/local/lib/python3.8/dist-packages/example* /temp
+COPY modules/learning modules/learning
+RUN pip3 install modules/learning
+RUN cp -r /usr/local/lib/python3.8/dist-packages/learning* /temp
+COPY modules/gridmap modules/gridmap
+RUN pip3 install modules/gridmap
+RUN cp -r /usr/local/lib/python3.8/dist-packages/gridmap* /temp
+
+
+FROM base-python AS pkg-environments
+RUN mkdir /temp
+COPY modules/unitybridge modules/unitybridge
+RUN pip3 install modules/unitybridge
+RUN cp -r /usr/local/lib/python3.8/dist-packages/unitybridge* /temp
+COPY modules/environments modules/environments
+RUN pip3 install modules/environments
+RUN cp -r /usr/local/lib/python3.8/dist-packages/environments* /temp
+
+
+# Build the final image
+FROM base-python AS target
 
 # Needed for using matplotlib without a screen
 RUN echo "backend: TkAgg" > matplotlibrc
@@ -37,23 +88,16 @@ RUN echo "backend: TkAgg" > matplotlibrc
 COPY modules/conftest.py modules/conftest.py
 COPY modules/setup.cfg modules/setup.cfg
 
-COPY modules/lsp_accel modules/lsp_accel
-RUN pip3 install modules/lsp_accel
+# Migrate files from spot
+COPY --from=spot /usr/local/lib/*spot* /usr/local/lib
+COPY --from=spot /usr/local/lib/*bdd* /usr/local/lib
+COPY --from=spot /usr/local/lib/python3.8/site-packages/spot /usr/local/lib/python3.8/site-packages/spot
+COPY --from=spot /usr/local/lib/python3.8/site-packages/*buddy* /usr/local/lib/python3.8/site-packages/
 
-COPY modules/common modules/common
-RUN pip3 install modules/common
-COPY modules/example modules/example
-RUN pip3 install modules/example
-COPY modules/learning modules/learning
-RUN pip3 install modules/learning
-COPY modules/gridmap modules/gridmap
-RUN pip3 install modules/gridmap
-COPY modules/unitybridge modules/unitybridge
-RUN pip3 install modules/unitybridge
-COPY modules/environments modules/environments
-RUN pip3 install modules/environments
-COPY modules/lsp modules/lsp
-RUN pip3 install modules/lsp
+# Migrate files from our package installs
+COPY --from=pkg-core /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-lsp /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-environments /temp/ /usr/local/lib/python3.8/dist-packages
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh
