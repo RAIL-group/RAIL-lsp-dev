@@ -28,7 +28,8 @@ RUN pip3 install uv
 RUN pip3 install lit==15.0.7  # needed to help UV install torch
 RUN uv pip install -r requirements.txt --system
 RUN uv pip install torch==2.0.0+cu118 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --system
-RUN pip install torch_geometric -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+RUN pip3 install torch_geometric -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+RUN pip3 install sentence_transformers
 
 # Build Spot
 FROM base AS spot
@@ -76,6 +77,9 @@ RUN cp -r /usr/local/lib/python3.8/dist-packages/unitybridge* /temp
 COPY modules/environments modules/environments
 RUN pip3 install modules/environments
 RUN cp -r /usr/local/lib/python3.8/dist-packages/environments* /temp
+COPY modules/procthor modules/procthor
+RUN pip3 install modules/procthor
+RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
 
 
 # Build the final image

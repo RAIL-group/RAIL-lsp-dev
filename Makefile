@@ -32,8 +32,9 @@ DOCKER_CORE_VOLUMES = \
 	$(DOCKER_GPU_ARG) \
 	--volume="$(RAIL_SIM_DIR)/v$(RAIL_SIM_VERSION):/unity/:ro" \
 	--volume="$(DATA_BASE_DIR):/data/:rw" \
-	--volume="$(RESOURCES_BASE_DIR):/resources/:ro" \
+	--volume="$(RESOURCES_BASE_DIR):/resources/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/notebooks:/notebooks/:rw" \
+	--volume="$(RESOURCES_BASE_DIR)/ai2thor:/root/.ai2thor/:rw" \
 	--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"
 DOCKER_BASE = docker run --init --ipc=host --rm \
 	$(DOCKER_ARGS) $(DOCKER_CORE_VOLUMES) \
@@ -125,3 +126,6 @@ notebook: build
 		--no-browser --allow-root \
 		--ip 0.0.0.0 \
 		--NotebookApp.token='' --NotebookApp.password=''
+
+# ==== Includes ====
+include modules/procthor/Makefile.mk
