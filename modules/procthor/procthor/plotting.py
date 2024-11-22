@@ -84,20 +84,18 @@ def simulate_plan(trajectory, thor_data, args):
     fig_title = 'Seed: [' + str(args.current_seed) + \
                 '] - Planner: [' + args.cost_str + '] - Step: '
 
-    for step, grid_coord in enumerate(
-      list(zip(trajectory[0], trajectory[1]))[::5]):
+    for step, grid_coord in enumerate(list(zip(trajectory[0], trajectory[1]))[::5]):
         position = thor_data.g2p_map[grid_coord]
 
         thor_data.controller.step(
             action="Teleport",
             position=position,
-            # rotation=dict(x=0, y=90, z=0),
             horizon=30
         )
         plt.clf()
         top_down_frame = thor_data.get_top_down_frame()
         plt.imshow(top_down_frame)
-        title = fig_title + str(step+1)
+        title = fig_title + str(step + 1)
         plt.title(title, fontsize='10')
         writer.grab_frame()
     writer.finish()
@@ -105,11 +103,9 @@ def simulate_plan(trajectory, thor_data, args):
 
 
 def plot_plan(plan):
-    # Add a text block
     textstr = ''
     for p in plan:
         textstr += str(p) + '\n'
-    # textstr = 'This is a text block.\nYou can add multiple lines of text.'
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 
     # Place a text box in upper left in axes coords
