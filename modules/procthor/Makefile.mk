@@ -2,6 +2,7 @@ help::
 	@echo "Downloads the ProcTHOR environment related data:"
 	@echo "  download-procthor-10k			Download procthor-10k data."
 	@echo "  download-ai2thor-simulator		Download ai2thor simulator."
+	@echo "  download-sbert-model			Download SBERT model."
 	@echo "  download-procthor-all			Download both procthor-10k data and ai2thor simulator."
 
 
