@@ -11,10 +11,8 @@ setuptools
 # tensorboard
 # pyscreenshot
 # pybullet
-# prior
-# ai2thor
-# procthor
-# sentence_transformers
+prior
+ai2thor
 
 # Plotting & Data Handling
 matplotlib
