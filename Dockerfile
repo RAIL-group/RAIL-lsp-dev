@@ -85,9 +85,9 @@ RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
 FROM base-python AS pkg-potlp
 RUN mkdir /temp
 COPY modules/potlp_accel modules/potlp_accel
-RUN pip3 install potlp_accel
+RUN pip3 install modules/potlp_accel
 COPY modules/potlp modules/potlp
-RUN pip3 install potlp
+RUN pip3 install modules/potlp
 RUN cp -r /usr/local/lib/python3.8/dist-packages/potlp* /temp
 
 
