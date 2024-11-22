@@ -82,6 +82,15 @@ RUN pip3 install modules/procthor
 RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
 
 
+FROM base-python AS pkg-potlp
+RUN mkdir /temp
+COPY modules/potlp_accel modules/potlp_accel
+RUN pip3 install potlp_accel
+COPY modules/potlp modules/potlp
+RUN pip3 install potlp
+RUN cp -r /usr/local/lib/python3.8/dist-packages/potlp* /temp
+
+
 # Build the final image
 FROM base-python AS target
 
@@ -105,6 +114,8 @@ COPY --from=pkg-lsp /temp/ /usr/local/lib/python3.8/dist-packages
 COPY --from=pkg-lsp /modules/* /modules
 COPY --from=pkg-environments /temp/ /usr/local/lib/python3.8/dist-packages
 COPY --from=pkg-environments /modules/* /modules
+COPY --from=pkg-potlp /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-potlp /modules/* /modules
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh
