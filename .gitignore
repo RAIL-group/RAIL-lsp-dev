@@ -136,3 +136,6 @@ dmypy.json
 
 /data/
 /resources/unity/
+/resources/ai2thor
+/resources/procthor-10k
+/resources/sentence_transformers
