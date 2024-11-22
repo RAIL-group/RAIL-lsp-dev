@@ -144,8 +144,8 @@ class ThorInterface:
             skyboxColor="white",
             raise_for_failure=True,
         )
-        top_down_frame = Image.fromarray(event.third_party_camera_frames[-1])
-        top_down_frame = top_down_frame.transpose(Image.FLIP_TOP_BOTTOM)
+        top_down_frame = event.third_party_camera_frames[-1]
+        top_down_frame = top_down_frame[::-1, ...]
         return top_down_frame
 
     def get_graph(self, include_node_embeddings=True):
