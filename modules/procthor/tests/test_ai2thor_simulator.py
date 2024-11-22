@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import procthor
+import pytest
 
 
 def get_args():
@@ -22,46 +23,49 @@ def create_dir():
         os.makedirs(sub_path)
 
 
+@pytest.mark.timeout(15)
 def test_reachable_grid():
-    ''' This test plots occupancy grid and the original top-view image of the same procTHOR map.
-    '''
+    '''This test plots occupancy grid and the original top-view image of the same ProcTHOR map.'''
     args = get_args()
-    save_file = '/data/test_logs/grid-scene-' \
-        + str(args.current_seed) + '.png'
+    save_file = f'/data/test_logs/grid-scene-{args.current_seed}.png'
 
     # # Get data for a send and extract initial object states
     thor_data = procthor.ThorInterface(args=args, preprocess=True)
 
     # Get the occupancy grid from thor_data
-    grid = thor_data.occupancy_grid.copy()
+    grid = thor_data.occupancy_grid
     plt.subplot(121)
     img = np.transpose(grid)
     plt.imshow(img)
 
     top_down_frame = thor_data.get_top_down_frame()
-
     plt.subplot(122)
     plt.imshow(top_down_frame)
     plt.savefig(save_file, dpi=1200)
 
-    assert 0 == 0
+    assert grid.size > 0
+    assert top_down_frame.size > 0
+    unique_vals = np.unique(grid)
+    assert 1 in unique_vals and 0 in unique_vals
+    assert np.std(top_down_frame) > 0
 
 
+@pytest.mark.timeout(15)
 def test_graph_on_grid():
-    ''' This test plots occupancy grid and the original top-view image of the same procTHOR map.
-    '''
+    '''This test plots occupancy grid and the original top-view image of the same ProcTHOR map.'''
     args = get_args()
-    save_file = '/data/test_logs/graph-on-grid-' \
-        + str(args.current_seed) + '.png'
+    save_file = f'/data/test_logs/graph-on-grid-{args.current_seed}.png'
 
     # Get thor data for a send and extract initial object states
     thor_data = procthor.ThorInterface(args=args)
-    # Get the occupancy grid from proc_data
+    # Get the occupancy grid from thor_data
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()
 
     # Get the whole graph from ProcTHOR data
     whole_graph = thor_data.get_graph(include_node_embeddings=False)
+    assert len(whole_graph['nodes']) > 0
+    assert len(whole_graph['edge_index']) > 0
 
     plt.subplot(121)
     procthor.plotting.plot_graph_on_grid(grid, whole_graph)
@@ -74,5 +78,3 @@ def test_graph_on_grid():
     plt.imshow(top_down_frame)
 
     plt.savefig(save_file, dpi=1200)
-
-    assert 0 == 0
