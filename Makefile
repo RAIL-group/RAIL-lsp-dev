@@ -33,6 +33,7 @@ DOCKER_CORE_VOLUMES = \
 	--volume="$(RAIL_SIM_DIR)/v$(RAIL_SIM_VERSION):/unity/:ro" \
 	--volume="$(DATA_BASE_DIR):/data/:rw" \
 	--volume="$(RESOURCES_BASE_DIR):/resources/:rw" \
+	--volume="$(RESOURCES_BASE_DIR)/blender/$(blender-basename):/blender/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/notebooks:/notebooks/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/ai2thor:/root/.ai2thor/:rw" \
 	--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"
@@ -129,3 +130,4 @@ notebook: build
 
 # ==== Includes ====
 include modules/procthor/Makefile.mk
+include modules/blendervsim/Makefile.mk
