@@ -16,6 +16,9 @@ $(blender-full-name):
 blender-build: $(blender-full-name)
 	@$(DOCKER_BASE) /blender/blender --python /modules/install.py
 
+blender-dbg: $(blender-full-name)
+	@$(DOCKER_BASE) /blender/blender --background --python /modules/blendervsim/blenderscripts/check_blender_working.py
+
 blender-dbg-render:
 	@$(DOCKER_PYTHON) -m blendervsim.scripts.dbg
 
