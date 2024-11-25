@@ -128,4 +128,6 @@ notebook: build
 		--NotebookApp.token='' --NotebookApp.password=''
 
 # ==== Includes ====
+include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
+include modules/taskplan/Makefile.mk

@@ -30,6 +30,15 @@ RUN uv pip install -r requirements.txt --system
 RUN uv pip install torch==2.0.0+cu118 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --system
 RUN pip3 install torch_geometric -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
 RUN pip3 install sentence_transformers
+# Install PDDLStream
+RUN git clone https://github.com/caelan/pddlstream.git \
+	&& cd pddlstream && ls -a && cat .gitmodules\
+	&& sed -i 's/ss-pybullet/pybullet-planning/' .gitmodules \
+	&& sed -i 's/git@github.com:caelan\/downward.git/https:\/\/github.com\/caelan\/downward/' .gitmodules \
+	&& git submodule update --init --recursive
+RUN cd pddlstream\
+	&& ./downward/build.py
+ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
 
 # Build Spot
 FROM base AS spot
@@ -80,6 +89,9 @@ RUN cp -r /usr/local/lib/python3.8/dist-packages/environments* /temp
 COPY modules/procthor modules/procthor
 RUN pip3 install modules/procthor
 RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
+COPY modules/taskplan modules/taskplan
+RUN pip3 install modules/taskplan
+RUN cp -r /usr/local/lib/python3.8/dist-packages/taskplan* /temp
 
 
 # Build the final image
