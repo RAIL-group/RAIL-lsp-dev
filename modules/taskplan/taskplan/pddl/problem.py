@@ -1,4 +1,4 @@
-from taskplan.pddl.helper import generate_pddl_problem, get_goals2
+from taskplan.pddl.helper import generate_pddl_problem, get_goals
 from procthor.utils import get_generic_name
 
 
@@ -99,7 +99,7 @@ def get_problem(map_data, unvisited, seed=0):
                 f"(= (known-cost {c1} {c2}) {val})"
             )
 
-    task = get_goals2(seed, cnt_of_interest, obj_of_interest, objects)
+    task = get_goals(seed, cnt_of_interest, obj_of_interest, objects)
     if task is None:
         return None, None
     print(f'Goal: {task}')
