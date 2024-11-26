@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pddlstream.algorithms.search import solve_from_pddl
 
+import procthor
 import taskplan
 from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner
 from taskplan.pddl.helper import get_learning_informed_pddl
@@ -17,8 +18,7 @@ def evaluate_main(args):
     args = get_args()
 
     # Load data for a given seed
-    thor_data = taskplan.utilities.ai2thor_helper. \
-        ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -228,7 +228,7 @@ def evaluate_main(args):
 
     plt.subplot(235)
     # 3 plot the graph overlaied image
-    taskplan.plotting.plot_graph_on_grid(grid, whole_graph)
+    procthor.plotting.plot_graph_on_grid(grid, whole_graph)
     x, y = init_robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
     plt.title('Graph overlaied occupancy grid', fontsize=6)
@@ -237,7 +237,7 @@ def evaluate_main(args):
 
     plt.subplot(236)
     # 4 plot the grid with trajectory viridis color
-    plotting_grid = taskplan.plotting.make_blank_grid(
+    plotting_grid = procthor.plotting.make_blank_grid(
         np.transpose(grid)
     )
     plt.imshow(plotting_grid)
