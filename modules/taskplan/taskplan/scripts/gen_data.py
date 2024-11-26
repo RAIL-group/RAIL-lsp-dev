@@ -4,13 +4,13 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+import procthor
 import taskplan
 
 
 def gen_data_main(args):
     # Load data for a given seed
-    thor_data = taskplan.utilities.ai2thor_helper. \
-        ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -35,7 +35,7 @@ def gen_data_main(args):
     img = whole_graph['graph_image']
     plt.imshow(img)
     plt.subplot(132)
-    taskplan.plotting.plot_graph_on_grid(grid, whole_graph)
+    procthor.plotting.plot_graph_on_grid(grid, whole_graph)
     x, y = init_robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
 
