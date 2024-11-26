@@ -25,7 +25,7 @@ data-gen-seeds = \
 $(data-gen-seeds): traintest = $(shell echo $@ | grep -Eo '(training|testing)' | tail -1)
 $(data-gen-seeds): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
 
-$(data-gen-seeds):
+$(data-gen-seeds): download-procthor-10k-data download-ai2thor-simulator download-sbert-model
 	@echo "Generating Data [$(BASENAME) | seed: $(seed) | $(traintest)"]
 	@-rm -f $(DATA_BASE_DIR)/$(BASENAME)/data_$(traintest)_$(seed).csv
 	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/pickles
@@ -157,7 +157,7 @@ eval-task-seeds-learned = \
 	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
 		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_$${ii}.png"; done)
 $(eval-task-seeds-learned): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-task-seeds-learned):
+$(eval-task-seeds-learned): $(train-file)
 	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Learned Search Policy + Expected Cost"]
 	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
 	@$(call xhost_activate)
