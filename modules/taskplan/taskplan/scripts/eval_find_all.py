@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+import procthor
 import taskplan
 from taskplan.planners.planner import ClosestActionPlanner, \
     LearnedPlanner, KnownPlanner
@@ -13,8 +14,7 @@ from taskplan.planners.planner import ClosestActionPlanner, \
 
 def evaluate_main(args):
     # Load data for a given seed
-    thor_data = taskplan.utilities.ai2thor_helper. \
-        ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -102,7 +102,7 @@ def evaluate_main(args):
 
     plt.subplot(232)
     # 2 plot the graph overlaied image
-    taskplan.plotting.plot_graph_on_grid(grid, whole_graph)
+    procthor.plotting.plot_graph_on_grid(grid, whole_graph)
     x, y = init_robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
     plt.title('Graph overlaied occupancy grid', fontsize=6)
@@ -121,7 +121,7 @@ def evaluate_main(args):
 
     plt.subplot(234)
     # 4 plot the grid with naive trajectory viridis color
-    plotting_grid = taskplan.plotting.make_plotting_grid(
+    plotting_grid = procthor.plotting.make_plotting_grid(
         np.transpose(grid)
     )
     plt.imshow(plotting_grid)
@@ -155,9 +155,6 @@ def evaluate_main(args):
 
     plt.subplot(235)
     # 4 plot the grid with learned trajectory viridis color
-    # plotting_grid = taskplan.plotting.make_plotting_grid(
-    #     np.transpose(grid)
-    # )
     plt.imshow(plotting_grid)
     plt.title(f"{learned_cost_str} Cost: {learned_dist:0.3f}", fontsize=6)
     plt.xticks(fontsize=5)
