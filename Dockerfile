@@ -105,18 +105,18 @@ COPY modules/conftest.py modules/conftest.py
 COPY modules/setup.cfg modules/setup.cfg
 
 # Migrate files from spot
-COPY --from=spot /usr/local/lib/*spot* /usr/local/lib
-COPY --from=spot /usr/local/lib/*bdd* /usr/local/lib
+COPY --from=spot /usr/local/lib/*spot* /usr/local/lib/
+COPY --from=spot /usr/local/lib/*bdd* /usr/local/lib/
 COPY --from=spot /usr/local/lib/python3.8/site-packages/spot /usr/local/lib/python3.8/site-packages/spot
 COPY --from=spot /usr/local/lib/python3.8/site-packages/*buddy* /usr/local/lib/python3.8/site-packages/
 
 # Migrate files from our package installs
 COPY --from=pkg-core /temp/ /usr/local/lib/python3.8/dist-packages
-COPY --from=pkg-core /modules/* /modules
+COPY --from=pkg-core /modules/* /modules/
 COPY --from=pkg-lsp /temp/ /usr/local/lib/python3.8/dist-packages
-COPY --from=pkg-lsp /modules/* /modules
+COPY --from=pkg-lsp /modules/* /modules/
 COPY --from=pkg-environments /temp/ /usr/local/lib/python3.8/dist-packages
-COPY --from=pkg-environments /modules/* /modules
+COPY --from=pkg-environments /modules/* /modules/
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh
