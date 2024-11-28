@@ -39,9 +39,9 @@ def _send_pickled_data(sock, data):
 
 
 def main():
-
+    # Get arguments (including comm-port)
     args = get_args()
-    print(args)
+
     # Create a client socket and connect to the parent process
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", args.comm_port))
@@ -64,23 +64,18 @@ def main():
         bpy.context.scene.cycles.use_adaptive_sampling = True
         bpy.context.scene.cycles.use_denoising = False
 
-        # Render the scene
+        # Render the image and load back in
         output_path = "/tmp/render_result.png"  # Adjust to your desired location
         bpy.context.scene.render.filepath = output_path
-
         bpy.ops.render.render(write_still=True)
-        # send_pickled_data(sys.stdout.buffer, input_data)
-
-        # Load the rendered image
         image = np.asarray(Image.open(output_path))
 
         # Process the data (example: add a new key)
-        input_data['reply'] = 'Hello from Blender'
-        input_data['image_type'] = type(image)
-        input_data['rendered_image'] = image
+        out_data = {'status': 'rendered',
+                    'rendered_image': image}
 
         # Send response back to parent
-        _send_pickled_data(sock, input_data)
+        _send_pickled_data(sock, out_data)
 
 if __name__ == "__main__":
     main()
