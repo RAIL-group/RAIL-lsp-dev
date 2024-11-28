@@ -12,9 +12,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # Start Blender as a subprocess
-    with BlenderVSim() as blender:
-        import pickle
-        print(pickle.dumps(np.zeros(10)))
+    with BlenderVSim(verbose=False) as blender:
 
         # Example messages to send
         messages_to_send = [
@@ -23,10 +21,7 @@ def main():
             {'message': 'Hello from parent 3'}
         ]
         for msg in messages_to_send:
-            data = blender.send_receive_data(msg)
-            import matplotlib.pyplot as plt
-            plt.imshow(data['rendered_image'])
-            plt.show()
+            data = blender._send_receive_data(msg)
 
 
 if __name__ == '__main__':

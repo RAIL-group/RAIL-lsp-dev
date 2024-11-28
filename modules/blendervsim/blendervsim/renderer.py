@@ -3,12 +3,14 @@ import subprocess
 import pickle
 import struct
 import socket
+import sys
 
 BLENDER_EXE_PATH = '/blender/blender'
 BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
 
 
 def _send_pickled_data(pipe, data):
+    print('data', data)
     pickled_data = pickle.dumps(data)
     length = struct.pack('>I', len(pickled_data))
     pipe.write(length)
@@ -18,13 +20,10 @@ def _send_pickled_data(pipe, data):
 
 def _receive_pickled_data_pipe(pipe):
     length_bytes = pipe.read(4)
-    print("got it!", length_bytes)
     if not length_bytes:
         return None  # End of stream
     length = struct.unpack('>I', length_bytes)[0]
-    print("got it!", length)
     pickled_data = pipe.read(length)
-    print("DATA", pickled_data)
     return pickle.loads(pickled_data)
 
 
@@ -53,7 +52,7 @@ class BlenderVSim():
                  verbose=True):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
-        self.blender_comm_port = 9999
+        self.blender_comm_port = None
         self.verbose = verbose
 
         # Create a server socket
@@ -61,16 +60,18 @@ class BlenderVSim():
 
     def __enter__(self):
         # Start Blender as a subprocess
-        self.server_socket.bind(("localhost", 9999))  # Bind to localhost and a port
+        self.server_socket.bind(("localhost", 0))  # Bind to localhost and an available port
+        self.blender_comm_port = self.server_socket.getsockname()[1]  # Get the assigned port number
         self.server_socket.listen(1)
 
         if self.verbose:
-            stdout = subprocess.PIPE
-        else:
             stdout = sys.stdout
+        else:
+            stdout = subprocess.PIPE
 
         self.blender_process = subprocess.Popen(
-            [self.blender_exe_path, '--background', '--python', self.blender_script_path],
+            [self.blender_exe_path, '--background', '--python', self.blender_script_path,
+             '--', '--comm-port', str(self.blender_comm_port)],
             stdin=subprocess.PIPE,
             stdout=stdout,
             # stderr=subprocess.PIPE
@@ -81,12 +82,13 @@ class BlenderVSim():
 
     def __exit__(self, type, value, traceback):
         # Close the subprocess
+        self.close_blender()
         self.blender_process.stdin.close()
         # self.blender_process.stdout.close()
         # self.blender_process.stderr.close()
         self.blender_process.wait()
 
-    def send_receive_data(self, data):
+    def _send_receive_data(self, data):
         # Send message to Blender
         _send_pickled_data(self.blender_process.stdin, data)
         data = _receive_pickled_data(self.conn)
@@ -107,3 +109,6 @@ class BlenderVSim():
             # Exit the loop when the process finishes and streams are empty
             if self.blender_process.poll() is not None and not stdout_line and not stderr_line:
                 break
+
+    def close_blender(self):
+        self._send_receive_data({'command': 'close'})
