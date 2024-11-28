@@ -23,4 +23,4 @@ blender-dbg-render:
 	@$(DOCKER_PYTHON) -m blendervsim.scripts.dbg
 
 dbg-blender: blender
-	@$(DOCKER_BASE) /blender/blender --background --python /modules/simulator/tests/test_blender_sim_core.py --log-level 0
+	@$(DOCKER_BASE) /blender/blender --background --python /modules/simulator/tests/test_blender_sim_core.py

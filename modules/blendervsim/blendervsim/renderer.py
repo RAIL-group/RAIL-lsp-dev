@@ -6,7 +6,6 @@ import socket
 
 BLENDER_EXE_PATH = '/blender/blender'
 BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
-# BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/check_blender_working.py'
 
 
 def _send_pickled_data(pipe, data):
@@ -50,10 +49,12 @@ def _receive_pickled_data(sock):
 
 class BlenderVSim():
     def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
-                 blender_script_path=BLENDER_SCRIPT_PATH):
+                 blender_script_path=BLENDER_SCRIPT_PATH,
+                 verbose=True):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
         self.blender_comm_port = 9999
+        self.verbose = verbose
 
         # Create a server socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -63,38 +64,40 @@ class BlenderVSim():
         self.server_socket.bind(("localhost", 9999))  # Bind to localhost and a port
         self.server_socket.listen(1)
 
+        if self.verbose:
+            stdout = subprocess.PIPE
+        else:
+            stdout = sys.stdout
+
         self.blender_process = subprocess.Popen(
             [self.blender_exe_path, '--background', '--python', self.blender_script_path],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            stdin=subprocess.PIPE,
+            stdout=stdout,
+            # stderr=subprocess.PIPE
         )
 
-        print("Waiting for Blender")
         self.conn, self.addr = self.server_socket.accept()
-        print(f"Connection accepted from {addr}")
         return self
 
     def __exit__(self, type, value, traceback):
         # Close the subprocess
         self.blender_process.stdin.close()
-        self.blender_process.stdout.close()
-        self.blender_process.stderr.close()
+        # self.blender_process.stdout.close()
+        # self.blender_process.stderr.close()
         self.blender_process.wait()
 
     def send_receive_data(self, data):
         # Send message to Blender
-        print("Sending")
         _send_pickled_data(self.blender_process.stdin, data)
-
-        return _receive_pickled_data(self.blender_process.stdout)
-        print("Done sending")
+        data = _receive_pickled_data(self.conn)
+        return data
 
         # This doesn't always work...
         while True:
-            import sys
-            # # Read a line from stdout
-            # stdout_line = self.blender_process.stdout.readline()
-            # if stdout_line:
-            #     print(f"[BLENDER OUT] {stdout_line.strip()}")
+            # Read a line from stdout
+            stdout_line = self.blender_process.stdout.readline()
+            if stdout_line:
+                print(f"[BLENDER OUT] {stdout_line.strip()}")
 
             # Read a line from stderr
             stderr_line = self.blender_process.stderr.readline()
@@ -104,25 +107,3 @@ class BlenderVSim():
             # Exit the loop when the process finishes and streams are empty
             if self.blender_process.poll() is not None and not stdout_line and not stderr_line:
                 break
-
-        return
-        # return _receive_pickled_data(self.blender_process.stdout)
-        try:
-            return _receive_pickled_data(self.blender_process.stdout)
-        except:
-            # This doesn't always work...
-            while True:
-                import sys
-                # Read a line from stdout
-                stdout_line = self.blender_process.stdout.readline()
-                if stdout_line:
-                    print(f"[BLENDER OUT] {stdout_line.strip()}")
-
-                # Read a line from stderr
-                stderr_line = self.blender_process.stderr.readline()
-                if stderr_line:
-                    print(f"[BLENDER ERR] {stderr_line.strip()}", file=sys.stderr)
-
-                # Exit the loop when the process finishes and streams are empty
-                if self.blender_process.poll() is not None and not stdout_line and not stderr_line:
-                    break

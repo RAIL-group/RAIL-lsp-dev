@@ -13,46 +13,38 @@ import socket
 import struct
 import pickle
 
-def send_pickled_data(sock, data):
+def _send_pickled_data(sock, data):
     pickled_data = pickle.dumps(data)
     length = struct.pack('>I', len(pickled_data))
     sock.sendall(length + pickled_data)
 
 # Create a client socket and connect to the parent process
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 9999))
+# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# sock.connect(("localhost", 9999))
 
-try:
-    # Example: Send data
-    send_pickled_data(sock, {"message": "Hello from Blender"})
-finally:
-    sock.close()
+# try:
+#     # Example: Send data
+#     send_pickled_data(sock, {"message": "Hello from Blender"})
+# finally:
+#     sock.close()
 
 
-# Create a client socket and connect to the parent process
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 9999))
-
-while True:
-    pass
+# # Create a client socket and connect to the parent process
+# sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# sock.connect(("localhost", 9999))
 
 
 def main():
+    # Create a client socket and connect to the parent process
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("localhost", 9999))
+    import sys
+
     while True:
-
-        # Create a client socket and connect to the parent process
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(("localhost", 9999))
-
-        def send_pickled_data(sock, data):
-            pickled_data = pickle.dumps(data)
-            length = struct.pack('>I', len(pickled_data))
-            sock.sendall(length + pickled_data)
-
         # Read message from parent
         input_data = receive_pickled_data(sys.stdin.buffer)
-        # if input_data is None:
-        #     break  # End of input stream
+        if input_data is None:
+            continue
 
         # Set the render engine and output settings
         bpy.context.scene.render.engine = 'CYCLES'  # Or 'BLENDER_EEVEE'
@@ -61,15 +53,6 @@ def main():
         bpy.context.scene.cycles.samples = 1  # Adjust sample count for quality
         bpy.context.scene.cycles.use_adaptive_sampling = True
         bpy.context.scene.cycles.use_denoising = False
-
-        try:
-            # Example: Send data
-            send_pickled_data(sock, {"message": "Hello from Blender"})
-        finally:
-            sock.close()
-
-        break
-
 
         # Render the scene
         output_path = "/tmp/render_result.png"  # Adjust to your desired location
@@ -84,18 +67,18 @@ def main():
         #         # Perform render operations here
         #         bpy.ops.render.render(write_still=True)
 
-        # bpy.ops.render.render(write_still=True)
+        bpy.ops.render.render(write_still=True)
         # send_pickled_data(sys.stdout.buffer, input_data)
 
         # Load the rendered image
-        # image = Image.open(output_path)
+        image = np.asarray(Image.open(output_path))
 
         # Process the data (example: add a new key)
         input_data['reply'] = 'Hello from Blender'
-        # input_data['image_type'] = type(image)
-        # input_data['rendered_image'] = image
+        input_data['image_type'] = type(image)
+        input_data['rendered_image'] = image
 
         # Send response back to parent
-        send_pickled_data(sys.stdout.buffer, input_data)
+        _send_pickled_data(sock, input_data)
 
-# main()
+main()
