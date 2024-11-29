@@ -104,3 +104,17 @@ def multiple_goal(goals):
         t_str += f' {goal}'
     t_str += ')'
     return t_str
+
+
+def get_related_goal(goal_cnt, goal_objs):
+    obj1 = goal_objs[1].split('|')[0]
+    if obj1 == 'egg':
+        state_str = f'(is-boiled {goal_objs[1]})'
+    elif obj1 in ['apple', 'tomato', 'potato']:
+        state_str = f'(is-peeled {goal_objs[1]})'
+    elif obj1 == 'bread':
+        state_str = f'(is-toasted {goal_objs[1]})'
+    obj1_loc_str = f'(is-at {goal_objs[1]} {goal_cnt})'
+    obj2_loc_str = f'(is-at {goal_objs[0]} {goal_cnt})'
+    combined_str = f'(and {state_str} {obj1_loc_str} {obj2_loc_str})'
+    return combined_str
