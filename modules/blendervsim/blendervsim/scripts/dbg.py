@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # Start Blender as a subprocess
-    with BlenderVSim(verbose=False) as blender:
+    with BlenderVSim(verbose=True) as blender:
 
         # Example messages to send
         messages_to_send = [

@@ -1,148 +1,3 @@
-import os
-import subprocess
-import pickle
-import struct
-import socket
-import sys
-
-BLENDER_EXE_PATH = '/blender/blender'
-BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
-
-
-async def _send_pickled_data(pipe, data):
-    print('data', data)
-    pickled_data = pickle.dumps(data)
-    length = struct.pack('>I', len(pickled_data))
-    pipe.write(length)
-    pipe.write(pickled_data)
-    # pipe.flush()
-    await pipe.drain()
-
-
-def _receive_pickled_data_pipe(pipe):
-    length_bytes = pipe.read(4)
-    if not length_bytes:
-        return None  # End of stream
-    length = struct.unpack('>I', length_bytes)[0]
-    pickled_data = pipe.read(length)
-    return pickle.loads(pickled_data)
-
-
-def _receive_pickled_data(sock):
-    # Read 4 bytes for the length
-    length_bytes = sock.recv(4)
-    if not length_bytes:
-        return None  # End of stream or closed socket
-
-    length = struct.unpack('>I', length_bytes)[0]
-
-    # Read the pickled data
-    pickled_data = b''
-    while len(pickled_data) < length:
-        chunk = sock.recv(length - len(pickled_data))
-        if not chunk:
-            raise ConnectionError("Socket closed unexpectedly")
-        pickled_data += chunk
-
-    return pickle.loads(pickled_data)
-
-
-class BlenderVSim():
-    def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
-                 blender_script_path=BLENDER_SCRIPT_PATH,
-                 verbose=True):
-        self.blender_exe_path = blender_exe_path
-        self.blender_script_path = blender_script_path
-        self.blender_comm_port = None
-        self.verbose = verbose
-
-        # Create a server socket
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def __enter__(self):
-        # Start Blender as a subprocess
-        self.server_socket.bind(("localhost", 0))  # Bind to localhost and an available port
-        self.blender_comm_port = self.server_socket.getsockname()[1]  # Get the assigned port number
-        self.server_socket.listen(1)
-
-        if self.verbose:
-            stdout = sys.stdout
-        else:
-            stdout = subprocess.PIPE
-
-        self.blender_process = subprocess.Popen(
-            [self.blender_exe_path, '--background', '--python', self.blender_script_path,
-             '--', '--comm-port', str(self.blender_comm_port)],
-            stdin=subprocess.PIPE,
-            stdout=stdout,
-            # stderr=subprocess.PIPE
-        )
-
-        self.conn, self.addr = self.server_socket.accept()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        # Close the subprocess
-        self.close_blender()
-        self.blender_process.stdin.close()
-        self.blender_process.wait()
-        # self.blender_process.stdout.close()
-        # self.blender_process.stderr.close()
-
-    def _send_receive_data(self, data):
-        # Send message to Blender
-        _send_pickled_data(self.blender_process.stdin, data)
-        data = _receive_pickled_data(self.conn)
-        return data
-
-        # This doesn't always work...
-        while True:
-            # Read a line from stdout
-            stdout_line = self.blender_process.stdout.readline()
-            if stdout_line:
-                print(f"[BLENDER OUT] {stdout_line.strip()}")
-
-            # Read a line from stderr
-            stderr_line = self.blender_process.stderr.readline()
-            if stderr_line:
-                print(f"[BLENDER ERR] {stderr_line.strip()}", file=sys.stderr)
-
-            # Exit the loop when the process finishes and streams are empty
-            if self.blender_process.poll() is not None and not stdout_line and not stderr_line:
-                break
-
-    def close_blender(self):
-        try:
-            _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
-        except e:
-            pass
-
-    async def _read_stream(self, stream, callback):
-        """Reads lines from a stream and sends them to the callback."""
-        while True:
-            line = await stream.readline()
-            if not line:  # End of stream
-                break
-            await callback(line.decode().strip())
-
-    async def _read_stdout(self):
-        """Process data from stdout."""
-        async def handle_data(data):
-            print(f"[Blender Out] {data}")  # Handle data here
-            # Process the received data (e.g., append to a list or parse)
-
-        await self._read_stream(self.blender_process.stdout, handle_data)
-
-    async def _read_stderr(self):
-        """Process data from stderr."""
-        async def handle_error(data):
-            print(f"[Blender Error] {data}")  # Handle error here
-            raise RuntimeError(f"Subprocess error: {data}")
-
-        await self._read_stream(self.blender_process.stderr, handle_error)
-
-# ################### Dragons
-
 import asyncio
 import socket
 import subprocess
@@ -150,10 +5,13 @@ import sys
 import struct
 import pickle
 
-class BlenderVSim:
+BLENDER_EXE_PATH = '/blender/blender'
+BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
+
+class BlenderVSim(object):
     def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
                  blender_script_path=BLENDER_SCRIPT_PATH,
-                 verbose=True):
+                 verbose=False):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
         self.blender_comm_port = None
@@ -192,11 +50,6 @@ class BlenderVSim:
         self._stdout_task = loop.create_task(self._read_stdout())
         self._stderr_task = loop.create_task(self._read_stderr())
 
-        # try:
-        #     await asyncio.gather(self._stdout_task, self._stderr_task)
-        # except Exception as e:
-        #     raise e
-
         return self
 
     async def _async_exit(self):
@@ -207,7 +60,10 @@ class BlenderVSim:
             self._stderr_task.cancel()
 
         # Send a message to blender to close
-        await _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
+        try:
+            await _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
+        except (ConnectionResetError, BrokenPipeError) as e:
+            pass
         self.blender_process.stdin.close()
         await self.blender_process.wait()
 
@@ -218,7 +74,7 @@ class BlenderVSim:
             if not line:
                 break
             if self.verbose:
-                print(f"[Blender stdout] {line.decode().strip()}")  # Replace with custom processing logic
+                print(f"[Blender Log] {line.decode().strip()}")  # Replace with custom processing logic
 
     async def _read_stderr(self):
         """Asynchronously read stderr."""
@@ -226,7 +82,6 @@ class BlenderVSim:
             line = await self.blender_process.stderr.readline()
             if not line:
                 break
-            # print(f"STDERR: {line.decode().strip()}")  # Replace with custom error handling
             self._stderr_logs += f"[Blender Error] {line.decode().strip()}\n"
 
     def _send_receive_data(self, data):
@@ -249,12 +104,6 @@ class BlenderVSim:
 
 
 # Supporting functions for pickle-based communication
-def _send_pickled_data(stream, data):
-    """Serialize the data with pickle and send it over the stream."""
-    pickled_data = pickle.dumps(data)
-    length = struct.pack('>I', len(pickled_data))
-    stream.write(length + pickled_data)
-    stream.flush()  # Ensure data is sent immediately
 
 def _receive_pickled_data(conn):
     """Receive pickled data from a socket."""
