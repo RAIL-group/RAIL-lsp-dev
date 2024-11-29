@@ -22,7 +22,10 @@ def main():
         ]
         for msg in messages_to_send:
             data = blender._send_receive_data(msg)
+            print(data)
 
+    plt.imshow(data['rendered_image'])
+    plt.show()
 
 if __name__ == '__main__':
     main()
