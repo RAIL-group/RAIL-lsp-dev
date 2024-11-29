@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # Start Blender as a subprocess
-    with BlenderVSim(verbose=True) as blender:
+    with BlenderVSim(verbose=False) as blender:
 
         # Example messages to send
         messages_to_send = [
@@ -28,8 +28,6 @@ def main():
             data = blender._send_receive_data(msg)
             print(msg, data)
 
-    plt.imshow(data['rendered_image'])
-    plt.show()
 
 if __name__ == '__main__':
     main()

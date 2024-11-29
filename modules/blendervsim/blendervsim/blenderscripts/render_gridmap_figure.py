@@ -4,6 +4,9 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
+sys.stderr.reconfigure(line_buffering=True)
+sys.stdout.reconfigure(line_buffering=True)
+
 import bpy
 import numpy as np
 from utils.communication import send_pickled_data, receive_pickled_data
@@ -144,7 +147,7 @@ class BlenderManager(BlenderManagerBase):
 
     def render(self, data):
         self.counter += 1
-        if not self.render_settings_set or 'render_settings' in input_data.keys():
+        if not self.render_settings_set or 'render_settings' in data.keys():
             self._set_render_settings(data)
 
         # Render the image and load back in
@@ -159,14 +162,11 @@ class BlenderManager(BlenderManagerBase):
                     'rendered_image': image}
 
         # Send response back to parent
-        self._send(data)
+        self._send(out_data)
 
 
 def main():
-
-    print("IN")
     with BlenderManager() as manager:
-        print("loop")
         while manager.alive:
             manager.listen()
 

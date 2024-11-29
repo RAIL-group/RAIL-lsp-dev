@@ -40,7 +40,7 @@ class BlenderVSim(object):
             '--', '--comm-port', str(self.blender_comm_port),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            # stderr=asyncio.subprocess.PIPE,
         )
 
         loop = asyncio.get_event_loop()
@@ -48,7 +48,7 @@ class BlenderVSim(object):
 
         # Start listening to stdout and stderr asynchronously
         self._stdout_task = loop.create_task(self._read_stdout())
-        self._stderr_task = loop.create_task(self._read_stderr())
+        # self._stderr_task = loop.create_task(self._read_stderr())
 
         return self
 
@@ -63,6 +63,7 @@ class BlenderVSim(object):
         try:
             await _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
         except (ConnectionResetError, BrokenPipeError) as e:
+            await self.blender_process.wait()
             pass
         self.blender_process.stdin.close()
         await self.blender_process.wait()
@@ -101,6 +102,9 @@ class BlenderVSim(object):
         # Receive response
         loop = asyncio.get_event_loop()
         received_data = await loop.run_in_executor(None, _receive_pickled_data, self.conn)
+        if not received_data:
+            raise RuntimeError(f"Blender has died.")
+
         return received_data
 
 
