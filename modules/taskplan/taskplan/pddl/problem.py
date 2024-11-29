@@ -1,4 +1,4 @@
-from taskplan.pddl.helper import generate_pddl_problem, get_goals
+from taskplan.pddl.helper import generate_pddl_problem, get_goals, get_goals2
 from procthor.utils import get_generic_name
 
 
@@ -71,24 +71,20 @@ def get_problem(map_data, unvisited, seed=0):
                             d = d1 + d2
                             init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
 
-    #             if 'isLiquid' in child and child['isLiquid'] == 1:
-    #                 init_states.append(f"(is-liquid {chld_name})")
     #             if 'pickable' in child and child['pickable'] == 1:
                 init_states.append(f"(is-pickable {child_name})")
-    #             if 'spreadable' in child and child['spreadable'] == 1:
-    #                 init_states.append(f"(is-spreadable {chld_name})")
-    #             if 'washable' in child and child['washable'] == 1:
-    #                 init_states.append(f"(is-washable {chld_name})")
-    #             if 'dirty' in child and child['dirty'] == 1:
-    #                 init_states.append(f"(is-dirty {chld_name})")
-    #             if 'spread' in child and child['spread'] == 1:
-    #                 init_states.append(f"(is-spread {chld_name})")
-    #             if 'fillable' in child and child['fillable'] == 1:
-    #                 init_states.append(f"(is-fillable {chld_name})")
-    #             if 'folded' in child and child['folded'] == 1:
-    #                 init_states.append(f"(is-folded {chld_name})")
-    #             if 'foldable' in child and child['foldable'] == 1:
-    #                 init_states.append(f"(is-foldable {chld_name})")
+                if gen_name_child == 'egg':
+                    init_states.append(f"(is-boilable {child_name})")
+                if gen_name_child in ['pot', 'kettle']:
+                    init_states.append(f"(is-boiler {child_name})")
+                if gen_name_child in ['apple', 'tomato', 'potato']:
+                    init_states.append(f"(is-peelable {child_name})")
+                if gen_name_child == 'knife':
+                    init_states.append(f"(is-peeler {child_name})")
+                if gen_name_child == 'bread':
+                    init_states.append(f"(is-toastable {child_name})")
+                if gen_name_child == 'toaster':
+                    init_states.append(f"(is-toaster {child_name})")
 
     for c1 in map_data.known_cost:
         for c2 in map_data.known_cost[c1]:
@@ -99,7 +95,9 @@ def get_problem(map_data, unvisited, seed=0):
                 f"(= (known-cost {c1} {c2}) {val})"
             )
 
-    task = get_goals(seed, cnt_of_interest, obj_of_interest)
+    # task = get_goals(seed, cnt_of_interest, obj_of_interest)
+    task = get_goals2(seed, cnt_of_interest, objects)
+
     if task is None:
         return None, None
     print(f'Goal: {task}')
