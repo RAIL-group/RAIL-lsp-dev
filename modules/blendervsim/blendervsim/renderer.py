@@ -82,6 +82,7 @@ class BlenderVSim(object):
             line = await self.blender_process.stderr.readline()
             if not line:
                 break
+            print(f"[Blender Error] {line.decode().strip()}")
             self._stderr_logs += f"[Blender Error] {line.decode().strip()}\n"
 
     def _send_receive_data(self, data):

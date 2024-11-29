@@ -59,7 +59,7 @@ DEFAULT_RENDER_SETTINGS = {
 }
 
 
-class BlenderManager(object):
+class BlenderManagerBase(object):
     def __init__(self, comm_port=None):
         if comm_port is None:
             args = get_args()
@@ -68,6 +68,8 @@ class BlenderManager(object):
             self.comm_port = comm_port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.alive = True
+        self.render_settings_set = False
+        self.counter = 0
 
     def __enter__(self):
         self.sock.connect(("localhost", self.comm_port))
@@ -85,23 +87,24 @@ class BlenderManager(object):
 
         command = input_data.get('command')
         if command is None:
-            self._send({'status': 'command not provided'})
+            input_data['status'] = 'Command not provided.'
+            self._send(input_data)
         elif command == 'listen':
             raise ValueError('Command cannot be "listen".')
         elif command[0] == '_':
             raise ValueError('Command cannot begin with an underscore.')
-        elif hasattr(obj, command):
+        elif hasattr(self, command):
             # Call an arbitrary command
-            method = getattr(obj, command)
+            method = getattr(self, command)
             if callable(method):
-                return method(*args, **kwargs)
+                return method(input_data)
             else:
                 print(f"{command} is not callable.")
                 self._send({'status': f'{command} is not callable'})
+                return
         else:
             print(f"{command} does not exist.")
             self._send({'status': 'No such command.'})
-        return None
 
     def _send(self, data):
         send_pickled_data(self.sock, data)
@@ -109,6 +112,55 @@ class BlenderManager(object):
     def close(self, _):
         self.alive = False
         self._send({'status', 'done'})
+
+
+class BlenderManager(BlenderManagerBase):
+
+    def _set_render_settings(self, data):
+        render_settings = DEFAULT_RENDER_SETTINGS.copy()
+        if 'render_settings' in data.keys():
+            for k, v in data['render_settings']:
+                render_settings[k] = v
+
+        scene = bpy.context.scene
+        render = scene.render  # Render settings
+        render.image_settings.file_format = 'PNG'
+
+        # Set general render settings
+        for key, value in render_settings.items():
+            if hasattr(render, key):
+                setattr(render, key, value)
+            elif render.engine == "CYCLES" and hasattr(bpy.context.scene.cycles, key):
+                setattr(bpy.context.scene.cycles, key, value)
+            else:
+                print(f"Warning: Unknown setting {key}")
+
+        self.render_settings_set = True
+
+    def set_render_settings(self, data):
+        # Set the render settings
+        self._set_render_settings(data)
+        self._send({'status': 'set render settings'})
+
+    def render(self, data):
+        self.counter += 1
+        if not self.render_settings_set or 'render_settings' in input_data.keys():
+            self._set_render_settings(data)
+
+        # Render the image and load back in
+        import random
+        output_path = f"/tmp/render_result_{self.counter}.png"  # Adjust to your desired location
+        bpy.context.scene.render.filepath = output_path
+        bpy.ops.render.render(write_still=True)
+        image = np.asarray(Image.open(output_path))
+
+        # Process the data (example: add a new key)
+        out_data = {'status': 'rendered',
+                    'rendered_image': image}
+
+        # Send response back to parent
+        self._send(data)
+
 
 def main():
 
@@ -152,18 +204,6 @@ def main():
         # bpy.context.scene.cycles.use_adaptive_sampling = True
         # bpy.context.scene.cycles.use_denoising = False
 
-        # Render the image and load back in
-        output_path = "/tmp/render_result.png"  # Adjust to your desired location
-        bpy.context.scene.render.filepath = output_path
-        bpy.ops.render.render(write_still=True)
-        image = np.asarray(Image.open(output_path))
-
-        # Process the data (example: add a new key)
-        out_data = {'status': 'rendered',
-                    'rendered_image': image}
-
-        # Send response back to parent
-        send_pickled_data(sock, out_data)
 
 if __name__ == "__main__":
     main()
