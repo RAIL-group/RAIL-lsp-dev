@@ -247,13 +247,11 @@ def update_problem_find(problem, obj, loc):
     return updated_pddl_problem
 
 
-def get_goals2(seed, cnt_of_interest, obj_of_interest, objects):
+def get_goals2(seed, cnt_of_interest, objects):
     random.seed(seed)
     object_relations = {
-        'plate': ['mug', 'bowl', 'apple'],
-        'bowl': ['mug', 'egg'],
-        # 'toiletpaper': ['soapbottle'],
-        'cellphone': ['pillow']
+        'bowl': ['egg'],
+        'plate': ['apple', 'bread', 'tomato', 'potato']
     }
     pairs = []
     for object in object_relations:
@@ -269,18 +267,15 @@ def get_goals2(seed, cnt_of_interest, obj_of_interest, objects):
     compatible_containers = [cnt for cnt in cnt_of_interest
                              if cnt.split('|')[0] in preferred_containers]
 
-    if compatible_containers == [] or len(pairs) < 3:
+    if compatible_containers == [] or len(pairs) == 0:
         return None
 
     goal_cnt = random.choice(compatible_containers)
-    goal_cnt = [goal_cnt, goal_cnt]
-    goal_obj = random.sample(pairs, 3)
 
-    task1 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj[0])
+    task = []
+    for pair in pairs:
+        goal = taskplan.pddl.task.get_related_goal(goal_cnt, pair)
+        task.append(goal)
 
-    task2 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj[1])
-
-    task3 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj[2])
-    task = [task3, task2, task1]
     task = taskplan.pddl.task.multiple_goal(task)
     return task
