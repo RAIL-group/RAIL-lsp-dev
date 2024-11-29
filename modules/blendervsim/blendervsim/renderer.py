@@ -40,15 +40,14 @@ class BlenderVSim(object):
             '--', '--comm-port', str(self.blender_comm_port),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
-            # stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
 
         loop = asyncio.get_event_loop()
         self.conn, self.addr = await loop.run_in_executor(None, self.server_socket.accept)
 
-        # Start listening to stdout and stderr asynchronously
+        # Start listening to stdout asynchronously
         self._stdout_task = loop.create_task(self._read_stdout())
-        # self._stderr_task = loop.create_task(self._read_stderr())
 
         return self
 
@@ -56,16 +55,13 @@ class BlenderVSim(object):
         # Cancel stdout and stderr listeners
         if self._stdout_task:
             self._stdout_task.cancel()
-        if self._stderr_task:
-            self._stderr_task.cancel()
 
         # Send a message to blender to close
         try:
             await _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
+            self.blender_process.stdin.close()
         except (ConnectionResetError, BrokenPipeError) as e:
-            await self.blender_process.wait()
             pass
-        self.blender_process.stdin.close()
         await self.blender_process.wait()
 
     async def _read_stdout(self):
@@ -83,14 +79,14 @@ class BlenderVSim(object):
             line = await self.blender_process.stderr.readline()
             if not line:
                 break
-            print(f"[Blender Error] {line.decode().strip()}")
-            self._stderr_logs += f"[Blender Error] {line.decode().strip()}\n"
+            self._stderr_logs += f"[Blender Error] {line.decode().rstrip()}\n"
 
     def _send_receive_data(self, data):
         """Synchronous interface for sending and receiving data."""
         try:
             return self.loop.run_until_complete(self._async_send_receive_data(data))
         except (ConnectionResetError, BrokenPipeError) as e:
+            self.loop.run_until_complete(self._read_stderr())
             error_msg = self._stderr_logs
             self._stderr_logs = ''
             raise RuntimeError(f"Blender has died with the following error: {e}\n\n{error_msg}")
@@ -103,7 +99,7 @@ class BlenderVSim(object):
         loop = asyncio.get_event_loop()
         received_data = await loop.run_in_executor(None, _receive_pickled_data, self.conn)
         if not received_data:
-            raise RuntimeError(f"Blender has died.")
+            raise BrokenPipeError(f"The connection to Blender is unexpectedly closed.")
 
         return received_data
 

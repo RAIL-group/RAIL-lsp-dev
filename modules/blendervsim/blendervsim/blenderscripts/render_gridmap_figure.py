@@ -85,6 +85,7 @@ class BlenderManagerBase(object):
         """Listen for data from parent and then execute command."""
         # Read message from parent
         input_data = receive_pickled_data(sys.stdin.buffer)
+        self._sent_reply = False
         if input_data is None:
             return
 
@@ -104,17 +105,26 @@ class BlenderManagerBase(object):
             else:
                 print(f"{command} is not callable.")
                 self._send({'status': f'{command} is not callable'})
-                return
         else:
             print(f"{command} does not exist.")
             self._send({'status': 'No such command.'})
 
+        # Some protection: a reply must be sent.
+        if not self._sent_reply:
+            raise RuntimeError("No reply sent from Blender. "
+                               "All commands must have a reply.")
+
+    def echo(self, data):
+        print(f"Printing data: {data}")
+        self._send({'status': 'done'})
+
     def _send(self, data):
         send_pickled_data(self.sock, data)
+        self._sent_reply = True
 
     def close(self, _):
         self.alive = False
-        self._send({'status', 'done'})
+        self._send({'status', 'process closed'})
 
 
 class BlenderManager(BlenderManagerBase):
@@ -151,8 +161,7 @@ class BlenderManager(BlenderManagerBase):
             self._set_render_settings(data)
 
         # Render the image and load back in
-        import random
-        output_path = f"/tmp/render_result_{self.counter}.png"  # Adjust to your desired location
+        output_path = f"/tmp/render_result.png"  # Adjust to your desired location
         bpy.context.scene.render.filepath = output_path
         bpy.ops.render.render(write_still=True)
         image = np.asarray(Image.open(output_path))

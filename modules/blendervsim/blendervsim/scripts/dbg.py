@@ -12,17 +12,16 @@ import matplotlib.pyplot as plt
 
 def main():
     # Start Blender as a subprocess
-    with BlenderVSim(verbose=False) as blender:
+    with BlenderVSim(verbose=True) as blender:
 
         # Example messages to send
         messages_to_send = [
             {'command': 'render'},
             {'message': 'Hello from parent 2'},
             {'message': 'Hello from parent 2'},
+            {'command': 'echo', 'another message': 'hello!'},
             {'message': 'Hello from parent 2'},
-            {'command': 'render'},
             # {'message': np.random.rand(2400, 2400, 3)},
-            {'command': 'render'}
         ]
         for msg in messages_to_send:
             data = blender._send_receive_data(msg)
