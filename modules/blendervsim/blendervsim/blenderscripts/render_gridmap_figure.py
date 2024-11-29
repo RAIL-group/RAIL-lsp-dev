@@ -4,36 +4,13 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 
-sys.stderr.reconfigure(line_buffering=True)
-sys.stdout.reconfigure(line_buffering=True)
-
 import bpy
+import time
 import numpy as np
-from utils.communication import send_pickled_data, receive_pickled_data
 from PIL import Image
-
 import socket
-import struct
-import pickle
-import sys
-import argparse
 
-def get_args():
-    # Find where '--' occurs in sys.argv
-    try:
-        idx = sys.argv.index("--")
-        # Only take arguments after '--'
-        args = sys.argv[idx + 1:]
-    except ValueError:
-        # If '--' is not found, no arguments are passed to the script
-        args = []
-
-    # Set up argparse
-    parser = argparse.ArgumentParser(description="Blender Visual Simulator.")
-    parser.add_argument("--comm-port", type=int, help="Port over which Blender sends data.")
-    parsed_args = parser.parse_args(args)
-    return parsed_args
-
+from utils.communication import send_pickled_data, receive_pickled_data, get_args
 
 
 def apply_render_settings(settings):
@@ -156,15 +133,15 @@ class BlenderManager(BlenderManagerBase):
         self._send({'status': 'set render settings'})
 
     def render(self, data):
-        self.counter += 1
+        stime = time.time()
         if not self.render_settings_set or 'render_settings' in data.keys():
             self._set_render_settings(data)
 
         # Render the image and load back in
-        output_path = f"/tmp/render_result.png"  # Adjust to your desired location
-        bpy.context.scene.render.filepath = output_path
+        render_path = data.get('render_path', '/tmp/render_result.png')
+        bpy.context.scene.render.filepath = render_path
         bpy.ops.render.render(write_still=True)
-        image = np.asarray(Image.open(output_path))
+        image = np.asarray(Image.open(render_path))
 
         # Process the data (example: add a new key)
         out_data = {'status': 'rendered',
@@ -178,41 +155,6 @@ def main():
     with BlenderManager() as manager:
         while manager.alive:
             manager.listen()
-
-    return
-
-    # Get arguments (including comm-port)
-    args = get_args()
-
-    # Create a client socket and connect to the parent process
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(("localhost", args.comm_port))
-
-    while True:
-        # Read message from parent
-        input_data = receive_pickled_data(sys.stdin.buffer)
-        if input_data is None:
-            continue
-
-        if input_data.get('command') == 'close':
-            send_pickled_data(sock, {'status', 'done'})
-            break
-
-        # Set the render settings
-        render_settings = DEFAULT_RENDER_SETTINGS.copy()
-        if 'render_settings' in input_data.keys():
-            for k, v in input_data['render_settings']:
-                render_settings[k] = v
-        apply_render_settings(render_settings)
-
-        # # Set the render engine and output settings
-        # bpy.context.scene.render.image_settings.file_format = 'PNG'
-        # bpy.context.scene.render.engine = 'CYCLES'  # Or 'BLENDER_EEVEE'
-        # bpy.context.scene.cycles.device = 'CPU'
-        # bpy.context.scene.cycles.samples = 1  # Adjust sample count for quality
-        # bpy.context.scene.cycles.use_adaptive_sampling = True
-        # bpy.context.scene.cycles.use_denoising = False
-
 
 if __name__ == "__main__":
     main()
