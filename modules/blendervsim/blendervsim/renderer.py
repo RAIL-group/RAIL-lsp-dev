@@ -5,7 +5,7 @@ import sys
 from .comms import _receive_pickled_data, _send_pickled_data
 
 BLENDER_EXE_PATH = "/blender/blender"
-BLENDER_SCRIPT_PATH = "/modules/blendervsim/blenderscripts/render_gridmap_figure.py"
+BLENDER_SCRIPT_PATH = "/modules/blendervsim/blenderscripts/render_main.py"
 
 import socket
 import struct
