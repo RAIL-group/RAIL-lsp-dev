@@ -1,9 +1,8 @@
 import asyncio
 import socket
-import subprocess
 import sys
-import struct
-import pickle
+
+from .comms import _receive_pickled_data, _send_pickled_data
 
 BLENDER_EXE_PATH = '/blender/blender'
 BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
@@ -11,9 +10,12 @@ BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure
 class BlenderVSim(object):
     def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
                  blender_script_path=BLENDER_SCRIPT_PATH,
-                 verbose=False):
+                 blender_scene_path=None,
+                 verbose=False,
+                 debug=False):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
+        self.blender_scene_path = blender_scene_path
         self.blender_comm_port = None
         self.verbose = verbose
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -21,6 +23,7 @@ class BlenderVSim(object):
         self._stdout_task = None
         self._stderr_task = None
         self._stderr_logs = ''
+        self.debug = debug
 
     def __enter__(self):
         asyncio.set_event_loop(self.loop)
@@ -30,18 +33,31 @@ class BlenderVSim(object):
         self.loop.run_until_complete(self._async_exit())
         self.loop.close()
 
+    async def _create_blender_subprocess(self):
+        if self.blender_scene_path:
+            blender_command = [self.blender_exe_path, self.blender_scene_path]
+        else:
+            blender_command = [self.blender_exe_path]
+
+        if self.debug:
+            stderr_pipe = sys.stderr
+        else:
+            stderr_pipe = asyncio.subprocess.PIPE
+
+        self.blender_process = await asyncio.create_subprocess_exec(
+            *blender_command, '--background', '--python', self.blender_script_path,
+            '--', '--comm-port', str(self.blender_comm_port),
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=stderr_pipe
+        )
+
     async def _async_enter(self):
         self.server_socket.bind(("localhost", 0))
         self.blender_comm_port = self.server_socket.getsockname()[1]
         self.server_socket.listen(1)
 
-        self.blender_process = await asyncio.create_subprocess_exec(
-            self.blender_exe_path, '--background', '--python', self.blender_script_path,
-            '--', '--comm-port', str(self.blender_comm_port),
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
+        await self._create_blender_subprocess()
 
         loop = asyncio.get_event_loop()
         self.conn, self.addr = await loop.run_in_executor(None, self.server_socket.accept)
@@ -104,33 +120,10 @@ class BlenderVSim(object):
         return received_data
 
 
-# Supporting functions for pickle-based communication
+class BlenderVSimOverhead(BlenderVSim):
+    def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
+                 blender_script_path=BLENDER_SCRIPT_PATH,
+                 verbose=False):
+        super().__init__(blende_exe_path, blender_script_path, verbose)
 
-def _receive_pickled_data(conn):
-    """Receive pickled data from a socket."""
-    # Read the length of the incoming message
-    length_bytes = conn.recv(4)
-    if not length_bytes:
-        return None  # End of stream
-    length = struct.unpack('>I', length_bytes)[0]
-
-    # Read the actual data
-    data = b""
-    while len(data) < length:
-        packet = conn.recv(length - len(data))
-        if not packet:
-            raise ConnectionError("Connection closed before receiving all data")
-        data += packet
-
-    return pickle.loads(data)
-
-async def _send_pickled_data(stream, data):
-    """Serialize the data with pickle and send it over an asyncio stream."""
-    # Serialize the data
-    pickled_data = pickle.dumps(data)
-    # Prepend the length of the serialized data (4 bytes, big-endian)
-    length = struct.pack('>I', len(pickled_data))
-    # Write the length and the serialized data to the stream
-    stream.write(length + pickled_data)
-    # Ensure all data is sent
-    await stream.drain()
+        # Now

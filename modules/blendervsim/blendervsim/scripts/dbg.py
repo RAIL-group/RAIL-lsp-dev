@@ -5,27 +5,66 @@ import socket
 import subprocess
 import struct
 import pickle
+import environments
 
 import matplotlib
 matplotlib.use("TkAgg")  # Use TkAgg backend
 import matplotlib.pyplot as plt
 
+def get_grid():
+    # Set the arguments (usually done via the command line)
+    args = lambda: None
+    args.current_seed = 2005
+    args.save_dir = './'
+
+    # Robot Arguments
+    args.step_size = 1.8
+    args.num_primitives = 32
+    args.laser_scanner_num_points = 1024
+    args.field_of_view_deg = 360
+    args.map_type = 'office2'
+
+    known_map, map_data, pose, goal = environments.generate.map_and_poses(args)
+    return map_data
+
+
 def main():
     # Start Blender as a subprocess
-    with BlenderVSim(verbose=True) as blender:
+    scene = '/resources/blender_scenes/render_overhead.blend'
+    with BlenderVSim(blender_scene_path=scene, verbose=True, debug=False) as blender:
+
+        grid = np.random.rand(100, 100) > 0.3
+        sample_map_data = {
+            'resolution': 1.0,
+            'semantic_labels': {'background': 0, 'hallway': 1},
+            'semantic_grid': grid,
+            'occ_grid': grid
+        }
+        sample_map_data = get_grid()
+        sample_map_data['resolution'] = 0.2
 
         # Example messages to send
         messages_to_send = [
-            {'command': 'render'},
+            # {'command': 'render_image'},
             {'message': 'Hello from parent 2'},
             {'message': 'Hello from parent 2'},
             {'command': 'echo', 'another message': 'hello!'},
             {'message': 'Hello from parent 2'},
+            # {'command': 'render_image',
+            #  'render_settings': {'samples': 256}},
+            {'command': 'render_overhead',
+             'map_data': sample_map_data,
+             'render_settings': {'samples': 256,
+                                 'resolution_x': 2400,
+                                 'resolution_y': 2400}},
             # {'message': np.random.rand(2400, 2400, 3)},
         ]
         for msg in messages_to_send:
             data = blender._send_receive_data(msg)
             print(msg, data)
+
+        plt.imshow(data['rendered_image'])
+        plt.show()
 
 
 if __name__ == '__main__':
