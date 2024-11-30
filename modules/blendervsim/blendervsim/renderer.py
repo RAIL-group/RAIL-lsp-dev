@@ -139,3 +139,153 @@ class BlenderVSim(object):
                                                     'kwargs': kwargs})
                 return out_data['output']
             return dynamic_method
+
+
+import socket
+import struct
+import subprocess
+import pickle
+import threading
+import sys
+
+class BlenderVSim(object):
+    def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
+                 blender_script_path=BLENDER_SCRIPT_PATH,
+                 blender_scene_path=None,
+                 verbose=False,
+                 debug=False):
+        self.blender_exe_path = blender_exe_path
+        self.blender_script_path = blender_script_path
+        self.blender_scene_path = blender_scene_path
+        self.blender_comm_port = None
+        self.verbose = verbose
+        self.debug = debug
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.blender_process = None
+        self.conn = None
+        self.addr = None
+        self._stdout_thread = None
+        self._stderr_thread = None
+        self._stderr_logs = ''
+
+    def __enter__(self):
+        self._setup_socket()
+        self._start_blender_subprocess()
+        self._accept_connection()
+        self._start_stdout_listener()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._shutdown()
+
+    def _setup_socket(self):
+        self.server_socket.bind(("localhost", 0))
+        self.blender_comm_port = self.server_socket.getsockname()[1]
+        self.server_socket.listen(1)
+
+    def _start_blender_subprocess(self):
+        blender_command = [self.blender_exe_path, '--background', '--python', self.blender_script_path,
+                           '--', '--comm-port', str(self.blender_comm_port)]
+        if self.blender_scene_path:
+            blender_command.insert(1, self.blender_scene_path)
+
+        stderr_pipe = sys.stderr if self.debug else subprocess.PIPE
+
+        self.blender_process = subprocess.Popen(
+            blender_command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=stderr_pipe,
+            text=False  # Binary mode
+        )
+
+    def _accept_connection(self):
+        self.conn, self.addr = self.server_socket.accept()
+
+    def _start_stdout_listener(self):
+        self._stdout_thread = threading.Thread(target=self._read_stdout, daemon=True)
+        self._stdout_thread.start()
+
+    def _read_stdout(self):
+        """Reads Blender's stdout in a separate thread."""
+        while True:
+            line = self.blender_process.stdout.readline()
+            if not line:
+                break
+            if self.verbose:
+                print(f"[Blender Log] {line.decode().strip()}")
+
+    def _read_stderr(self):
+        """Reads Blender's stderr in a separate thread."""
+        while True:
+            line = self.blender_process.stderr.readline()
+            if not line:
+                break
+            self._stderr_logs += f"[Blender Error] {line.decode()}"
+
+    def send_receive_data(self, data):
+        """Sends data to Blender and waits for the response."""
+        try:
+            self._send_pickled_data(data)
+            data = _receive_pickled_data(self.conn)
+            if data is None:
+                raise BrokenPipeError(f"No data returned from Blender.")
+            return data
+        except (ConnectionResetError, BrokenPipeError) as e:
+            error_msg = self._read_remaining_stderr()
+            raise RuntimeError(f"Blender has died with the following error: {e}\n\n{error_msg}")
+
+    def _send_pickled_data(self, data):
+        """Pickle and send data to Blender."""
+        pickled_data = pickle.dumps(data)
+        # Prepend the length of the serialized data (4 bytes, big-endian)
+        length = struct.pack('>I', len(pickled_data))
+        # Write the length and the serialized data to the stream
+        self.blender_process.stdin.write(length + pickled_data)
+        self.blender_process.stdin.flush()
+
+    def _read_remaining_stderr(self):
+        """Read remaining stderr logs."""
+        stderr_logs = ''
+        if not self.debug and self.blender_process.stderr:
+            for line in self.blender_process.stderr:
+                stderr_logs += f"[Blender Error] {line.decode()}"
+
+        return stderr_logs
+
+    def _shutdown(self):
+        """Cleanly shuts down the Blender subprocess and closes connections."""
+        try:
+            # Send a close command to Blender
+            self._send_pickled_data({'command': 'close'})
+            self.conn.close()
+            self.blender_process.stdin.close()
+        except (ConnectionResetError, BrokenPipeError):
+            pass
+
+        if self.blender_process:
+            self.blender_process.wait()
+
+        if self.server_socket:
+            self.server_socket.close()
+
+    def __getattr__(self, name):
+        """
+        Handle method calls dynamically. If a method exists, call it.
+        Otherwise, handle it as an arbitrary function.
+        """
+        # Use __getattribute__ to safely check for existing attributes/methods
+        try:
+            attr = object.__getattribute__(self, name)
+            if callable(attr):
+                return attr  # Return the existing callable
+            else:
+                raise AttributeError(f"'{name}' exists but is not callable.")
+        except AttributeError:
+            # If the attribute does not exist, create a dynamic method
+            def dynamic_method(*args, **kwargs):
+                out_data = self.send_receive_data({'command': name,
+                                                   'args': args,
+                                                   'kwargs': kwargs})
+                return out_data['output']
+            return dynamic_method
