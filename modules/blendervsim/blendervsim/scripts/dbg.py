@@ -31,13 +31,15 @@ def get_grid():
 def main():
     # Start Blender as a subprocess
     scene = '/resources/blender_scenes/render_overhead.blend'
-    with BlenderVSim(blender_scene_path=scene, verbose=False, debug=True) as blender:
+    with BlenderVSim(blender_scene_path=scene, verbose=True) as blender:
         blender.echo('Hello from blender!')
         blender.echo(message='Hello from blender 2!')
         image = blender.render_image(
             render_settings={'samples': 4, 'resolution_x': 512, 'resolution_y': 512})
 
-        blender.error(message='Hello from blender 2!')
+        blender.error()
+
+        # blender.error(message='Hello from blender 2!')
         # grid = np.random.rand(100, 100) > 0.3
         # sample_map_data = {
         #     'resolution': 1.0,
