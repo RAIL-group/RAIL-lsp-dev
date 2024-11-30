@@ -112,6 +112,24 @@ def evaluate_main(args):
                 # (not (is holding object))
                 pddl['problem'] = taskplan.pddl.helper.update_problem_place(
                     pddl['problem'], object_name, place_at)
+            elif action.name == 'boil':
+                obj1_name = action.args[0]
+                # Update problem for boil action.
+                # (is-boiled obj1_name)
+                pddl['problem'] = taskplan.pddl.helper.update_problem_boil(
+                    pddl['problem'], obj1_name)
+            elif action.name == 'peel':
+                obj1_name = action.args[0]
+                # Update problem for peel action.
+                # (is-peeled obj1_name)
+                pddl['problem'] = taskplan.pddl.helper.update_problem_peel(
+                    pddl['problem'], obj1_name)
+            elif action.name == 'toast':
+                obj1_name = action.args[0]
+                # Update problem for toast action.
+                # (is-toasted obj1_name)
+                pddl['problem'] = taskplan.pddl.helper.update_problem_toast(
+                    pddl['problem'], obj1_name)
             elif action.name == 'find':
                 obj_name = action.args[0]
                 obj_idx = partial_map.idx_map[obj_name]
@@ -201,7 +219,7 @@ def evaluate_main(args):
                 f" | {cost_str}: {distance:0.3f}\n")
 
     plt.clf()
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 8))
     plt.suptitle(f"{pddl['goal']} - seed: [{args.current_seed}]", fontsize=6)
 
     plt.subplot(231)
@@ -226,7 +244,7 @@ def evaluate_main(args):
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
-    plt.subplot(235)
+    plt.subplot(234)
     # 3 plot the graph overlaied image
     procthor.plotting.plot_graph_on_grid(grid, whole_graph)
     x, y = init_robot_pose
@@ -235,13 +253,13 @@ def evaluate_main(args):
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
-    plt.subplot(236)
-    # 4 plot the grid with trajectory viridis color
-    plotting_grid = procthor.plotting.make_blank_grid(
-        np.transpose(grid)
-    )
+    plt.subplot(235)
+    # 4 plot the graph overlaied image
+    plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(grid))
     plt.imshow(plotting_grid)
-    plt.title(f"{cost_str} Cost: {distance:0.3f}", fontsize=6)
+    x, y = init_robot_pose
+    plt.text(x, y, '+', color='red', size=6, rotation=45)
+    plt.title('Path overlaied occupancy grid', fontsize=6)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
@@ -249,6 +267,20 @@ def evaluate_main(args):
 
     colors = np.linspace(0, 1, len(trajectory[0]))
     line_colors = viridis_cmap(colors)
+
+    for idx, x in enumerate(trajectory[0]):
+        y = trajectory[1][idx]
+        plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
+
+    plt.subplot(236)
+    # 5 plot the grid with trajectory viridis color
+    plotting_grid = procthor.plotting.make_blank_grid(
+        np.transpose(grid)
+    )
+    plt.imshow(plotting_grid)
+    plt.title(f"{cost_str} Cost: {distance:0.3f}", fontsize=6)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
 
     for idx, x in enumerate(trajectory[0]):
         y = trajectory[1][idx]
