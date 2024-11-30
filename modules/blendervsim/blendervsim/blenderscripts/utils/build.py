@@ -1,6 +1,11 @@
 import sys
 sys.path.append('/Users/gjstein/.local/lib/python3.11/site-packages')
 
+# Important for running within Jupyter
+import os
+os.environ['MPLBACKEND'] = 'Agg'  # Set a non-GUI backend
+
+
 import bpy
 import bmesh
 import matplotlib.pyplot
@@ -8,9 +13,8 @@ import numpy as np
 import pickle
 import shapely
 import shapely.ops
-# import skimage.measure
 import scipy.signal
-# import itertools
+
 
 def _apply_transforms(obj):
     bpy.ops.object.select_all(action='DESELECT')
@@ -127,6 +131,7 @@ def _add_material_to_object(obj, material_name):
 
     return bsdf
 
+
 def set_object_properties(obj):
     if 'frontier' in obj.name:
         return
@@ -200,6 +205,7 @@ def add_map_data(map_data, do_partial_walls=True):
 
     return objects
 
+
 def _add_sphere(x, y, z, radius, name):
     bpy.ops.mesh.primitive_ico_sphere_add(
         subdivisions=3,
@@ -208,6 +214,7 @@ def _add_sphere(x, y, z, radius, name):
     obj = bpy.context.active_object
     obj.name = name
     return obj
+
 
 def _join_objects(objects):
     # Ensure all objects are deselected first
@@ -222,6 +229,7 @@ def _join_objects(objects):
     bpy.ops.object.join()
 
     return objects[0]
+
 
 def render_map_data(map_data):
     # Populate the scene
