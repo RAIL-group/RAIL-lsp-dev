@@ -53,7 +53,7 @@ def _convert_grid_to_poly(grid, resolution, do_full_simplify=True):
                                       (x, y + r)
                                       ]).buffer(0.001 * resolution, 0))
 
-    joined_poly = shapely.ops.cascaded_union(polys)
+    joined_poly = shapely.ops.unary_union(polys)
 
     if do_full_simplify:
         return full_simplify_shapely_polygon(joined_poly)
