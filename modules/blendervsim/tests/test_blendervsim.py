@@ -29,3 +29,11 @@ def test_blendervsim_can_render_image():
     assert image.shape[1] == 64
     assert np.mean(image) > 0
     assert np.std(image) > 0
+
+
+@pytest.mark.timeout(15)
+def test_blendervsim_closes_when_errors():
+    """When blender crashes, it should result in a runtime error and then close gracefully."""
+    with BlenderVSim() as blender:
+        with pytest.raises(RuntimeError):
+            blender.error("This call should force an error in Blender")
