@@ -231,6 +231,48 @@ def update_problem_place(problem, obj, loc):
     return updated_pddl_problem
 
 
+def update_problem_boil(problem, obj):
+    x = f'(is-boilable {obj})'
+    y = f'(is-boiled {obj})'
+    insert_y = None
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if x in line:
+            insert_y = line_idx + 1
+    if insert_y:
+        lines.insert(insert_y, y)
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
+def update_problem_peel(problem, obj):
+    x = f'(is-peelable {obj})'
+    y = f'(is-peeled {obj})'
+    insert_y = None
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if x in line:
+            insert_y = line_idx + 1
+    if insert_y:
+        lines.insert(insert_y, y)
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
+def update_problem_toast(problem, obj):
+    x = f'(is-toastable {obj})'
+    y = f'(is-toasted {obj})'
+    insert_y = None
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if x in line:
+            insert_y = line_idx + 1
+    if insert_y:
+        lines.insert(insert_y, y)
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
 def update_problem_find(problem, obj, loc):
     y = f'(not (is-located {obj}))'
     z = f'        (is-at {obj} {loc})'
