@@ -1,9 +1,11 @@
 import sys
-sys.path.append('/Users/gjstein/.local/lib/python3.11/site-packages')
+
+sys.path.append("/Users/gjstein/.local/lib/python3.11/site-packages")
 
 # Important for running within Jupyter
 import os
-os.environ['MPLBACKEND'] = 'Agg'  # Set a non-GUI backend
+
+os.environ["MPLBACKEND"] = "Agg"  # Set a non-GUI backend
 
 
 import bpy
@@ -17,9 +19,9 @@ import scipy.signal
 
 
 def _apply_transforms(obj):
-    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.transform_apply(scale=True)
 
 
@@ -27,17 +29,24 @@ def _add_robot_path(robot_poses, radius, height=0.0):
     coordinates = [(pose[1], pose[0], height) for pose in robot_poses]
 
     # Create a new curve object
-    curve_data = bpy.data.curves.new(name="MyCurve", type='CURVE')
-    curve_data.dimensions = '3D'  # Set to '2D' if you want a flat curve
+    curve_data = bpy.data.curves.new(name="MyCurve", type="CURVE")
+    curve_data.dimensions = "3D"  # Set to '2D' if you want a flat curve
 
     # Create a new spline within the curve and add points to it
-    spline = curve_data.splines.new(type='POLY')  # 'POLY' creates a polyline, 'BEZIER' creates a smooth curve
+    spline = curve_data.splines.new(
+        type="POLY"
+    )  # 'POLY' creates a polyline, 'BEZIER' creates a smooth curve
     spline.points.add(len(coordinates) - 1)  # Add the correct number of points
 
     # Assign the coordinates to the spline points
     for i, coord in enumerate(coordinates):
         x, y, z = coord
-        spline.points[i].co = (x, y, z, 1)  # The fourth value is the weight, set to 1 for default
+        spline.points[i].co = (
+            x,
+            y,
+            z,
+            1,
+        )  # The fourth value is the weight, set to 1 for default
 
     curve_data.bevel_depth = radius
     curve_data.bevel_resolution = 8
@@ -51,57 +60,68 @@ def _add_robot_path(robot_poses, radius, height=0.0):
 
 def make_obj_from_grid(grid, resolution, z_floor=0.0, extrude_height=1.0):
     # Create a new mesh and a new object
-    mesh = bpy.data.meshes.new('PolygonMesh')
-    obj = bpy.data.objects.new('PolygonObject', mesh)
+    mesh = bpy.data.meshes.new("PolygonMesh")
+    obj = bpy.data.objects.new("PolygonObject", mesh)
 
     # Link the object to the current scene
     bpy.context.collection.objects.link(obj)
 
     # Set the object as active and enter edit mode
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode="EDIT")
 
     # Use a BMesh to create geometry
     bm = bmesh.new()
 
     # Get coords (and flip x and x), then scale and offset.
-    coordinates = [(x, y) for (y, x), val in np.ndenumerate(grid)
-                   if val > 0.5]
+    coordinates = [(x, y) for (y, x), val in np.ndenumerate(grid) if val > 0.5]
     coordinates = resolution * np.array(coordinates) - 0.5 * resolution
 
     r = resolution
-    for (x, y) in coordinates:
-        verts = [bm.verts.new((x, y, z_floor))
-                 for x, y in [(x, y), (x + r, y), (x + r, y + r), (x, y + r)]]
+    for x, y in coordinates:
+        verts = [
+            bm.verts.new((x, y, z_floor))
+            for x, y in [(x, y), (x + r, y), (x + r, y + r), (x, y + r)]
+        ]
         bm.faces.new(verts)
 
     # Update mesh and exit edit mode
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)  # Remove any duplicate vertices
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bmesh.ops.remove_doubles(
+        bm, verts=bm.verts, dist=0.001
+    )  # Remove any duplicate vertices
+    bpy.ops.object.mode_set(mode="OBJECT")
     bm.to_mesh(mesh)
     bm.free()
 
     if extrude_height > 0.0:
         # Add Solidify modifier to extrude the polygon
         solidify_modifier = obj.modifiers.new(name="Extrude", type="SOLIDIFY")
-        solidify_modifier.thickness = extrude_height  # Set the extrude thickness (adjust as needed)
+        solidify_modifier.thickness = (
+            extrude_height  # Set the extrude thickness (adjust as needed)
+        )
         solidify_modifier.offset = 1.0
         bpy.ops.object.modifier_apply(modifier=solidify_modifier.name)
 
     return obj
 
-def _add_frontier(frontier_points, point_radius, success_probability, colormap='viridis'):
+
+def _add_frontier(
+    frontier_points, point_radius, success_probability, colormap="viridis"
+):
 
     # Make the object
     # raise ValueError(frontier_points.T[0])
-    spheres = [_add_sphere(point[1], point[0], 0, point_radius, name='f')
-               for point in frontier_points.T]
+    spheres = [
+        _add_sphere(point[1], point[0], 0, point_radius, name="f")
+        for point in frontier_points.T
+    ]
     frontier = _join_objects(spheres)
-    frontier.name = 'frontier'
+    frontier.name = "frontier"
 
     # Set the material and color
     bsdf = _add_material_to_object(
-        frontier, material_name=f'frontier_mat_{success_probability}')
+        frontier, material_name=f"frontier_mat_{success_probability}"
+    )
     cmap = matplotlib.pyplot.get_cmap(colormap)
     color = list(cmap(success_probability))
     bsdf.inputs["Alpha"].default_value = 0.5
@@ -133,24 +153,24 @@ def _add_material_to_object(obj, material_name):
 
 
 def set_object_properties(obj):
-    if 'frontier' in obj.name:
+    if "frontier" in obj.name:
         return
 
-    if 'door' in obj.name:
+    if "door" in obj.name:
         obj.scale.z = 0.01
-    if 'room' in obj.name:
+    if "room" in obj.name:
         obj.scale.z = 0.01
-    if 'hallway' in obj.name:
+    if "hallway" in obj.name:
         obj.scale.z = 0.01
-    if 'background' in obj.name:
+    if "background" in obj.name:
         obj.scale.z = 1.0
-        if 'unseen' in obj.name:
+        if "unseen" in obj.name:
             obj.scale.z = 0.1
-    if 'goal_path' in obj.name:
+    if "goal_path" in obj.name:
         obj.scale.z = 0.01
-    if 'clutter' in obj.name:
+    if "clutter" in obj.name:
         obj.scale.z = 0.5
-        if 'unseen' in obj.name:
+        if "unseen" in obj.name:
             obj.scale.z = 0.05
 
     _add_material_to_object(obj, obj.name)
@@ -161,45 +181,66 @@ def add_map_data(map_data, do_partial_walls=True):
 
     objects = []
 
-    for semantic_class, value in map_data['semantic_labels'].items():
-        if semantic_class == 'background' and do_partial_walls:
+    for semantic_class, value in map_data["semantic_labels"].items():
+        if semantic_class == "background" and do_partial_walls:
             inflated_free = scipy.signal.convolve(
-                (map_data['occ_grid'] < 0.5).astype(int), np.ones((5, 5)), mode='same')
-            grid_region = ((inflated_free > 0.1) & (map_data['occ_grid'] > 0.5)).astype(int)
+                (map_data["occ_grid"] < 0.5).astype(int), np.ones((5, 5)), mode="same"
+            )
+            grid_region = ((inflated_free > 0.1) & (map_data["occ_grid"] > 0.5)).astype(
+                int
+            )
         else:
-            grid_region = map_data['semantic_grid'] == value
+            grid_region = map_data["semantic_grid"] == value
 
         if grid_region.sum() == 0:
             continue
 
-        if 'observed_grid' in map_data.keys():
-            grid_region_seen = (map_data['observed_grid'] >= 0) & grid_region
-            object = make_obj_from_grid(grid_region_seen.astype(int), map_data['resolution'], extrude_height=1.0)
+        if "observed_grid" in map_data.keys():
+            grid_region_seen = (map_data["observed_grid"] >= 0) & grid_region
+            object = make_obj_from_grid(
+                grid_region_seen.astype(int), map_data["resolution"], extrude_height=1.0
+            )
             object.name = semantic_class
             objects.append(object)
 
-            grid_region_unseen = (map_data['observed_grid'] < 0) & grid_region
-            object = make_obj_from_grid(grid_region_unseen.astype(int), map_data['resolution'], extrude_height=1.0)
-            object.name = semantic_class + '_unseen'
+            grid_region_unseen = (map_data["observed_grid"] < 0) & grid_region
+            object = make_obj_from_grid(
+                grid_region_unseen.astype(int),
+                map_data["resolution"],
+                extrude_height=1.0,
+            )
+            object.name = semantic_class + "_unseen"
             objects.append(object)
         else:
-            object = make_obj_from_grid(grid_region.astype(int), map_data['resolution'], extrude_height=1.0)
+            object = make_obj_from_grid(
+                grid_region.astype(int), map_data["resolution"], extrude_height=1.0
+            )
             object.name = semantic_class
             objects.append(object)
 
-    if 'robot_poses' in map_data.keys():
-        objects.append(_add_robot_path(map_data['robot_poses'], map_data['resolution']*1.5))
-        objects.append(_add_sphere(map_data['robot_poses'][-1][1],
-                                map_data['robot_poses'][-1][0],
-                                0.0,
-                                radius=3 * map_data['resolution'],
-                                name='robot_pose_orb'))
+    if "robot_poses" in map_data.keys():
+        objects.append(
+            _add_robot_path(map_data["robot_poses"], map_data["resolution"] * 1.5)
+        )
+        objects.append(
+            _add_sphere(
+                map_data["robot_poses"][-1][1],
+                map_data["robot_poses"][-1][0],
+                0.0,
+                radius=3 * map_data["resolution"],
+                name="robot_pose_orb",
+            )
+        )
 
-    if 'subgoal_data' in map_data.keys():
-        objects += [_add_frontier(f['points'] * map_data['resolution'],
-                                0.65 * map_data['resolution'],
-                                f['prob_feasible'])
-                    for f in map_data['subgoal_data']]
+    if "subgoal_data" in map_data.keys():
+        objects += [
+            _add_frontier(
+                f["points"] * map_data["resolution"],
+                0.65 * map_data["resolution"],
+                f["prob_feasible"],
+            )
+            for f in map_data["subgoal_data"]
+        ]
 
     [set_object_properties(object) for object in objects]
 
@@ -208,9 +249,8 @@ def add_map_data(map_data, do_partial_walls=True):
 
 def _add_sphere(x, y, z, radius, name):
     bpy.ops.mesh.primitive_ico_sphere_add(
-        subdivisions=3,
-        radius=radius,
-        location=(x, y, z))
+        subdivisions=3, radius=radius, location=(x, y, z)
+    )
     obj = bpy.context.active_object
     obj.name = name
     return obj
@@ -218,7 +258,7 @@ def _add_sphere(x, y, z, radius, name):
 
 def _join_objects(objects):
     # Ensure all objects are deselected first
-    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.object.select_all(action="DESELECT")
 
     # Select and set the first object in the list as active
     [obj.select_set(True) for obj in objects]

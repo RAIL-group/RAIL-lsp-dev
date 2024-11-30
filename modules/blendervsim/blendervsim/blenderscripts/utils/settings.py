@@ -21,7 +21,7 @@ def apply_render_settings(upd_render_settings):
 
     scene = bpy.context.scene
     render = scene.render  # Render settings
-    render.image_settings.file_format = 'PNG'
+    render.image_settings.file_format = "PNG"
 
     # Set general render settings
     for key, value in render_settings.items():

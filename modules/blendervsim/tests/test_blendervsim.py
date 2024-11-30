@@ -13,15 +13,16 @@ def test_blendervsim_runs_without_crashing():
 @pytest.mark.timeout(15)
 def test_blendervsim_supports_comms():
     with BlenderVSim() as blender:
-        blender.echo('Hello from blender!')
-        blender.echo(message='Hello from blender!')
+        blender.echo("Hello from blender!")
+        blender.echo(message="Hello from blender!")
 
 
 @pytest.mark.timeout(15)
 def test_blendervsim_can_render_image():
     with BlenderVSim() as blender:
         image = blender.render_image(
-            render_settings={'samples': 1, 'resolution_x': 64, 'resolution_y': 32})
+            render_settings={"samples": 1, "resolution_x": 64, "resolution_y": 32}
+        )
 
     assert image is not None
     assert image.shape[0] == 32

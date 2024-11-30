@@ -4,8 +4,8 @@ import sys
 
 from .comms import _receive_pickled_data, _send_pickled_data
 
-BLENDER_EXE_PATH = '/blender/blender'
-BLENDER_SCRIPT_PATH = '/modules/blendervsim/blenderscripts/render_gridmap_figure.py'
+BLENDER_EXE_PATH = "/blender/blender"
+BLENDER_SCRIPT_PATH = "/modules/blendervsim/blenderscripts/render_gridmap_figure.py"
 
 import socket
 import struct
@@ -13,12 +13,16 @@ import subprocess
 import pickle
 import threading
 
+
 class BlenderVSim(object):
-    def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
-                 blender_script_path=BLENDER_SCRIPT_PATH,
-                 blender_scene_path=None,
-                 verbose=False,
-                 debug=False):
+    def __init__(
+        self,
+        blender_exe_path=BLENDER_EXE_PATH,
+        blender_script_path=BLENDER_SCRIPT_PATH,
+        blender_scene_path=None,
+        verbose=False,
+        debug=False,
+    ):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
         self.blender_scene_path = blender_scene_path
@@ -51,14 +55,21 @@ class BlenderVSim(object):
         self._stdout_thread.start()
         self._stderr_thread = threading.Thread(target=self._read_stderr, daemon=True)
         self._stderr_thread.start()
-        self._error_logs = ''
+        self._error_logs = ""
 
         # Listen for data from Blender
         self.conn, _ = self.server_socket.accept()
 
     def _start_blender_subprocess(self):
-        blender_command = [self.blender_exe_path, '--background', '--python', self.blender_script_path,
-                           '--', '--comm-port', str(self.blender_comm_port)]
+        blender_command = [
+            self.blender_exe_path,
+            "--background",
+            "--python",
+            self.blender_script_path,
+            "--",
+            "--comm-port",
+            str(self.blender_comm_port),
+        ]
         if self.blender_scene_path:
             blender_command.insert(1, self.blender_scene_path)
 
@@ -69,14 +80,14 @@ class BlenderVSim(object):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=stderr_pipe,
-            text=False  # Binary mode
+            text=False,  # Binary mode
         )
 
     def _shutdown(self):
         """Cleanly shuts down the Blender subprocess and closes connections."""
         try:
             # Send a close command to Blender
-            _send_pickled_data(self.blender_process.stdin, {'command': 'close'})
+            _send_pickled_data(self.blender_process.stdin, {"command": "close"})
             self.conn.close()
             self.blender_process.stdin.close()
         except (ConnectionResetError, BrokenPipeError):
@@ -122,7 +133,9 @@ class BlenderVSim(object):
             # Finish reading from stdout and stderr, then raise error
             self._stdout_thread.join()
             self._stderr_thread.join()
-            raise RuntimeError(f"Blender has died with the following error:\n\n{self._error_logs}")
+            raise RuntimeError(
+                f"Blender has died with the following error:\n\n{self._error_logs}"
+            )
 
     def __getattr__(self, name):
         """
@@ -139,8 +152,9 @@ class BlenderVSim(object):
         except AttributeError:
             # If the attribute does not exist, create a dynamic method
             def dynamic_method(*args, **kwargs):
-                out_data = self._send_receive_data({'command': name,
-                                                    'args': args,
-                                                    'kwargs': kwargs})
-                return out_data['output']
+                out_data = self._send_receive_data(
+                    {"command": name, "args": args, "kwargs": kwargs}
+                )
+                return out_data["output"]
+
             return dynamic_method

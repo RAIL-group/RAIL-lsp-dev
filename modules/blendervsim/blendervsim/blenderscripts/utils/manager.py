@@ -57,13 +57,13 @@ class BlenderManager(object):
             return
 
         # Look for the function 'command' and then pass args/kwargs to it
-        command = command_dict.get('command')
-        args = command_dict.get('args', [])
-        kwargs = command_dict.get('kwargs', {})
+        command = command_dict.get("command")
+        args = command_dict.get("args", [])
+        kwargs = command_dict.get("kwargs", {})
         if hasattr(self, command):
             method = getattr(self, command)
             if callable(method):
-                self._send({'output': method(*args, **kwargs)})
+                self._send({"output": method(*args, **kwargs)})
                 return
 
         raise AttributeError(f"{self} has no callable attribute '{command}'")
@@ -75,7 +75,7 @@ class BlenderManager(object):
         apply_render_settings(render_settings)
         self.render_settings_set = True
 
-    def render_image(self, render_path='/tmp/render_result.png', render_settings=None):
+    def render_image(self, render_path="/tmp/render_result.png", render_settings=None):
         if not self.render_settings_set or render_settings is not None:
             apply_render_settings(render_settings)
             self.render_settings_set = True
