@@ -101,7 +101,7 @@ def place_two_objects(locs, objs):
 def multiple_goal(goals):
     t_str = '(or'
     for goal in goals:
-        t_str += f' {goal}'
+        t_str += f' {goal}\n'
     t_str += ')'
     return t_str
 
