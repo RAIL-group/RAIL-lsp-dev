@@ -119,11 +119,23 @@ class BlenderVSim(object):
 
         return received_data
 
-
-class BlenderVSimOverhead(BlenderVSim):
-    def __init__(self, blender_exe_path=BLENDER_EXE_PATH,
-                 blender_script_path=BLENDER_SCRIPT_PATH,
-                 verbose=False):
-        super().__init__(blende_exe_path, blender_script_path, verbose)
-
-        # Now
+    def __getattr__(self, name):
+        """
+        Handle method calls dynamically. If a method exists, call it.
+        Otherwise, handle it as an arbitrary function.
+        """
+        # Use __getattribute__ to safely check for existing attributes/methods
+        try:
+            attr = object.__getattribute__(self, name)
+            if callable(attr):
+                return attr  # Return the existing callable
+            else:
+                raise AttributeError(f"'{name}' exists but is not callable.")
+        except AttributeError:
+            # If the attribute does not exist, create a dynamic method
+            def dynamic_method(*args, **kwargs):
+                out_data = self._send_receive_data({'command': name,
+                                                    'args': args,
+                                                    'kwargs': kwargs})
+                return out_data['output']
+            return dynamic_method

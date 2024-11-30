@@ -32,39 +32,23 @@ def main():
     # Start Blender as a subprocess
     scene = '/resources/blender_scenes/render_overhead.blend'
     with BlenderVSim(blender_scene_path=scene, verbose=True, debug=False) as blender:
+        blender.echo('Hello from blender!')
+        blender.echo(message='Hello from blender 2!')
+        blender.echo(message='Hello from blender 2!')
+        image = blender.render_image(
+            render_settings={'samples': 4, 'resolution_x': 512, 'resolution_y': 512})
 
-        grid = np.random.rand(100, 100) > 0.3
-        sample_map_data = {
-            'resolution': 1.0,
-            'semantic_labels': {'background': 0, 'hallway': 1},
-            'semantic_grid': grid,
-            'occ_grid': grid
-        }
-        sample_map_data = get_grid()
-        sample_map_data['resolution'] = 0.2
-
-        # Example messages to send
-        messages_to_send = [
-            # {'command': 'render_image'},
-            {'message': 'Hello from parent 2'},
-            {'message': 'Hello from parent 2'},
-            {'command': 'echo', 'another message': 'hello!'},
-            {'message': 'Hello from parent 2'},
-            # {'command': 'render_image',
-            #  'render_settings': {'samples': 256}},
-            {'command': 'render_overhead',
-             'map_data': sample_map_data,
-             'render_settings': {'samples': 256,
-                                 'resolution_x': 2400,
-                                 'resolution_y': 2400}},
-            # {'message': np.random.rand(2400, 2400, 3)},
-        ]
-        for msg in messages_to_send:
-            data = blender._send_receive_data(msg)
-            print(msg, data)
-
-        plt.imshow(data['rendered_image'])
-        plt.show()
+        # grid = np.random.rand(100, 100) > 0.3
+        # sample_map_data = {
+        #     'resolution': 1.0,
+        #     'semantic_labels': {'background': 0, 'hallway': 1},
+        #     'semantic_grid': grid,
+        #     'occ_grid': grid
+        # }
+        # image = blender.render_overhead(map_data=sample_map_data,
+        #     render_settings={'samples': 64, 'resolution_x': 2400, 'resolution_y': 2400})
+        # plt.imshow(image)
+        # plt.show()
 
 
 if __name__ == '__main__':

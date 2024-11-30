@@ -12,13 +12,12 @@ DEFAULT_RENDER_SETTINGS = {
 }
 
 
-def apply_render_settings(settings):
+def apply_render_settings(upd_render_settings):
     """Apply render settings from a dictionary."""
     render_settings = DEFAULT_RENDER_SETTINGS.copy()
-    if 'render_settings' in settings.keys():
-        for k, v in settings['render_settings'].items():
+    if upd_render_settings:
+        for k, v in upd_render_settings.items():
             render_settings[k] = v
-    print(render_settings)
 
     scene = bpy.context.scene
     render = scene.render  # Render settings
