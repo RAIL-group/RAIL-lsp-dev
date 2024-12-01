@@ -36,11 +36,10 @@ def main():
     with BlenderVSim(blender_scene_path=scene, verbose=True) as blender:
         blender.echo("Hello from blender!")
         blender.echo(message="Hello from blender 2!")
-        image = blender.render_image(
-            render_settings={"samples": 4, "resolution_x": 512, "resolution_y": 512}
-        )
-
-        blender.error()
+        # image = blender.render_image(
+        #     render_settings={"samples": 4, "resolution_x": 512, "resolution_y": 512}
+        # )
+        # blender.error()
 
         # blender.error(message='Hello from blender 2!')
         # grid = np.random.rand(100, 100) > 0.3
@@ -50,12 +49,15 @@ def main():
         #     'semantic_grid': grid,
         #     'occ_grid': grid
         # }
-        # # sample_map_data = get_grid()
-        # # sample_map_data['resolution'] = 0.1
-        # image = blender.render_overhead(map_data=sample_map_data,
-        #     render_settings={'samples': 128, 'resolution_x': 2400, 'resolution_y': 2400})
-        # plt.imshow(image)
-        # plt.show()
+        sample_map_data = get_grid()
+        sample_map_data['resolution'] = 0.3
+        image, im_data = blender.render_overhead(map_data=sample_map_data,
+                                                 pixels_per_meter=20,
+                                                 edge_buffer_meters=2.5,
+                                                 render_settings={'samples': 64, 'use_denoising': True})
+        print(image.shape)
+        plt.imshow(image, extent=im_data['extent'])
+        plt.show()
 
 
 if __name__ == "__main__":

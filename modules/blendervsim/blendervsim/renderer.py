@@ -21,14 +21,12 @@ class BlenderVSim(object):
         blender_script_path=BLENDER_SCRIPT_PATH,
         blender_scene_path=None,
         verbose=False,
-        debug=False,
     ):
         self.blender_exe_path = blender_exe_path
         self.blender_script_path = blender_script_path
         self.blender_scene_path = blender_scene_path
         self.blender_comm_port = None
         self.verbose = verbose
-        self.debug = debug
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.blender_process = None
         self.conn = None
@@ -73,13 +71,11 @@ class BlenderVSim(object):
         if self.blender_scene_path:
             blender_command.insert(1, self.blender_scene_path)
 
-        stderr_pipe = sys.stderr if self.debug else subprocess.PIPE
-
         self.blender_process = subprocess.Popen(
             blender_command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=stderr_pipe,
+            stderr=subprocess.PIPE,
             text=False,  # Binary mode
         )
 
