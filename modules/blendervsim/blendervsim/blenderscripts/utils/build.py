@@ -162,6 +162,8 @@ def set_object_properties(obj):
         obj.scale.z = 0.01
     if "hallway" in obj.name:
         obj.scale.z = 0.01
+    if "free" in obj.name:
+        obj.scale.z = 0.01
     if "background" in obj.name:
         obj.scale.z = 1.0
         if "unseen" in obj.name:
@@ -177,7 +179,7 @@ def set_object_properties(obj):
     _apply_transforms(obj)
 
 
-def add_map_data(map_data, do_partial_walls=True):
+def add_map_data(map_data, robot_poses=None, observed_grid=None, subgoal_data=None, do_partial_walls=True):
 
     objects = []
 
@@ -195,15 +197,15 @@ def add_map_data(map_data, do_partial_walls=True):
         if grid_region.sum() == 0:
             continue
 
-        if "observed_grid" in map_data.keys():
-            grid_region_seen = (map_data["observed_grid"] >= 0) & grid_region
+        if observed_grid is not None:
+            grid_region_seen = (observed_grid >= 0) & grid_region
             object = make_obj_from_grid(
                 grid_region_seen.astype(int), map_data["resolution"], extrude_height=1.0
             )
             object.name = semantic_class
             objects.append(object)
 
-            grid_region_unseen = (map_data["observed_grid"] < 0) & grid_region
+            grid_region_unseen = (observed_grid < 0) & grid_region
             object = make_obj_from_grid(
                 grid_region_unseen.astype(int),
                 map_data["resolution"],
@@ -218,28 +220,28 @@ def add_map_data(map_data, do_partial_walls=True):
             object.name = semantic_class
             objects.append(object)
 
-    if "robot_poses" in map_data.keys():
+    if robot_poses is not None:
         objects.append(
-            _add_robot_path(map_data["robot_poses"], map_data["resolution"] * 1.5)
+            _add_robot_path(robot_poses, map_data["resolution"] * 1.5)
         )
         objects.append(
             _add_sphere(
-                map_data["robot_poses"][-1][1],
-                map_data["robot_poses"][-1][0],
+                robot_poses[-1][1],
+                robot_poses[-1][0],
                 0.0,
                 radius=3 * map_data["resolution"],
                 name="robot_pose_orb",
             )
         )
 
-    if "subgoal_data" in map_data.keys():
+    if subgoal_data is not None:
         objects += [
             _add_frontier(
                 f["points"] * map_data["resolution"],
                 0.65 * map_data["resolution"],
                 f["prob_feasible"],
             )
-            for f in map_data["subgoal_data"]
+            for f in subgoal_data
         ]
 
     [set_object_properties(object) for object in objects]
