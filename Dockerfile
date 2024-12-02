@@ -82,6 +82,13 @@ RUN pip3 install modules/procthor
 RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
 
 
+FROM base-python AS pkg-blender
+RUN mkdir /temp
+COPY modules/blendervsim modules/blendervsim
+RUN pip3 install modules/blendervsim
+RUN cp -r /usr/local/lib/python3.8/dist-packages/blendervsim* /temp
+
+
 # Build the final image
 FROM base-python AS target
 
@@ -105,6 +112,8 @@ COPY --from=pkg-lsp /temp/ /usr/local/lib/python3.8/dist-packages
 COPY --from=pkg-lsp /modules/* /modules
 COPY --from=pkg-environments /temp/ /usr/local/lib/python3.8/dist-packages
 COPY --from=pkg-environments /modules/* /modules
+COPY --from=pkg-blender /temp/ /usr/local/lib/python3.8/dist-packages
+COPY --from=pkg-blender /modules/* /modules
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh
