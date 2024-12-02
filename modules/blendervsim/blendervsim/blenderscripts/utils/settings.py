@@ -3,7 +3,7 @@ import bpy
 
 DEFAULT_RENDER_SETTINGS = {
     "engine": "CYCLES",
-    "device": "CPU",
+    "device": "GPU",
     "resolution_x": 256,
     "resolution_y": 256,
     "samples": 1,
