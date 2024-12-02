@@ -273,6 +273,71 @@ def _join_objects(objects):
     return objects[0]
 
 
+def set_top_down_orthographic_camera(camera, xbounds, ybounds):
+    """
+    Set the properties of a top-down orthographic camera in Blender to entirely observe
+    a rectangular region defined by xbounds and ybounds.
+
+    Parameters:
+    camera (bpy.types.Object): The camera object.
+    xbounds (tuple): A tuple of (xmin, xmax) defining the x boundaries of the region.
+    ybounds (tuple): A tuple of (ymin, ymax) defining the y boundaries of the region.
+    """
+    if not camera or camera.type != 'CAMERA':
+        raise ValueError("The provided object is not a camera.")
+
+    xmin, xmax = xbounds
+    ymin, ymax = ybounds
+
+    # Calculate the center of the rectangular region
+    center_x = (xmin + xmax) / 2.0
+    center_y = (ymin + ymax) / 2.0
+
+    # Calculate the orthographic scale
+    width = xmax - xmin
+    height = ymax - ymin
+    ortho_scale = max(width, height) / 2.0
+
+    # Set the camera properties
+    camera.location = (center_x, center_y, 10.0)  # Top-down view, Z > 0
+    camera.rotation_euler = (0.0, 0.0, 0.0)  # Ensure it's looking down
+    camera.data.type = 'ORTHO'  # Set the camera to orthographic
+    camera.data.ortho_scale = max(width, height)
+
+    import bpy
+
+
+def create_rectangle_with_bounds(xbounds, ybounds, z, name, material_name):
+    """
+    Create a rectangle (plane) in Blender that matches the specified bounds,
+    assigns a name to the object, and sets a material by name.
+
+    Parameters:
+    xbounds (tuple): A tuple of (xmin, xmax) defining the x boundaries of the rectangle.
+    ybounds (tuple): A tuple of (ymin, ymax) defining the y boundaries of the rectangle.
+    name (str): The name to assign to the rectangle object.
+    material_name (str): The name of the material to assign to the rectangle.
+
+    Returns:
+    bpy.types.Object: The created plane object.
+    """
+
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0))
+    plane = bpy.context.active_object
+    plane.scale.x = xbounds[1] - xbounds[0]
+    plane.scale.y = ybounds[1] - ybounds[0]
+    plane.location.x = sum(xbounds) / 2
+    plane.location.y = sum(ybounds) / 2
+    plane.location.z = z
+    plane.name = name
+
+    _add_material_to_object(plane, material_name)
+    _apply_transforms(plane)
+
+    return plane
+
+
+
 def render_map_data(map_data):
     # Populate the scene
     objects = add_map_data(map_data)
