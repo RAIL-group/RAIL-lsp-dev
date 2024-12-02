@@ -45,7 +45,6 @@ def test_blendervsim_render_overhead_fully_known():
     grid[10:90, 10:90] = 1
     grid[15:85, 15:85] = 2
     map_data = {
-        'occ_grid': (grid > 1.5).astype(int),
         'semantic_labels': {'background': 1, 'free': 2},
         'resolution': 0.1,
         'x_offset': 0,
@@ -55,12 +54,14 @@ def test_blendervsim_render_overhead_fully_known():
     scene = "/resources/blender_scenes/render_overhead.blend"
     with BlenderVSim(blender_scene_path=scene) as blender:
         map_data['semantic_grid'] = np.ones_like(grid)
+        map_data['occ_grid'] = np.zeros_like(grid)
         bkd_image, _ = blender.render_overhead(
             map_data=map_data,
             pixels_per_meter=25,
             render_settings={'samples': 32, 'use_denoising': True})
 
         map_data['semantic_grid'] = grid
+        map_data['occ_grid'] = (grid > 1.5).astype(int)
         sq_image, _ = blender.render_overhead(
             map_data=map_data,
             pixels_per_meter=25,
