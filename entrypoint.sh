@@ -4,6 +4,7 @@ set -e
 # Needed to point the system towards pytorch CUDA
 export LD_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH
 
 # Ensures 'spot' is on the path
 export PYTHONPATH=/usr/local/lib/python3.8/site-packages/:$PYTHONPATH

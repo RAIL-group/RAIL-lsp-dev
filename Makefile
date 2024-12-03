@@ -11,6 +11,11 @@ USE_GPU ?= true
 ifeq ($(USE_GPU),true)
 	DOCKER_GPU_ARG = --gpus all
 endif
+IS_WSL := $(shell grep -i Microsoft /proc/version > /dev/null 2>&1 && echo true || echo false)
+ifeq ($(IS_WSL),true)
+	DOCKER_WSL_ARG = -v /usr/lib/wsl:/usr/lib/wsl --device=/dev/dxg -v /mnt/wslg:/mnt/wslg
+endif
+
 
 # Paths and Key File Names
 EXPERIMENT_NAME ?= dbg
@@ -30,6 +35,7 @@ DOCKER_CORE_VOLUMES = \
 	--env XPASSTHROUGH=$(XPASSTHROUGH) \
 	--env DISPLAY=$(DISPLAY) \
 	$(DOCKER_GPU_ARG) \
+	$(DOCKER_WSL_ARG) \
 	--volume="$(RAIL_SIM_DIR)/v$(RAIL_SIM_VERSION):/unity/:ro" \
 	--volume="$(DATA_BASE_DIR):/data/:rw" \
 	--volume="$(RESOURCES_BASE_DIR):/resources/:rw" \
