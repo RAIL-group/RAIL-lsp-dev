@@ -93,8 +93,18 @@ def set_napkin(location, napkin=None):
     return str
 
 
+def place_one_object(locs, objs):
+    t_str = f'(is-at {objs[0]} {locs[0]})'
+    return t_str
+
+
 def place_two_objects(locs, objs):
     t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}))'
+    return t_str
+
+
+def place_three_objects(locs, objs):
+    t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}) (is-at {objs[2]} {locs[2]}))'
     return t_str
 
 
