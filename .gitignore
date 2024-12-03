@@ -139,3 +139,5 @@ dmypy.json
 /resources/ai2thor
 /resources/procthor-10k
 /resources/sentence_transformers
+/resources/blender
+/resources/blender_scenes/*blend1
