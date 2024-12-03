@@ -11,16 +11,6 @@ from .build import (add_map_data, _add_material_to_object, _apply_transforms,
                     set_top_down_orthographic_camera, create_rectangle_with_bounds)
 
 
-DEFAULT_RENDER_SETTINGS = {
-    "engine": "CYCLES",
-    "device": "CPU",
-    "resolution_x": 256,
-    "resolution_y": 256,
-    "samples": 1,
-    "use_adaptive_sampling": True,
-    "use_denoising": False,
-}
-
 
 class BlenderManager(object):
     def __init__(self, comm_port=None):
