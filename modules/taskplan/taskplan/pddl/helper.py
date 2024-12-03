@@ -49,10 +49,10 @@ def generate_pddl_problem(domain_name, problem_name, objects, init_states,
     return problem_str
 
 
-def get_pddl_instance(whole_graph, map_data, seed=0):
+def get_pddl_instance(whole_graph, map_data, args):
     # Initialize the environment setting which containers are undiscovered
     init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
-        whole_graph['cnt_node_idx'], seed)
+        whole_graph['cnt_node_idx'], args.current_seed)
     subgoal_IDs = taskplan.utilities.utils.get_container_ID(
         whole_graph['nodes'], init_subgoals_idx)
 
@@ -60,7 +60,9 @@ def get_pddl_instance(whole_graph, map_data, seed=0):
     pddl = {}
     pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
     pddl['problem'], pddl['goal'] = taskplan.pddl.problem.get_problem(
-        map_data=map_data, unvisited=subgoal_IDs, seed=seed)
+        map_data=map_data, unvisited=subgoal_IDs,
+        seed=args.current_seed, use_pessimistic=args.use_pessimistic,
+        goal_type=args.goal_type)
     pddl['planner'] = 'ff-astar2'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
@@ -158,24 +160,6 @@ def get_learning_informed_plan(pddl, partial_map, subgoals, init_robot_pose, lea
                                  planner=pddl['planner'], max_planner_time=300)
 
     return plan, cost
-
-
-def get_goals(seed, cnt_of_interest, obj_of_interest):
-    random.seed(seed)
-    goal_cnt = random.sample(cnt_of_interest, 2)
-    goal_obj = random.sample(obj_of_interest, 2)
-    task1 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
-
-    goal_cnt = random.sample(cnt_of_interest, 2)
-    goal_obj = random.sample(obj_of_interest, 2)
-    task2 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
-
-    goal_cnt = random.sample(cnt_of_interest, 2)
-    goal_obj = random.sample(obj_of_interest, 2)
-    task3 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
-    task = [task3, task2, task1]
-    task = taskplan.pddl.task.multiple_goal(task)
-    return task
 
 
 def update_problem_move(problem, end):
@@ -289,7 +273,61 @@ def update_problem_find(problem, obj, loc):
     return updated_pddl_problem
 
 
-def get_goals2(seed, cnt_of_interest, objects):
+def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
+    random.seed(seed)
+    goal_cnt = random.sample(cnt_of_interest, 1)
+    goal_obj = random.sample(obj_of_interest, 1)
+    task1 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 1)
+    goal_obj = random.sample(obj_of_interest, 1)
+    task2 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 1)
+    goal_obj = random.sample(obj_of_interest, 1)
+    task3 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+    task = [task3, task2, task1]
+    task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
+def get_goals_for_two(seed, cnt_of_interest, obj_of_interest):
+    random.seed(seed)
+    goal_cnt = random.sample(cnt_of_interest, 2)
+    goal_obj = random.sample(obj_of_interest, 2)
+    task1 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 2)
+    goal_obj = random.sample(obj_of_interest, 2)
+    task2 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 2)
+    goal_obj = random.sample(obj_of_interest, 2)
+    task3 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
+    task = [task3, task2, task1]
+    task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
+def get_goals_for_three(seed, cnt_of_interest, obj_of_interest):
+    random.seed(seed)
+    goal_cnt = random.sample(cnt_of_interest, 3)
+    goal_obj = random.sample(obj_of_interest, 3)
+    task1 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 3)
+    goal_obj = random.sample(obj_of_interest, 3)
+    task2 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
+
+    goal_cnt = random.sample(cnt_of_interest, 3)
+    goal_obj = random.sample(obj_of_interest, 3)
+    task3 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
+    task = [task3, task2, task1]
+    task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
+def get_goals_for_breakfast(seed, cnt_of_interest, objects):
     random.seed(seed)
     object_relations = {
         'bowl': ['egg'],
@@ -320,4 +358,21 @@ def get_goals2(seed, cnt_of_interest, objects):
         task.append(goal)
 
     task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
+def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
+    if goal_type == '1object':
+        task = get_goals_for_one(seed, cnt_of_interest, obj_of_interest)
+    elif goal_type == '2object':
+        task = get_goals_for_two(seed, cnt_of_interest, obj_of_interest)
+    elif goal_type == '3object':
+        task = get_goals_for_three(seed, cnt_of_interest, obj_of_interest)
+    elif goal_type == 'breakfast':
+        task = get_goals_for_breakfast(seed, cnt_of_interest, objects)
+    elif goal_type == 'coffee':
+        raise NotImplementedError
+    elif goal_type == 'breakfast_coffee':
+        raise NotImplementedError
+
     return task
