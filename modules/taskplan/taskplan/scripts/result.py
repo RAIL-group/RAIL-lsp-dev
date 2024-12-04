@@ -23,12 +23,12 @@ def process_learned_data(args):
     )
 
 
-def process_naive_data(args):
+def process_optimistic_greedy_data(args):
     """Preprocessing function for naive (closest action planner) lsp"""
     data = []
 
     for line in open(args.data_file).readlines():
-        d = re.match(r'.*?s: (.*?) . naive: (.*?)\n', line)
+        d = re.match(r'.*?s: (.*?) . optimistic_greedy: (.*?)\n', line)
         if d is None:
             continue
         d = d.groups()
@@ -36,16 +36,33 @@ def process_naive_data(args):
 
     return pd.DataFrame(
         data,
-        columns=['seed', 'NAIVE_LSP']
+        columns=['seed', 'OPTIMISTIC_GREEDY']
     )
 
 
-def process_learned_sp_data(args):
+def process_pessimistic_greedy_data(args):
+    """Preprocessing function for naive (closest action planner) lsp"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . pessimistic_greedy: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'PESSIMISTIC_GREEDY']
+    )
+
+
+def process_optimistic_lsp_data(args):
     """Preprocessing function for planner with Learned Search Policy"""
     data = []
 
     for line in open(args.data_file).readlines():
-        d = re.match(r'.*?s: (.*?) . learned_sp: (.*?)\n', line)
+        d = re.match(r'.*?s: (.*?) . optimistic_lsp: (.*?)\n', line)
         if d is None:
             continue
         d = d.groups()
@@ -53,7 +70,75 @@ def process_learned_sp_data(args):
 
     return pd.DataFrame(
         data,
-        columns=['seed', 'LEARNED_SP']
+        columns=['seed', 'OPTIMISTIC_LSP']
+    )
+
+
+def process_pessimistic_lsp_data(args):
+    """Preprocessing function for planner with Learned Search Policy"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . pessimistic_lsp: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'PESSIMISTIC_LSP']
+    )
+
+
+def process_optimistic_oracle_data(args):
+    """Preprocessing function for optimistic oracle"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . optimistic_oracle: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'OPTIMISTIC_ORACLE']
+    )
+
+
+def process_pessimistic_oracle_data(args):
+    """Preprocessing function for pessimistic oracle"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . pessimistic_oracle: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'PESSIMISTIC_ORACLE']
+    )
+
+
+def process_oracle_data(args):
+    """Preprocessing function for pessimistic oracle"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . oracle: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'ORACLE']
     )
 
 
@@ -149,19 +234,39 @@ if __name__ == "__main__":
     parser.add_argument('--output_image_file', type=str,
                         required=False, default=None)
     parser.add_argument('--learned', action='store_true')
-    parser.add_argument('--naive', action='store_true')
-    parser.add_argument('--learned_sp', action='store_true')
+    parser.add_argument('--optimistic_greedy', action='store_true')
+    parser.add_argument('--pessimistic_greedy', action='store_true')
+    parser.add_argument('--optimistic_lsp', action='store_true')
+    parser.add_argument('--pessimistic_lsp', action='store_true')
+    parser.add_argument('--optimistic_oracle', action='store_true')
+    parser.add_argument('--pessimistic_oracle', action='store_true')
+    parser.add_argument('--oracle', action='store_true')
     parser.add_argument('--scatter2', action='store_true')
     args = parser.parse_args()
 
     if args.learned:
         data = process_learned_data(args)
         print(data.describe())
-    elif args.naive:
-        data = process_naive_data(args)
+    elif args.optimistic_greedy:
+        data = process_optimistic_greedy_data(args)
         print(data.describe())
-    elif args.learned_sp:
-        data = process_learned_sp_data(args)
+    elif args.pessimistic_greedy:
+        data = process_pessimistic_greedy_data(args)
+        print(data.describe())
+    elif args.optimistic_lsp:
+        data = process_optimistic_lsp_data(args)
+        print(data.describe())
+    elif args.pessimistic_lsp:
+        data = process_pessimistic_lsp_data(args)
+        print(data.describe())
+    elif args.optimistic_oracle:
+        data = process_optimistic_oracle_data(args)
+        print(data.describe())
+    elif args.pessimistic_oracle:
+        data = process_pessimistic_oracle_data(args)
+        print(data.describe())
+    elif args.oracle:
+        data = process_oracle_data(args)
         print(data.describe())
     else:
         other_data, learned_data = process_data(args)
