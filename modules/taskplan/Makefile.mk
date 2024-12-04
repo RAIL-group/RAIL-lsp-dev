@@ -9,9 +9,10 @@ help::
 BASENAME ?= taskplan
 NUM_TRAIN_SEEDS ?= 500
 NUM_TEST_SEEDS ?= 200
-NUM_EVAL_SEEDS ?= 200
+NUM_EVAL_SEEDS ?= 100
 
 CORE_ARGS ?= --resolution 0.05
+GOAL_TYPE ?= 1object
 
 
 ### Target for experiments ###
@@ -72,93 +73,218 @@ $(eval-find-seeds-naive):
 .PHONY: eval-find-naive
 eval-find-naive: $(eval-find-seeds-naive)
 
-# Task Plan: Naive target #
-eval-task-seeds-naive = \
+#############################
+#########  GREEDY  ##########
+#############################
+# Task Plan: Optimistic-Greedy #
+eval-task-seeds-optimistic-greedy = \
 	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
-		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_naive_$${ii}.png"; done)
-$(eval-task-seeds-naive): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-task-seeds-naive):
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Naive"]
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_greedy_$${ii}.png"; done)
+$(eval-task-seeds-optimistic-greedy): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-optimistic-greedy):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Optimistic-Greedy | $(GOAL_TYPE)"]
 	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
 		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
 	 	--current_seed $(seed) \
-	 	--image_filename task_naive_$(seed).png \
-	 	--logfile_name task_naive_logfile.txt
+	 	--image_filename task_optimistic_greedy_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+	 	--logfile_name task_optimistic_greedy_logfile.txt
 
-.PHONY: eval-task-naive
-eval-task-naive: $(eval-task-seeds-naive)
-	$(MAKE) result-naive
+.PHONY: eval-task-optimistic-greedy
+eval-task-optimistic-greedy: $(eval-task-seeds-optimistic-greedy)
+	$(MAKE) result-optimistic-greedy
 
-# Object search: Known target #
-eval-find-seeds-known = \
+.PHONY: result-optimistic-greedy
+result-optimistic-greedy:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_greedy_logfile.txt \
+		--optimistic_greedy
+
+# Task Plan: Pessimistic-Greedy #
+eval-task-seeds-pessimistic-greedy = \
 	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
-		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/known_$${ii}.png"; done)
-$(eval-find-seeds-known): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-find-seeds-known):
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Known"]
-	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
-	@$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_find \
-		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
-	 	--current_seed $(seed) \
-	 	--image_filename known_$(seed).png \
-	 	--logfile_name known_logfile.txt
-
-.PHONY: eval-find-known
-eval-find-known: $(eval-find-seeds-known)
-
-# Object search: Learned target #
-eval-find-seeds-learned = \
-	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
-		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/learned_$${ii}.png"; done)
-$(eval-find-seeds-learned): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-find-seeds-learned):
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Learned"]
-	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
-	@$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_find \
-		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
-	 	--current_seed $(seed) \
-	 	--image_filename learned_$(seed).png \
-	 	--logfile_name learned_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
-
-.PHONY: eval-find-learned
-eval-find-learned: $(eval-find-seeds-learned)
-
-# Task Plan: Learned Search Policy #
-eval-task-seeds-learned-sp = \
-	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
-		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_sp_$${ii}.png"; done)
-$(eval-task-seeds-learned-sp): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-task-seeds-learned-sp):
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Learned Search Policy"]
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_greedy_$${ii}.png"; done)
+$(eval-task-seeds-pessimistic-greedy): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-pessimistic-greedy):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Pessimistic-Greedy | $(GOAL_TYPE)"]
 	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
 		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
 	 	--current_seed $(seed) \
-	 	--image_filename task_learned_sp_$(seed).png \
-	 	--logfile_name task_learned_sp_logfile.txt \
+	 	--image_filename task_pessimistic_greedy_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+		--cost_type pessimistic \
+	 	--logfile_name task_pessimistic_greedy_logfile.txt
+
+.PHONY: eval-task-pessimistic-greedy
+eval-task-pessimistic-greedy: $(eval-task-seeds-pessimistic-greedy)
+	$(MAKE) result-pessimistic-greedy
+
+.PHONY: result-pessimistic-greedy
+result-pessimistic-greedy:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_greedy_logfile.txt \
+		--pessimistic_greedy
+
+#############################
+#########  ORACLE  ##########
+#############################
+# Task Plan: Optimistic-Oracle #
+eval-task-seeds-optimistic-oracle = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_oracle_$${ii}.png"; done)
+$(eval-task-seeds-optimistic-oracle): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-optimistic-oracle):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Optimistic-Oracle | $(GOAL_TYPE)"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_optimistic_oracle_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+	 	--logfile_name task_optimistic_oracle_logfile.txt
+
+.PHONY: eval-task-optimistic-oracle
+eval-task-optimistic-oracle: $(eval-task-seeds-optimistic-oracle)
+	$(MAKE) result-optimistic-oracle
+
+.PHONY: result-optimistic-oracle
+result-optimistic-oracle:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_oracle_logfile.txt \
+		--optimistic_oracle
+
+# Task Plan: Pessimistic-oracle #
+eval-task-seeds-pessimistic-oracle = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_oracle_$${ii}.png"; done)
+$(eval-task-seeds-pessimistic-oracle): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-pessimistic-oracle):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Pessimistic-Oracle | $(GOAL_TYPE)"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_pessimistic_oracle_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+		--cost_type pessimistic \
+	 	--logfile_name task_pessimistic_oracle_logfile.txt
+
+.PHONY: eval-task-pessimistic-oracle
+eval-task-pessimistic-oracle: $(eval-task-seeds-pessimistic-oracle)
+	$(MAKE) result-pessimistic-oracle
+
+.PHONY: result-pessimistic-oracle
+result-pessimistic-oracle:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_oracle_logfile.txt \
+		--pessimistic_oracle
+
+
+# Task Plan: Oracle #
+eval-task-seeds-oracle = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_oracle_$${ii}.png"; done)
+$(eval-task-seeds-oracle): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-oracle):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Oracle | $(GOAL_TYPE)"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_oracle_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+		--cost_type known \
+	 	--logfile_name task_oracle_logfile.txt
+
+.PHONY: eval-task-oracle
+eval-task-oracle: $(eval-task-seeds-oracle)
+	$(MAKE) result-oracle
+
+.PHONY: result-oracle
+result-oracle:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_oracle_logfile.txt \
+		--oracle
+
+#############################
+#########   LSP  ############
+#############################
+# Task Plan: Optimistic LSP #
+eval-task-seeds-optimistic-lsp = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_lsp_$${ii}.png"; done)
+$(eval-task-seeds-optimistic-lsp): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-optimistic-lsp): #$(train-file)
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Optimistic-LSP"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_optimistic_lsp_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+	 	--logfile_name task_optimistic_lsp_logfile.txt \
 		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
 
-.PHONY: eval-task-learned-sp
-eval-task-learned-sp: $(eval-task-seeds-learned-sp)
-	$(MAKE) result-learned-sp
+.PHONY: eval-task-optimistic-lsp
+eval-task-optimistic-lsp: $(eval-task-seeds-optimistic-lsp)
+	$(MAKE) result-optimistic-lsp
+
+.PHONY: result-optimistic-lsp
+result-optimistic-lsp:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_lsp_logfile.txt \
+		--optimistic_lsp
+
+# Task Plan: Pessimistic LSP #
+eval-task-seeds-pessimistic-lsp = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_$${ii}.png"; done)
+$(eval-task-seeds-pessimistic-lsp): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-pessimistic-lsp): #$(train-file)
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Pessimistic-LSP"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_pessimistic_lsp_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+		--cost_type pessimistic \
+	 	--logfile_name task_pessimistic_lsp_logfile.txt \
+		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+
+.PHONY: eval-task-pessimistic-lsp
+eval-task-pessimistic-lsp: $(eval-task-seeds-pessimistic-lsp)
+	$(MAKE) result-pessimistic-lsp
+
+.PHONY: result-pessimistic-lsp
+result-pessimistic-lsp:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_logfile.txt \
+		--pessimistic_lsp
 
 # Task Plan: Learned Search Policy + Learned Expected Cost #
 eval-task-seeds-learned = \
 	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
 		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_$${ii}.png"; done)
 $(eval-task-seeds-learned): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-task-seeds-learned): $(train-file)
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Learned Search Policy + Expected Cost"]
+$(eval-task-seeds-learned): #$(train-file)
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Learned Search Policy + Expected Cost | $(GOAL_TYPE)"]
 	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
@@ -166,6 +292,7 @@ $(eval-task-seeds-learned): $(train-file)
 		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_learned_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
 	 	--logfile_name task_learned_logfile.txt \
 		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
 
@@ -230,19 +357,6 @@ result-learned:
 	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
 		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
 		--learned
-
-.PHONY: result-learned-sp
-result-learned-sp:
-	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
-		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_sp_logfile.txt \
-		--learned_sp
-
-.PHONY: result-naive
-result-naive:
-	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
-		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_naive_logfile.txt \
-		--naive
-
 
 .PHONY: result-learned-vs-naive
 result-learned-vs-naive:
