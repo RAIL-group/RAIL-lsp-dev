@@ -2,7 +2,7 @@ from taskplan.pddl.helper import generate_pddl_problem, goal_provider
 from procthor.utils import get_generic_name
 
 
-def get_problem(map_data, unvisited, seed=0, use_pessimistic=False, goal_type='breakfast'):
+def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfast'):
     obj_of_interest = []
     cnt_of_interest = []
     containers = map_data.containers
@@ -53,8 +53,12 @@ def get_problem(map_data, unvisited, seed=0, use_pessimistic=False, goal_type='b
                     for from_loc in cnt_names:
                         for to_loc in cnt_names:
                             d = map_data.known_cost[from_loc][to_loc]
-                            if use_pessimistic:
-                                d = d * 10000
+                            if cost_type == 'pessimistic':
+                                d = d * 100
+                            elif cost_type == 'known':
+                                d1 = map_data.known_cost[from_loc][cnt_name]
+                                d2 = map_data.known_cost[cnt_name][to_loc]
+                                d = d1 + d2
                             init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
                     # or else we can optimistically assume the object is in the nearest
                     # undiscovered location from the to-loc [WILL work on it later!!]
