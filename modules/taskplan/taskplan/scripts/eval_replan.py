@@ -9,7 +9,7 @@ from pddlstream.algorithms.search import solve_from_pddl
 
 import procthor
 import taskplan
-from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner
+from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner, KnownPlanner
 from taskplan.pddl.helper import get_learning_informed_pddl
 from taskplan.utilities.utils import get_container_pose
 
@@ -34,10 +34,11 @@ def evaluate_main(args):
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        seed=args.current_seed
+        args=args
     )
 
     if not pddl['goal']:
+        plt.title("No valid goal found!")
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
         exit()
 
@@ -48,10 +49,20 @@ def evaluate_main(args):
             learned_net=args.network_file)
         cost_str = 'learned'
     else:
-        if args.logfile_name == 'task_naive_logfile.txt':
-            cost_str = 'naive'
-        elif args.logfile_name == 'task_learned_sp_logfile.txt':
-            cost_str = 'learned_sp'
+        if args.logfile_name == 'task_optimistic_greedy_logfile.txt':
+            cost_str = 'optimistic_greedy'
+        elif args.logfile_name == 'task_pessimistic_greedy_logfile.txt':
+            cost_str = 'pessimistic_greedy'
+        elif args.logfile_name == 'task_optimistic_lsp_logfile.txt':
+            cost_str = 'optimistic_lsp'
+        elif args.logfile_name == 'task_pessimistic_lsp_logfile.txt':
+            cost_str = 'pessimistic_lsp'
+        elif args.logfile_name == 'task_optimistic_oracle_logfile.txt':
+            cost_str = 'optimistic_oracle'
+        elif args.logfile_name == 'task_pessimistic_oracle_logfile.txt':
+            cost_str = 'pessimistic_oracle'
+        elif args.logfile_name == 'task_oracle_logfile.txt':
+            cost_str = 'oracle'
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                  planner=pddl['planner'], max_planner_time=300)
@@ -59,6 +70,7 @@ def evaluate_main(args):
     robot_poses = [init_robot_pose]
 
     if not plan:
+        plt.title("No valid plan found with initial settings!")
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
         exit()
 
@@ -145,9 +157,12 @@ def evaluate_main(args):
                 # Initialize the partial map
                 partial_map.target_obj = obj_idx
                 # Over here initiate the planner
-                if args.logfile_name == 'task_naive_logfile.txt':
+                if 'greedy' in args.logfile_name:
                     planner = ClosestActionPlanner(args, partial_map,
                                                    destination=fe_pose)
+                elif 'oracle' in args.logfile_name:
+                    planner = KnownPlanner(args, partial_map,
+                                           destination=fe_pose)
                 else:
                     planner = LearnedPlanner(args, partial_map, verbose=True,
                                              destination=fe_pose)
@@ -207,7 +222,8 @@ def evaluate_main(args):
 
                 # Finally replan
                 print('Replanning .. .. ..')
-                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
+                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
+                                             planner=pddl['planner'], max_planner_time=300)
                 break
 
     distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
@@ -303,6 +319,8 @@ def get_args():
     parser.add_argument('--save_dir', type=str, required=True)
     parser.add_argument('--resolution', type=float, required=True)
     parser.add_argument('--network_file', type=str, required=False)
+    parser.add_argument('--goal_type', type=str, required=False)
+    parser.add_argument('--cost_type', type=str, required=False)
     return parser.parse_args()
 
 
