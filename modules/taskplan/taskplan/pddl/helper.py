@@ -164,23 +164,30 @@ def get_learning_informed_plan(pddl, partial_map, subgoals, init_robot_pose, lea
 
 def update_problem_move(problem, end):
     x = '(rob-at '
+    y = '(not (ban-move))'
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
         if x in line:
             line = '        ' + x + f'{end})'
             lines[line_idx] = line
+        if y in line:
+            line = '        (ban-move)'
     updated_pddl_problem = '\n'.join(lines)
     return updated_pddl_problem
 
 
 def update_problem_pick(problem, obj, loc):
+    w = '(ban-move)'
     x = f'        (is-holding {obj})'
     insert_x = None
     y = '(hand-is-free)'
     z = f'(is-at {obj} {loc})'
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if y in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif y in line:
             line = '        ' + f'(not {y})'
             lines[line_idx] = line
         elif z in line:
@@ -194,13 +201,17 @@ def update_problem_pick(problem, obj, loc):
 
 
 def update_problem_place(problem, obj, loc):
+    w = '(ban-move)'
     x = '(not (hand-is-free))'
     y = f'(not (is-at {obj} '
     z = f'(is-holding {obj})'
     delete_z = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if x in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
             line = '        ' + '(hand-is-free)'
             lines[line_idx] = line
         elif y in line:
@@ -216,12 +227,16 @@ def update_problem_place(problem, obj, loc):
 
 
 def update_problem_boil(problem, obj):
+    w = '(ban-move)'
     x = f'(is-boilable {obj})'
     y = f'(is-boiled {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if x in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
             insert_y = line_idx + 1
     if insert_y:
         lines.insert(insert_y, y)
@@ -230,12 +245,16 @@ def update_problem_boil(problem, obj):
 
 
 def update_problem_peel(problem, obj):
+    w = '(ban-move)'
     x = f'(is-peelable {obj})'
     y = f'(is-peeled {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if x in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
             insert_y = line_idx + 1
     if insert_y:
         lines.insert(insert_y, y)
@@ -244,12 +263,16 @@ def update_problem_peel(problem, obj):
 
 
 def update_problem_toast(problem, obj):
+    w = '(ban-move)'
     x = f'(is-toastable {obj})'
     y = f'(is-toasted {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if x in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
             insert_y = line_idx + 1
     if insert_y:
         lines.insert(insert_y, y)
@@ -258,12 +281,16 @@ def update_problem_toast(problem, obj):
 
 
 def update_problem_find(problem, obj, loc):
+    w = '(ban-move)'
     y = f'(not (is-located {obj}))'
     z = f'        (is-at {obj} {loc})'
     insert_z = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if y in line:
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif y in line:
             line = f'        (is-located {obj})'
             lines[line_idx] = line
             insert_z = line_idx + 1
