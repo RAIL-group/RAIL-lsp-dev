@@ -140,9 +140,9 @@ class ThorInterface:
 
         pose["fieldOfView"] = 50
         pose["position"]["y"] += 1.1 * max_bound
-        pose["orthographic"] = False
+        pose["orthographic"] = True
         pose["farClippingPlane"] = 50
-        del pose["orthographicSize"]
+        pose["orthographicSize"] = .5 * max_bound
 
         # add the camera to the scene
         event = self.controller.step(
