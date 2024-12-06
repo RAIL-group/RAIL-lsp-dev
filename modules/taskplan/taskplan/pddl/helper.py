@@ -49,10 +49,12 @@ def generate_pddl_problem(domain_name, problem_name, objects, init_states,
     return problem_str
 
 
-def get_pddl_instance(whole_graph, map_data, args):
+def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # Initialize the environment setting which containers are undiscovered
     init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
         whole_graph['cnt_node_idx'], args.current_seed)
+    if learned_data:
+        learned_data['subgoals'] = init_subgoals_idx
     subgoal_IDs = taskplan.utilities.utils.get_container_ID(
         whole_graph['nodes'], init_subgoals_idx)
 
@@ -62,7 +64,7 @@ def get_pddl_instance(whole_graph, map_data, args):
     pddl['problem'], pddl['goal'] = taskplan.pddl.problem.get_problem(
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
-        goal_type=args.goal_type)
+        goal_type=args.goal_type, learned_data=learned_data)
     pddl['planner'] = 'ff-astar2'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
@@ -70,7 +72,7 @@ def get_pddl_instance(whole_graph, map_data, args):
 
 def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
                                  robot_pose, destination,
-                                 learned_net='/data/taskplan/logs/01_cost_fix/gnn.pt'):
+                                 learned_net='/data/taskplan/logs/dbg/gnn.pt'):
     ''' This function calculates and returns the expected cost of finding an object
     given the partial map, initial subgoals, object name, initial robot pose, and a
     learned network path
@@ -177,21 +179,21 @@ def update_problem_move(problem, end):
 
 
 def update_problem_pick(problem, obj, loc):
-    w = '(ban-move)'
+    w = '        (ban-move)'
     x = f'        (is-holding {obj})'
     insert_x = None
-    y = '(hand-is-free)'
-    z = f'(is-at {obj} {loc})'
+    y = '        (hand-is-free)'
+    z = f'        (is-at {obj} {loc})'
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
         if w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif y in line:
-            line = '        ' + f'(not {y})'
+            line = '        ' + f'(not (hand-is-free))'
             lines[line_idx] = line
         elif z in line:
-            line = '        ' + f'(not {z})'
+            line = '        ' + f'(not (is-at {obj} {loc}))'
             lines[line_idx] = line
             insert_x = line_idx + 1
     if insert_x:
@@ -337,6 +339,8 @@ def get_goals_for_two(seed, cnt_of_interest, obj_of_interest):
 
 
 def get_goals_for_three(seed, cnt_of_interest, obj_of_interest):
+    if len(cnt_of_interest) < 3 or len(obj_of_interest) < 3:
+        return None
     random.seed(seed)
     goal_cnt = random.sample(cnt_of_interest, 3)
     goal_obj = random.sample(obj_of_interest, 3)
