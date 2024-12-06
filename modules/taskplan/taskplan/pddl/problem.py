@@ -1,8 +1,8 @@
-from taskplan.pddl.helper import generate_pddl_problem, goal_provider
+from taskplan.pddl.helper import generate_pddl_problem, goal_provider, get_expected_cost_of_finding
 from procthor.utils import get_generic_name
 
 
-def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfast'):
+def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfast', learned_data=None):
     obj_of_interest = []
     cnt_of_interest = []
     containers = map_data.containers
@@ -59,6 +59,24 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                 d1 = map_data.known_cost[from_loc][cnt_name]
                                 d2 = map_data.known_cost[cnt_name][to_loc]
                                 d = d1 + d2
+                            elif cost_type == 'learned':
+                                if from_loc == 'initial_robot_pose':
+                                    from_coord = learned_data['initial_robot_pose']
+                                else:
+                                    from_coord = learned_data['partial_map'].node_coords[
+                                        learned_data['partial_map'].idx_map[from_loc]]
+                                if to_loc == 'initial_robot_pose':
+                                    to_coord = learned_data['initial_robot_pose']
+                                else:
+                                    to_coord = learned_data['partial_map'].node_coords[
+                                        learned_data['partial_map'].idx_map[to_loc]]
+                                d = get_expected_cost_of_finding(
+                                    learned_data['partial_map'],
+                                    learned_data['subgoals'],
+                                    child_name,
+                                    from_coord,  # robot_pose
+                                    to_coord,  # destination_pose
+                                    learned_data['learned_net'])
                             init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
                     # or else we can optimistically assume the object is in the nearest
                     # undiscovered location from the to-loc [WILL work on it later!!]
