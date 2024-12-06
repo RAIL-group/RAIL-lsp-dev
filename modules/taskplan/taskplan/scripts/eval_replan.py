@@ -30,11 +30,20 @@ def evaluate_main(args):
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid, distinct=True)
 
+    if args.cost_type == 'learned':
+        learned_data = {
+            'partial_map': partial_map,
+            'initial_robot_pose': init_robot_pose,
+            'learned_net': args.network_file
+        }
+    else:
+        learned_data = None
     # Instantiate PDDL for this map
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        args=args
+        args=args,
+        learned_data=learned_data
     )
 
     if not pddl['goal']:
@@ -43,26 +52,21 @@ def evaluate_main(args):
         exit()
 
     if args.logfile_name == 'task_learned_logfile.txt':
-        pddl = get_learning_informed_pddl(
-            pddl=pddl, partial_map=partial_map,
-            subgoals=pddl['subgoals'], init_robot_pose=init_robot_pose,
-            learned_net=args.network_file)
         cost_str = 'learned'
-    else:
-        if args.logfile_name == 'task_optimistic_greedy_logfile.txt':
-            cost_str = 'optimistic_greedy'
-        elif args.logfile_name == 'task_pessimistic_greedy_logfile.txt':
-            cost_str = 'pessimistic_greedy'
-        elif args.logfile_name == 'task_optimistic_lsp_logfile.txt':
-            cost_str = 'optimistic_lsp'
-        elif args.logfile_name == 'task_pessimistic_lsp_logfile.txt':
-            cost_str = 'pessimistic_lsp'
-        elif args.logfile_name == 'task_optimistic_oracle_logfile.txt':
-            cost_str = 'optimistic_oracle'
-        elif args.logfile_name == 'task_pessimistic_oracle_logfile.txt':
-            cost_str = 'pessimistic_oracle'
-        elif args.logfile_name == 'task_oracle_logfile.txt':
-            cost_str = 'oracle'
+    elif args.logfile_name == 'task_optimistic_greedy_logfile.txt':
+        cost_str = 'optimistic_greedy'
+    elif args.logfile_name == 'task_pessimistic_greedy_logfile.txt':
+        cost_str = 'pessimistic_greedy'
+    elif args.logfile_name == 'task_optimistic_lsp_logfile.txt':
+        cost_str = 'optimistic_lsp'
+    elif args.logfile_name == 'task_pessimistic_lsp_logfile.txt':
+        cost_str = 'pessimistic_lsp'
+    elif args.logfile_name == 'task_optimistic_oracle_logfile.txt':
+        cost_str = 'optimistic_oracle'
+    elif args.logfile_name == 'task_pessimistic_oracle_logfile.txt':
+        cost_str = 'pessimistic_oracle'
+    elif args.logfile_name == 'task_oracle_logfile.txt':
+        cost_str = 'oracle'
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                  planner=pddl['planner'], max_planner_time=300)
