@@ -9,10 +9,10 @@ help::
 BASENAME ?= taskplan
 NUM_TRAIN_SEEDS ?= 500
 NUM_TEST_SEEDS ?= 200
-NUM_EVAL_SEEDS ?= 100
+NUM_EVAL_SEEDS ?= 200
 
 CORE_ARGS ?= --resolution 0.05
-GOAL_TYPE ?= 1object
+GOAL_TYPE ?= breakfast
 
 
 ### Target for experiments ###
@@ -293,6 +293,7 @@ $(eval-task-seeds-learned): #$(train-file)
 	 	--current_seed $(seed) \
 	 	--image_filename task_learned_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
+		--cost_type learned \
 	 	--logfile_name task_learned_logfile.txt \
 		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
 
