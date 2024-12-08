@@ -83,7 +83,9 @@ class BlenderManager(object):
                         subgoal_data=None,
                         pixels_per_meter=None,
                         edge_buffer_meters=0.0,
-                        render_settings=None):
+                        render_settings=None,
+                        partial_wall_thickness=1,
+                        upsample_factor=1):
 
         # Move the camera
         map_dim_x = map_data['resolution'] * map_data['semantic_grid'].shape[1]
@@ -105,7 +107,9 @@ class BlenderManager(object):
         objects = add_map_data(map_data,
                                robot_poses,
                                observed_grid,
-                               subgoal_data)
+                               subgoal_data,
+                               partial_wall_thickness=partial_wall_thickness,
+                               upsample_factor=upsample_factor)
         objects.append(create_rectangle_with_bounds(xbounds, ybounds, -0.01, 'ground_tiled',
                                                     'ground_tiled'))
 

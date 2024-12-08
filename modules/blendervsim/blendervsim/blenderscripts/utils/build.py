@@ -179,14 +179,32 @@ def set_object_properties(obj):
     _apply_transforms(obj)
 
 
-def add_map_data(map_data, robot_poses=None, observed_grid=None, subgoal_data=None, do_partial_walls=True):
+def add_map_data(map_data, robot_poses=None, observed_grid=None, subgoal_data=None, do_partial_walls=True, partial_wall_thickness=1, upsample_factor=1):
 
     objects = []
 
+    partial_wall_thickness = round(partial_wall_thickness)
+    if partial_wall_thickness < 1:
+       raise ValueError("partial_wall_thickness must be >= 1.")
+
+    upsample_factor = round(upsample_factor)
+    if upsample_factor < 1:
+       raise ValueError("upsample_factor must be >= 1.")
+    elif upsample_factor > 1:
+        import copy
+        map_data = copy.copy(map_data)
+        map_data['semantic_grid'] = np.repeat(np.repeat(map_data['semantic_grid'], upsample_factor, axis=0),
+                                              upsample_factor, axis=1)
+        map_data['occ_grid'] = np.repeat(np.repeat(map_data['occ_grid'], upsample_factor, axis=0),
+                                              upsample_factor, axis=1)
+        map_data['resolution'] = map_data['resolution']/upsample_factor
+
     for semantic_class, value in map_data["semantic_labels"].items():
         if semantic_class == "background" and do_partial_walls:
+            s = (partial_wall_thickness + 2,
+                 partial_wall_thickness + 2)
             inflated_free = scipy.signal.convolve(
-                (map_data["occ_grid"] < 0.5).astype(int), np.ones((5, 5)), mode="same"
+                (map_data["occ_grid"] < 0.5).astype(int), np.ones(s), mode="same"
             )
             grid_region = ((inflated_free > 0.1) & (map_data["occ_grid"] > 0.5)).astype(
                 int
