@@ -42,6 +42,9 @@ def get_domain(whole_graph):
         (is-boiled ?obj - item)
         (is-boilable ?obj - item)
         (is-boiler ?obj - item)
+        (is-fillable ?obj - item)
+        (filled-with-water ?obj - item)
+        (filled-with-coffee ?obj - item)
         (ban-move)
     )
 
@@ -49,6 +52,60 @@ def get_domain(whole_graph):
         (known-cost ?start ?end)
         (find-cost ?obj ?loc)
         (total-cost)
+    )
+
+    (:action pour-water
+        :parameters (?pour_to - item ?pour_from - item ?loc - location)
+        :precondition (and
+            (is-fillable ?pour_to)
+            (is-at ?pour_to ?loc)
+            (not (filled-with-water ?pour_to))
+            (not (filled-with-coffee ?pour_to))
+            (filled-with-water ?pour_from)
+            (is-holding ?pour_from)
+            (rob-at ?loc)
+        )
+        :effect (and
+            (filled-with-water ?pour_to)
+            (not (filled-with-water ?pour_from))
+            (not (ban-move))
+            (increase (total-cost) 100)
+        )
+    )
+
+    (:action pour-coffee
+        :parameters (?pour_to - item ?pour_from - item ?loc - location)
+        :precondition (and
+            (is-fillable ?pour_to)
+            (is-at ?pour_to ?loc)
+            (not (filled-with-water ?pour_to))
+            (not (filled-with-coffee ?pour_to))
+            (filled-with-coffee ?pour_from)
+            (is-holding ?pour_from)
+            (rob-at ?loc)
+        )
+        :effect (and
+            (filled-with-coffee ?pour_to)
+            (not (filled-with-coffee ?pour_from))
+            (not (ban-move))
+            (increase (total-cost) 100)
+        )
+    )
+
+    (:action make-coffee
+        :parameters (?receptacle - item ?loc - location)
+        :precondition (and
+            (hand-is-free)
+            (rob-at ?loc)
+            (filled-with-water ?receptacle)
+            (is-at ?receptacle ?loc)
+            (exists (?c - coffeegrinds) (is-at ?c ?loc))
+        :effect (and
+            (filled-with-coffee ?receptacle)
+            (not (filled-with-water ?receptacle))
+            (not (ban-move))
+            (increase (total-cost) 100)
+        )
     )
 
     (:action boil
