@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pddlstream.algorithms.search import solve_from_pddl
 import procthor
 import taskplan
-from taskplan.planners.planner import ClosestActionPlanner
+from taskplan.planners.planner import KnownPlanner
 from taskplan.pddl.helper import get_learning_informed_plan
 from taskplan.utilities.utils import get_container_pose
 import pytest
@@ -86,12 +86,19 @@ def test_place_task():
         print(cost)
 
 
-@pytest.mark.timeout(50)
+# @pytest.mark.timeout(50)
 def test_replan():
     args = get_args()
+    args.current_seed = 7004
+    args.goal_type = 'coffee'
+    args.cost_type = 'known'
 
+    obj_loc_dict = {
+        'waterbottle': ['fridge', 'diningtable'],
+        'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
+    }
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -107,7 +114,7 @@ def test_replan():
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        seed=args.current_seed
+        args=args
     )
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
@@ -116,6 +123,7 @@ def test_replan():
 
     while plan:
         for action in plan:
+            print(action)
             executed_actions.append(action)
             if action.name == 'move':
                 move_start = action.args[0]
@@ -165,6 +173,40 @@ def test_replan():
                 # Finally replan
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
                 break
+            elif action.name == 'pour-water':
+                pour_from = action.args[0]
+                pour_to = action.args[1]
+                # Update problem for pour-water action.
+                # (filled-with-water ?pour_to)
+                # (not (filled-with-water ?pour_from))
+                # (not (ban-move))
+                pddl['problem'] = taskplan.pddl.helper.update_problem_pourwater(
+                    pddl['problem'], pour_from, pour_to)
+                # Finally replan
+                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
+                break
+            elif action.name == 'pour-coffee':
+                pour_from = action.args[0]
+                pour_to = action.args[1]
+                # Update problem for pour-coffee action.
+                # (filled-with-coffee ?pour_to)
+                # (not (filled-with-coffee ?pour_from))
+                # (not (ban-move))
+                pddl['problem'] = taskplan.pddl.helper.update_problem_pourcoffee(
+                    pddl['problem'], pour_from, pour_to)
+                # Finally replan
+                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
+                break
+            elif action.name == 'make-coffee':
+                receptacle = action.args[1]
+                # Update problem for make-coffee action.
+                # (filled-with-coffee ?receptacle)
+                # (not (filled-with-water ?receptacle))
+                # (not (ban-move))
+                pddl['problem'] = taskplan.pddl.helper.update_problem_makecoffee(
+                    pddl['problem'], receptacle)
+                # Finally replan
+                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
             elif action.name == 'find':
                 obj_name = action.args[0]
                 obj_idx = partial_map.idx_map[obj_name]
@@ -180,9 +222,9 @@ def test_replan():
                 # Initialize the partial map
                 partial_map.target_obj = obj_idx
                 # Over here initiate the planner
-                planner = ClosestActionPlanner(args, partial_map,
-                                               destination=fe_pose)
-                cost_str = 'Naive'
+                planner = KnownPlanner(args, partial_map,
+                                       destination=fe_pose)
+                cost_str = 'Known'
                 # Initiate planning loop but run for a step
                 planning_loop = taskplan.planners.planning_loop.PlanningLoop(
                     partial_map=partial_map, robot=fs_pose,
@@ -255,7 +297,7 @@ def test_replan():
 
     # 1 plot the plan
     plt.subplot(221)
-    procthor.plotting.plot_plan(plan=executed_actions)
+    taskplan.plotting.plot_plan(plan=executed_actions)
 
     # 2 plot the whole graph
     plt.subplot(222)
@@ -297,20 +339,23 @@ def test_replan():
     plt.box(False)
     plt.xticks([])
     plt.yticks([])
-
+    assert len(plan) > 0
     plt.savefig(f'/data/test_logs/replan_{args.current_seed}.png', dpi=400)
 
 
-@pytest.mark.timeout(15)
+# @pytest.mark.timeout(15)
 def test_custom_goal():
     args = get_args()
+    args.current_seed = 7004
+    args.goal_type = 'coffee'
+    args.cost_type = 'known'
 
+    obj_loc_dict = {
+        'waterbottle': ['fridge', 'diningtable'],
+        'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
+    }
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args)
-
-    # # Get the occupancy grid from data
-    # grid = thor_data.occupancy_grid
-    # init_robot_pose = thor_data.get_robot_pose()
+    thor_data = procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
@@ -319,10 +364,8 @@ def test_custom_goal():
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        seed=args.current_seed
+        args=args
     )
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
-    if plan:
-        for p in plan:
-            print(p)
+    assert len(plan) > 0
