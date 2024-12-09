@@ -104,7 +104,6 @@ def get_domain(whole_graph):
             (is-at ?receptacle ?loc)
             (is-coffeeingredient ?ingredient)
             (is-at ?ingredient ?loc)
-            (exists (?c - coffeegrinds) (is-at ?c ?loc))
         )
         :effect (and
             (filled-with-coffee ?receptacle)
