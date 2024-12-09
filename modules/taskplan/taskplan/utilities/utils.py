@@ -128,3 +128,13 @@ def get_object_to_find_from_plan(plan, partial_map, init_robot_pose):
             robot_poses.append({(fs_pose, fe_pose): 'find'})
 
     return find_from_to, robot_poses
+
+
+def get_coffee_objects():
+    '''This function returns a dictionary of objects and their
+    possible spawn locations in the environment.'''
+    obj_loc_dict = {
+        'waterbottle': ['fridge', 'diningtable'],
+        'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
+    }
+    return obj_loc_dict
