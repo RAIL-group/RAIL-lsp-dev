@@ -228,6 +228,73 @@ def update_problem_place(problem, obj, loc):
     return updated_pddl_problem
 
 
+def update_problem_pourwater(problem, p_from, p_to):
+    w = '(ban-move)'
+    x = f'        (filled-with-water {p_from})'
+    y = f'        (is-located {p_to})'
+    z = f'        (filled-with-water {p_to})'
+    delete_x = None
+    insert_z = None
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
+            delete_x = line_idx
+        elif y in line:
+            insert_z = line_idx + 1
+    if delete_x < insert_z:
+        lines.insert(insert_z, z)
+        del lines[delete_x]
+    else:
+        del lines[delete_x]
+        lines.insert(insert_z, z)
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
+def update_problem_pourcoffee(problem, p_from, p_to):
+    w = '(ban-move)'
+    x = f'        (filled-with-coffee {p_from})'
+    y = f'        (is-located {p_to})'
+    z = f'        (filled-with-coffee {p_to})'
+    delete_x = None
+    insert_z = None
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
+            delete_x = line_idx
+        elif y in line:
+            insert_z = line_idx + 1
+    if delete_x < insert_z:
+        lines.insert(insert_z, z)
+        del lines[delete_x]
+    else:
+        del lines[delete_x]
+        lines.insert(insert_z, z)
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
+def update_problem_makecoffee(problem, obj):
+    w = '(ban-move)'
+    x = f'        (filled-with-water {obj})'
+    lines = problem.splitlines()
+    for line_idx, line in enumerate(lines):
+        if w in line:
+            line = '        (not (ban-move))'
+            lines[line_idx] = line
+        elif x in line:
+            line = '        ' + f'(filled-with-coffee {obj})'
+            lines[line_idx] = line
+    updated_pddl_problem = '\n'.join(lines)
+    return updated_pddl_problem
+
+
 def update_problem_boil(problem, obj):
     w = '(ban-move)'
     x = f'(is-boilable {obj})'
