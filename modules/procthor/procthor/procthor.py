@@ -68,11 +68,13 @@ class ThorInterface:
                 choice_count = max(1, int(0.4 * len(eligible_pool[obj])))
                 chosen_containers[obj] = np.random.choice(eligible_pool[obj], choice_count)
 
+            counter = 0
             for container in self.containers:
                 for obj in chosen_containers:
-                    counter = 0
                     if container['id'] in chosen_containers[obj]:
                         counter += 1
+                        if 'children' not in container:
+                            container['children'] = []
                         container['children'].append({
                             'id': f'{obj}|surface|{counter}',
                             'kinematic': False,
