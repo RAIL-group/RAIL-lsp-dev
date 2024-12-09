@@ -392,6 +392,34 @@ def get_goals_for_breakfast(seed, cnt_of_interest, objects):
     return task
 
 
+def get_goals_for_coffee(seed, cnt_of_interest, objects):
+    random.seed(seed)
+    receptacles = ['mug', 'cup']
+    compatible_receptacles = []
+    for object in receptacles:
+        if object in objects:
+            compatible_receptacles += objects[object]
+
+    if len(compatible_receptacles) > 3:
+        compatible_receptacles = random.sample(compatible_receptacles, 3)
+
+    preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
+    compatible_containers = [cnt for cnt in cnt_of_interest
+                             if cnt.split('|')[0] in preferred_containers]
+
+    if compatible_containers == [] or len(compatible_receptacles) == 0:
+        return None
+
+    goal_cnt = random.choice(compatible_containers)
+    task = []
+
+    for receptacle in compatible_receptacles:
+        goal = taskplan.pddl.task.get_coffee_task(goal_cnt, receptacle)
+        task.append(goal)
+    task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
 def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
     if goal_type == '1object':
         task = get_goals_for_one(seed, cnt_of_interest, obj_of_interest)
@@ -402,7 +430,7 @@ def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
     elif goal_type == 'breakfast':
         task = get_goals_for_breakfast(seed, cnt_of_interest, objects)
     elif goal_type == 'coffee':
-        raise NotImplementedError
+        task = get_goals_for_coffee(seed, cnt_of_interest, objects)
     elif goal_type == 'breakfast_coffee':
         raise NotImplementedError
 
