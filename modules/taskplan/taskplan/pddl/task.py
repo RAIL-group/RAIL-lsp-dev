@@ -131,7 +131,7 @@ def get_related_goal(goal_cnt, goal_objs):
 
 
 def get_coffee_task(goal_cnt, goal_obj):
-    state_str = f'(filled-with coffee {goal_obj})'
+    state_str = f'(filled-with-coffee {goal_obj})'
     obj_loc_str = f'(is-at {goal_obj} {goal_cnt})'
     combined_str = f'(and {state_str} {obj_loc_str})'
     return combined_str
