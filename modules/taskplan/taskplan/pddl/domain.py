@@ -43,6 +43,8 @@ def get_domain(whole_graph):
         (is-boilable ?obj - item)
         (is-boiler ?obj - item)
         (is-fillable ?obj - item)
+        (is-coffeemaker ?obj - item)
+        (is-coffeeingredient ?obj - item)
         (filled-with-water ?obj - item)
         (filled-with-coffee ?obj - item)
         (ban-move)
@@ -55,7 +57,7 @@ def get_domain(whole_graph):
     )
 
     (:action pour-water
-        :parameters (?pour_to - item ?pour_from - item ?loc - location)
+        :parameters (?pour_from - item ?pour_to - item ?loc - location)
         :precondition (and
             (is-fillable ?pour_to)
             (is-at ?pour_to ?loc)
@@ -74,7 +76,7 @@ def get_domain(whole_graph):
     )
 
     (:action pour-coffee
-        :parameters (?pour_to - item ?pour_from - item ?loc - location)
+        :parameters (?pour_from - item ?pour_to - item ?loc - location)
         :precondition (and
             (is-fillable ?pour_to)
             (is-at ?pour_to ?loc)
@@ -93,13 +95,17 @@ def get_domain(whole_graph):
     )
 
     (:action make-coffee
-        :parameters (?receptacle - item ?loc - location)
+        :parameters (?ingredient - item ?receptacle - item ?loc - location)
         :precondition (and
             (hand-is-free)
             (rob-at ?loc)
+            (is-coffeemaker ?receptacle)
             (filled-with-water ?receptacle)
             (is-at ?receptacle ?loc)
+            (is-coffeeingredient ?ingredient)
+            (is-at ?ingredient ?loc)
             (exists (?c - coffeegrinds) (is-at ?c ?loc))
+        )
         :effect (and
             (filled-with-coffee ?receptacle)
             (not (filled-with-water ?receptacle))

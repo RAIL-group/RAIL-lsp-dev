@@ -109,6 +109,14 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                     init_states.append(f"(is-toastable {child_name})")
                 if gen_name_child == 'toaster':
                     init_states.append(f"(is-toaster {child_name})")
+                if gen_name_child in ['pot', 'kettle', 'coffeemachine']:
+                    init_states.append(f"(is-coffeemaker {child_name})")
+                if gen_name_child in ['cup', 'mug', 'pot', 'kettle', 'coffeemachine']:
+                    init_states.append(f"(is-fillable {child_name})")
+                if gen_name_child == 'waterbottle':
+                    init_states.append(f"(filled-with-water {child_name})")
+                if gen_name_child == 'coffeegrinds':
+                    init_states.append(f"(is-coffeeingredient {child_name})")
 
     for c1 in map_data.known_cost:
         for c2 in map_data.known_cost[c1]:
