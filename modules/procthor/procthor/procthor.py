@@ -49,6 +49,36 @@ class ThorInterface:
                                      width=480, height=480)
         self.occupancy_grid = self.get_occupancy_grid()
 
+        if type(preprocess) is dict:
+            # add custom objects in their prefered locations; todo so,
+            # we first check if necessary container exists, create an
+            # eligible pool dictionary then randomly choose 1 or 40% from
+            # the pool, whichever max and add it to those containers
+            eligible_pool = {}
+            for container in self.containers:
+                cnt_ID = container['id'].split('|')[0].lower()
+                for obj in preprocess:
+                    if cnt_ID in preprocess[obj]:
+                        if obj not in eligible_pool:
+                            eligible_pool[obj] = [container['id']]
+                        else:
+                            eligible_pool[obj].append(container['id'])
+            chosen_containers = {}
+            for obj in eligible_pool:
+                choice_count = max(1, int(0.4 * len(eligible_pool[obj])))
+                chosen_containers[obj] = np.random.choice(eligible_pool[obj], choice_count)
+
+            for container in self.containers:
+                for obj in chosen_containers:
+                    counter = 0
+                    if container['id'] in chosen_containers[obj]:
+                        counter += 1
+                        container['children'].append({
+                            'id': obj+'|surface|counter',
+                            'kinematic': False,
+                            'position': container['position']
+                        })
+
         self.known_cost = self.get_known_costs()
 
     def load_scene(self, path='/resources/procthor-10k'):
