@@ -74,7 +74,7 @@ class ThorInterface:
                     if container['id'] in chosen_containers[obj]:
                         counter += 1
                         container['children'].append({
-                            'id': obj+'|surface|counter',
+                            'id': f'{obj}|surface|{counter}',
                             'kinematic': False,
                             'position': container['position']
                         })
