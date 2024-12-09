@@ -78,3 +78,24 @@ def test_graph_on_grid():
     plt.imshow(top_down_frame)
 
     plt.savefig(save_file, dpi=1200)
+
+
+def test_custom_object_graph():
+    '''This test checks if the custom object graph is created correctly.'''
+    args = get_args()
+    args.current_seed = 7060
+
+    obj_loc_dict = {
+        'waterbottle': ['fridge', 'diningtable'],
+        'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
+    }
+
+    thor_data = procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
+
+    # Get the whole graph from ProcTHOR data
+    whole_graph = thor_data.get_graph()
+    assert 'waterbottle' in whole_graph['node_names'].values()
+    assert 'coffeegrinds' in whole_graph['node_names'].values()
+
+    plt.imshow(whole_graph['graph_image'])
+    plt.savefig(f'/data/test_logs/custom-graph-{args.current_seed}.png', dpi=500)
