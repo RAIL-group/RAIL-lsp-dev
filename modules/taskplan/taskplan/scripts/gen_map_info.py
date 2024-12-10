@@ -1,13 +1,12 @@
 import argparse
 import matplotlib.pyplot as plt
 
-import taskplan
+import procthor
 
 
 def generate_map_info(args):
     # Load data for a given seed
-    thor_data = taskplan.utilities.ai2thor_helper. \
-        ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args)
 
     top_down_frame = thor_data.get_top_down_frame()
     plt.imshow(top_down_frame)
