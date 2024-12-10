@@ -365,6 +365,7 @@ def get_args():
     parser.add_argument('--network_file', type=str, required=False)
     parser.add_argument('--goal_type', type=str, required=False)
     parser.add_argument('--cost_type', type=str, required=False)
+    parser.add_argument('--cache_path', type=str, required=False)
     return parser.parse_args()
 
 

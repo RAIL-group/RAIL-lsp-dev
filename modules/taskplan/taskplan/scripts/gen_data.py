@@ -54,6 +54,7 @@ def get_args():
     parser.add_argument('--data_file_base_name', type=str, required=False)
     parser.add_argument('--save_dir', type=str, required=False)
     parser.add_argument('--resolution', type=float, required=False)
+    parser.add_argument('--cache_path', type=str, required=False)
     return parser.parse_args()
 
 
