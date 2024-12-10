@@ -47,7 +47,7 @@ class ThorInterface:
             ]
 
         self.cache = None
-        if args.cache_path:
+        if hasattr(args, "cache_path") and args.cache_path:
             self.cache = procthor.utils.load_cache(self.seed, args.cache_path)
         if self.cache is None:
             self.controller = Controller(scene=self.scene,
@@ -118,7 +118,7 @@ class ThorInterface:
             reachable_positions = event.metadata["actionReturn"]
             RPs = reachable_positions
             # save the data in cache as pickle and create necessary directories
-            if self.args.cache_path:
+            if hasattr(self.args, "cache_path") and self.args.cache_path:
                 data = {
                     'RPs': RPs,
                     'image': self.get_top_down_frame()
