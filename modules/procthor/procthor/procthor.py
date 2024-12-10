@@ -145,6 +145,20 @@ class ThorInterface:
         for pos in free_positions:
             occupancy_grid[pos] = 0
 
+        min_height, min_width = self.scale_to_grid([min_x, min_z])
+        if height > width:
+            offset_x = - min_height / 2
+            offset_z = (height - width) / 2 - min_width / 2
+            x_max = height
+            z_max = height
+        else:
+            offset_x = (width - height) / 2 - min_height / 2
+            offset_z = - min_width / 2
+            x_max = width
+            z_max = width
+        self.plot_offset = [offset_x, offset_z]
+        self.plot_extent = [0, x_max, z_max, 0]
+
         # store the mapping from grid coordinates to simulator positions
         self.g2p_map = grid_to_points_map
 
