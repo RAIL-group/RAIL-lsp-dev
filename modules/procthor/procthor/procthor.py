@@ -3,6 +3,8 @@ import copy
 import numpy as np
 from shapely import geometry
 from ai2thor.controller import Controller
+
+import procthor
 from . import utils
 
 IGNORE_CONTAINERS = [
@@ -44,9 +46,13 @@ class ThorInterface:
                 if container['id'].split('|')[0].lower() not in IGNORE_CONTAINERS
             ]
 
-        self.controller = Controller(scene=self.scene,
-                                     gridSize=self.grid_resolution,
-                                     width=480, height=480)
+        self.cache = None
+        if args.cache_path:
+            self.cache = procthor.utils.load_cache(self.seed, args.cache_path)
+        if self.cache is None:
+            self.controller = Controller(scene=self.scene,
+                                         gridSize=self.grid_resolution,
+                                         width=480, height=480)
         self.occupancy_grid = self.get_occupancy_grid()
 
         if type(preprocess) is dict:
@@ -105,12 +111,22 @@ class ThorInterface:
         return self.scale_to_grid(position)
 
     def get_occupancy_grid(self):
-        event = self.controller.step(action="GetReachablePositions")
-        reachable_positions = event.metadata["actionReturn"]
-        RPs = reachable_positions
+        if self.cache:
+            RPs = self.cache['RPs']
+        else:
+            event = self.controller.step(action="GetReachablePositions")
+            reachable_positions = event.metadata["actionReturn"]
+            RPs = reachable_positions
+            # save the data in cache as pickle and create necessary directories
+            if self.args.cache_path:
+                data = {
+                    'RPs': RPs,
+                    'image': self.get_top_down_frame()
+                }
+                procthor.utils.save_cache(self.seed, self.args.cache_path, data)
 
-        xs = [rp["x"] for rp in reachable_positions]
-        zs = [rp["z"] for rp in reachable_positions]
+        xs = [rp["x"] for rp in RPs]
+        zs = [rp["z"] for rp in RPs]
 
         # Calculate the mins and maxs
         min_x, max_x = min(xs), max(xs)
@@ -163,6 +179,8 @@ class ThorInterface:
         return occupancy_grid
 
     def get_top_down_frame(self):
+        if self.cache:
+            return self.cache['image']
         # Setup the top-down camera
         event = self.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
         pose = copy.deepcopy(event.metadata["actionReturn"])
