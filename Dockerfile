@@ -1,6 +1,6 @@
 # FROM nvidia/cudagl:11.3.1-devel-ubuntu20.04 AS base
 # FROM nvidia/cuda:11.3.1-devel-ubuntu20.04 AS base
-FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04 AS base
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 AS base
 
 
 ARG NUM_BUILD_CORES
@@ -29,9 +29,9 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.p
 COPY modules/requirements.txt requirements.txt
 RUN pip3 install uv
 RUN uv pip install -r requirements.txt
-RUN uv pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
+RUN uv pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu118
 # RUN uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-RUN pip3 install pyg_lib -f https://data.pyg.org/whl/torch-2.4.1+cu124.html
+RUN pip3 install pyg_lib -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
 RUN pip3 install sentence_transformers
 RUN pip3 install numba
 RUN pip3 install sknw --no-dependencies
@@ -111,8 +111,8 @@ ENV NVIDIA_VISIBLE_DEVICES \
 ENV NVIDIA_DRIVER_CAPABILITIES \
         ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics,compat32,utility
 
-RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
-    echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
+# RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
+#     echo "/usr/local/nvidia/lib64" >> /etc/ld.so.conf.d/nvidia.conf
 
 # Required for non-glvnd setups.
 ENV LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
@@ -124,11 +124,11 @@ RUN apt install -y libxtst6 libxi6 libxkbcommon-x11-0
 COPY modules/conftest.py modules/conftest.py
 COPY modules/setup.cfg modules/setup.cfg
 
-# Migrate files from spot
-COPY --from=spot /usr/local/lib/*spot* /usr/local/lib
-COPY --from=spot /usr/local/lib/*bdd* /usr/local/lib
-COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /usr/local/lib/python3.10/site-packages/spot
-COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /usr/local/lib/python3.10/site-packages/
+# # Migrate files from spot
+# COPY --from=spot /usr/local/lib/*spot* /usr/local/lib
+# COPY --from=spot /usr/local/lib/*bdd* /usr/local/lib
+# COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /usr/local/lib/python3.10/site-packages/spot
+# COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /usr/local/lib/python3.10/site-packages/
 
 # Migrate files from our package installs
 COPY --from=pkg-core /temp/ /opt/venv/lib/python3.10/site-packages
