@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import time
 
 from blendervsim import BlenderVSim
 
@@ -75,3 +76,57 @@ def test_blendervsim_render_overhead_fully_known():
 
     assert np.mean(bkd_image_subset) < 200
     assert np.mean(sq_image_subset) > 200
+
+
+def test_blendervsim_render_gpu_cpu_speed():
+    grid = np.zeros((100, 100))
+    grid[10:90, 10:90] = 1
+    grid[15:85, 15:85] = 2
+    map_data = {
+        'semantic_labels': {'background': 1, 'free': 2},
+        'resolution': 0.1,
+        'x_offset': 0,
+        'y_offset': 0,
+        'semantic_grid': grid,
+        'occ_grid': (grid > 1.5).astype(int),
+
+    }
+    render_settings = {
+    }
+
+    scene = "/resources/blender_scenes/render_overhead.blend"
+
+    with BlenderVSim(blender_scene_path=scene) as blender:
+        stime = time.time()
+        sq_image, _ = blender.render_overhead(
+            map_data=map_data,
+            pixels_per_meter=25,
+            render_settings={
+                'device': 'CPU',
+                'resolution_x': 1024,
+                'resolution_y': 1024,
+                'samples': 1024,
+                'use_denoising': False,
+                "use_adaptive_sampling": False,
+            })
+        cpu_time = time.time() - stime
+
+    with BlenderVSim(blender_scene_path=scene) as blender:
+        stime = time.time()
+        sq_image, _ = blender.render_overhead(
+            map_data=map_data,
+            pixels_per_meter=25,
+            render_settings={
+                'device': 'GPU',
+                'resolution_x': 1024,
+                'resolution_y': 1024,
+                'samples': 1024,
+                'use_denoising': False,
+                "use_adaptive_sampling": False,
+            })
+        gpu_time = time.time() - stime
+
+
+    print(f"CPU time: {cpu_time}")
+    print(f"GPU time: {gpu_time}")
+    assert False
