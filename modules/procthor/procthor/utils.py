@@ -1,9 +1,11 @@
 import os
 import io
+import pickle
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from PIL import Image
+
 import gridmap
 
 SBERT_PATH = '/resources/sentence_transformers/'
@@ -170,3 +172,18 @@ def get_graph_image(edge_index, node_names, color_map):
     plt.close()
     img = Image.open(buf)
     return img
+
+
+def load_cache(seed, cache_path):
+    cache_file = f'{cache_path}/procthor_{seed}.pkl'
+    if os.path.exists(cache_file):
+        with open(cache_file, 'rb') as f:
+            return pickle.load(f)
+
+
+def save_cache(seed, cache_path, data):
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
+    cache_file = f'{cache_path}/procthor_{seed}.pkl'
+    with open(cache_file, 'wb') as f:
+        pickle.dump(data, f)
