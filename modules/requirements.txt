@@ -2,7 +2,7 @@
 numpy
 scipy
 scikit-image
-sknw
+# sknw
 # shapely==1.6.4
 shapely
 # opencv-python

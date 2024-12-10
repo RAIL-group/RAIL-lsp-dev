@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import unitybridge
+import time
 
 
 @pytest.mark.timeout(5)
@@ -76,3 +77,17 @@ def test_unitybridge_can_add_objects(unity_path, do_debug_plot):
 
         assert np.std(pano_image - pano_image_cubes) > 0
         assert np.std(pano_depth_image - pano_depth_image_cubes) > 0
+
+
+@pytest.mark.timeout(60)
+def test_unitybridge_100_images(unity_path):
+    """Rendered images should change after a few objects are added."""
+    with unitybridge.UnityBridge(unity_path) as unity_bridge:
+
+        for _ in range(100):
+            stime = time.time()
+            pano_image = unity_bridge.get_image(
+                "robot/pano_camera")
+            pano_depth_image = unity_bridge.get_image(
+                "robot/pano_depth_camera")
+            print(f"Image Render Time: {time.time() - stime}")
