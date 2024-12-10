@@ -1,8 +1,11 @@
 import os
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 import procthor
 import pytest
+
+import taskplan
 
 
 def get_args():
@@ -99,3 +102,58 @@ def test_custom_object_graph():
 
     plt.imshow(whole_graph['graph_image'])
     plt.savefig(f'/data/test_logs/custom-graph-{args.current_seed}.png', dpi=500)
+
+
+def test_align_plot():
+    args = get_args()
+
+    # Load data for a given seed
+    thor_data = procthor.ThorInterface(args=args)
+
+    whole_graph = thor_data.get_graph()
+    grid = thor_data.occupancy_grid
+
+    init_robot_pose = thor_data.get_robot_pose()
+    robot_poses = [init_robot_pose]
+    robot_poses += random.sample(list(whole_graph['node_coords'].values()), 3)
+
+    distance, trajectory = taskplan.core.compute_path_cost(grid, robot_poses)
+
+    plt.clf()
+    plt.figure(figsize=(12, 6))
+
+    viridis_cmap = plt.get_cmap('viridis')
+
+    colors = np.linspace(0, 1, len(trajectory[0]))
+    line_colors = viridis_cmap(colors)
+
+    plt.subplot(121)
+    # 1 plot the top-down-view
+    top_down_frame = thor_data.get_top_down_frame()
+    offset = thor_data.plot_offset
+    extent = thor_data.plot_extent
+
+    plt.imshow(top_down_frame, extent=extent)
+    plt.title('Top-down view of the map', fontsize=6)
+    for idx, x in enumerate(trajectory[0]):
+        x = x + offset[0]
+        y = trajectory[1][idx] + offset[1]
+        plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
+
+    plt.subplot(122)
+    # 2 plot the trajectory overlaied grid
+    plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(grid))
+    plt.imshow(plotting_grid)
+    for idx, x in enumerate(trajectory[0]):
+        y = trajectory[1][idx]
+        plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
+    x, y = init_robot_pose
+    plt.text(x, y, '+', color='red', size=6, rotation=45)
+    plt.title('Path overlaied occupancy grid', fontsize=6)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
+    image_filename = f'/data/test_logs/align_plot_{args.current_seed}.png'
+    plt.savefig(image_filename, dpi=400)
+    assert os.path.exists(image_filename)
