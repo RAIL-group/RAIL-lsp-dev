@@ -279,7 +279,7 @@ def evaluate_main(args):
                 f" | {cost_str}: {distance:0.3f}\n")
 
     plt.clf()
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(14, 8))
     plt.suptitle(f"{pddl['goal']} - seed: [{args.current_seed}]", fontsize=6)
 
     plt.subplot(231)
@@ -296,11 +296,22 @@ def evaluate_main(args):
     plt.xticks([])
     plt.yticks([])
 
+    viridis_cmap = plt.get_cmap('viridis')
+
+    colors = np.linspace(0, 1, len(trajectory[0]))
+    line_colors = viridis_cmap(colors)
+
     plt.subplot(233)
     # 2 plot the top-dwon-view
     top_down_frame = thor_data.get_top_down_frame()
-    plt.imshow(top_down_frame)
+    offset = thor_data.plot_offset
+    extent = thor_data.plot_extent
+    plt.imshow(top_down_frame, extent=extent)
     plt.title('Top-down view of the map', fontsize=6)
+    for idx, x in enumerate(trajectory[0]):
+        x = x + offset[0]
+        y = trajectory[1][idx] + offset[1]
+        plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
@@ -323,10 +334,6 @@ def evaluate_main(args):
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
-    viridis_cmap = plt.get_cmap('viridis')
-
-    colors = np.linspace(0, 1, len(trajectory[0]))
-    line_colors = viridis_cmap(colors)
 
     for idx, x in enumerate(trajectory[0]):
         y = trajectory[1][idx]
