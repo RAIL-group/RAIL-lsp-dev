@@ -119,7 +119,7 @@ shell:
 	@$(DOCKER_BASE) bash
 
 .PHONY: notebook
-notebook: DOCKER_ARGS=-it -p 8889:8888
+notebook: DOCKER_ARGS=-it -p 8888:8888
 notebook: build
 	@$(DOCKER_BASE) jupyter notebook \
 		--notebook-dir=/notebooks \
