@@ -6,6 +6,7 @@ import numpy as np
 from torch_geometric.data import Data
 
 import learning
+import procthor
 
 
 def write_datum_to_file(args, datum, counter):
@@ -138,3 +139,18 @@ def get_coffee_objects():
         'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
     }
     return obj_loc_dict
+
+
+def get_robots_room_coords(occupancy_grid, robot_pose, rooms):
+    '''This function takes in the room data, robot pose and the
+    occupancy grid as input to return the room coordinates closest
+    to the robot pose'''
+    t_cost = 9999999
+    room_coords = None
+    for room in rooms:
+        room_coords = room['position']
+        cost = procthor.utils.get_cost(occupancy_grid, robot_pose, room_coords)
+        if cost < t_cost:
+            t_cost = cost
+            room_coords = room['position']
+    return room_coords
