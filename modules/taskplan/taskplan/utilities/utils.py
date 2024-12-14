@@ -141,16 +141,18 @@ def get_coffee_objects():
     return obj_loc_dict
 
 
-def get_robots_room_coords(occupancy_grid, robot_pose, rooms):
+def get_robots_room_coords(occupancy_grid, robot_pose, rooms, return_idx=False):
     '''This function takes in the room data, robot pose and the
     occupancy grid as input to return the room coordinates closest
     to the robot pose'''
     t_cost = 9999999
     room_coords = None
-    for room in rooms:
+    for idx, room in enumerate(rooms):
         room_coords = room['position']
         cost = procthor.utils.get_cost(occupancy_grid, robot_pose, room_coords)
         if cost < t_cost:
             t_cost = cost
             room_coords = room['position']
+    if return_idx:
+        return idx + 1
     return room_coords
