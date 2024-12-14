@@ -3,6 +3,7 @@ import glob
 import torch
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 from torch_geometric.data import Data
 
 import learning
@@ -156,3 +157,11 @@ def get_robots_room_coords(occupancy_grid, robot_pose, rooms, return_idx=False):
     if return_idx:
         return idx + 1
     return room_coords
+
+
+def check_skip_protocol(args):
+    IGNORE_LIST = [7007]
+    if args.current_seed in IGNORE_LIST:
+        plt.title("Skipped this troublesome seed!")
+        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
+        exit()
