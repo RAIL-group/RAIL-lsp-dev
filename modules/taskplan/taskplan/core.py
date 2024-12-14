@@ -211,6 +211,10 @@ class PartialMap:
         robot_room = taskplan.utilities.utils.get_robots_room_coords(
             self.grid, robot_pose, rooms, return_idx=True)
         self.room_info[robot_pose] = robot_room
+
+        for idx, room in enumerate(rooms):
+            self.room_info[room['position']] = idx + 1
+
         for container in self.container_poses:
             container_room = self.org_edge_index[0][
                 self.org_edge_index[1].index(container)]
