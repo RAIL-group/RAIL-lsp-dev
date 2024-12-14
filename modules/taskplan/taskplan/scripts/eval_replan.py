@@ -384,6 +384,8 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
+    # skip experiment if seed in ignore list
+    taskplan.utilities.utils.check_skip_protocol(args)
     random.seed(args.current_seed)
     np.random.seed(args.current_seed)
     torch.manual_seed(args.current_seed)
