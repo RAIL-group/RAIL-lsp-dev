@@ -269,6 +269,10 @@ def evaluate_main(args):
                 print('Replanning .. .. ..')
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                              planner=pddl['planner'], max_planner_time=300)
+                if not plan:
+                    plt.title("==== Replanning Failed ====")
+                    plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
+                    exit()
                 break
 
     distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
