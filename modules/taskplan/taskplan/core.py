@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 
 import gridmap
-# import taskplan
+import taskplan
 import lsp_accel
 
 
@@ -206,6 +206,17 @@ class PartialMap:
 
         return input_graph
 
+    def set_room_info(self, robot_pose, rooms):
+        self.room_info = {}
+        robot_room = taskplan.utilities.utils.get_robots_room_coords(
+            self.grid, robot_pose, rooms, return_idx=True)
+        self.room_info[robot_pose] = robot_room
+        for container in self.container_poses:
+            container_room = self.org_edge_index[0][
+                self.org_edge_index[1].index(container)]
+            container_coords = self.container_poses[container]
+            self.room_info[container_coords] = container_room
+
 
 class FState(object):
     """Used to conviently store the 'state' during recursive cost search.
@@ -373,8 +384,54 @@ def get_top_n_frontiers(frontiers, goal_dist, robot_dist, n):
     return fs_collated[0:n]
 
 
+def get_top_n_frontiers_new(frontiers, goal_dist, robot_dist, n, robot_pose, partial_map):
+    """This heuristic is for retrieving the 'best' N frontiers"""
+
+    # we want to pick the N most likely from the starting room and then the
+    # next M most likely absent those
+
+    # need the information which frontier is in which room
+    # also the robot is in which room
+    # the robot room info for the initial_robot_pose cannot be calculated using partial map
+
+    # first get the room of the robot
+    robot_room = partial_map.room_info[robot_pose]
+
+    # then get the (n-m) most likely containers from the other rooms
+
+    frontiers = [f for f in frontiers if f.prob_feasible > 0]
+
+    h_prob = {s: s.prob_feasible for s in frontiers}
+
+    fs_prob = sorted(list(frontiers), key=lambda s: h_prob[s], reverse=True)
+
+    seen = set()
+    fs_collated = []
+
+    # then get the n most likely containers from that room
+    for front_p in fs_prob:
+        front_coord = partial_map.container_poses[front_p.value]
+        front_room = partial_map.room_info[front_coord]
+        if front_p not in seen and front_room == robot_room:
+            seen.add(front_p)
+            fs_collated.append(front_p)
+
+    for front_p in fs_prob:
+        front_coord = partial_map.container_poses[front_p.value]
+        front_room = partial_map.room_info[front_coord]
+        if front_p not in seen:
+            seen.add(front_p)
+            fs_collated.append(front_p)
+
+    assert len(fs_collated) == len(seen)
+    assert len(fs_collated) == len(fs_prob)
+
+    return fs_collated[0:n]
+
+
 def get_best_expected_cost_and_frontier_list(
-        subgoals, partial_map, robot_pose, destination, num_frontiers_max):
+        subgoals, partial_map, robot_pose, destination, num_frontiers_max,
+        alternate_sampling=False):
 
     # Get robot distances
     robot_distances = get_robot_distances(
@@ -389,8 +446,13 @@ def get_best_expected_cost_and_frontier_list(
             partial_map.grid, destination, subgoals)
 
     # Calculate top n subgoals
-    subgoals = get_top_n_frontiers(
-        subgoals, goal_distances, robot_distances, num_frontiers_max)
+    if alternate_sampling:
+        subgoals = get_top_n_frontiers_new(
+            subgoals, goal_distances, robot_distances, num_frontiers_max,
+            robot_pose, partial_map)
+    else:
+        subgoals = get_top_n_frontiers(
+            subgoals, goal_distances, robot_distances, num_frontiers_max)
 
     # Get subgoal pair distances
     subgoal_distances = get_subgoal_distances(partial_map.grid, subgoals)
