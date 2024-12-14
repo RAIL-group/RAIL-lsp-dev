@@ -10,7 +10,6 @@ from pddlstream.algorithms.search import solve_from_pddl
 import procthor
 import taskplan
 from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner, KnownPlanner
-from taskplan.pddl.helper import get_learning_informed_pddl
 from taskplan.utilities.utils import get_container_pose
 
 
@@ -81,7 +80,10 @@ def evaluate_main(args):
     robot_poses = [init_robot_pose]
 
     if not plan:
-        plt.title("No valid plan found with initial settings!")
+        if plan == []:
+            plt.title("Goal already satisfied with initial settings!")
+        elif plan is None:
+            plt.title("No valid plan found with initial settings!")
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
         exit()
 
@@ -269,7 +271,7 @@ def evaluate_main(args):
                 print('Replanning .. .. ..')
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                              planner=pddl['planner'], max_planner_time=300)
-                if not plan:
+                if plan is None:
                     plt.title("==== Replanning Failed ====")
                     plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
                     exit()
@@ -338,7 +340,6 @@ def evaluate_main(args):
     plt.title('Path overlaied occupancy grid', fontsize=6)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
-
 
     for idx, x in enumerate(trajectory[0]):
         y = trajectory[1][idx]
