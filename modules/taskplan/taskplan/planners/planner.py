@@ -66,7 +66,8 @@ class KnownPlanner(Planner):
                 self.partial_map,
                 self.robot_pose,
                 self.destination,
-                num_frontiers_max=NUM_MAX_FRONTIERS))
+                num_frontiers_max=NUM_MAX_FRONTIERS,
+                alternate_sampling=True))
         return frontier_ordering[0]
 
 
@@ -98,7 +99,8 @@ class ClosestActionPlanner(Planner):
                 self.partial_map,
                 self.robot_pose,
                 self.destination,
-                num_frontiers_max=NUM_MAX_FRONTIERS))
+                num_frontiers_max=NUM_MAX_FRONTIERS,
+                alternate_sampling=True))
         return frontier_ordering[0]
 
 
@@ -142,7 +144,8 @@ class LearnedPlanner(Planner):
                 self.partial_map,
                 self.robot_pose,
                 self.destination,
-                num_frontiers_max=NUM_MAX_FRONTIERS))
+                num_frontiers_max=NUM_MAX_FRONTIERS,
+                alternate_sampling=True))
         if return_cost:
             return min_cost, frontier_ordering[0]
         return frontier_ordering[0]
