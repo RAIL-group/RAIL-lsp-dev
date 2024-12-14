@@ -167,13 +167,19 @@ def get_learning_informed_plan(pddl, partial_map, subgoals, init_robot_pose, lea
 def update_problem_move(problem, end):
     x = '(rob-at '
     y = '(not (ban-move))'
+    insert_z = None
+    replaced = False
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
         if x in line:
             line = '        ' + x + f'{end})'
             lines[line_idx] = line
+            insert_z = line_idx + 1
         if y in line:
             line = '        (ban-move)'
+            replaced = True
+    if not replaced:
+        lines.insert(insert_z, '        (ban-move)')
     updated_pddl_problem = '\n'.join(lines)
     return updated_pddl_problem
 
