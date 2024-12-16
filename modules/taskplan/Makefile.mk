@@ -353,12 +353,19 @@ download:
 	$(MAKE) download-ai2thor
 ################################################
 
-# Results processing targets
-.PHONY: result-learned
-result-learned:
-	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
-		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
-		--learned
+# Combined Results processing targets
+.PHONY: result-all
+result-all:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.comp_result \
+		--df_opt_greedy /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_greedy_logfile.txt \
+		--df_pes_greedy /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_greedy_logfile.txt \
+		--df_opt_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_lsp_logfile.txt \
+		--df_pes_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_logfile.txt \
+		--df_opt_oracle /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_oracle_logfile.txt \
+		--df_pes_oracle /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_oracle_logfile.txt \
+		--df_oracle /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_oracle_logfile.txt \
+		--df_learned /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/
 
 .PHONY: result-learned-vs-naive
 result-learned-vs-naive:
