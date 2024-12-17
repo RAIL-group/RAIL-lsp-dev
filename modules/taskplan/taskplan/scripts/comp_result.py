@@ -1,9 +1,6 @@
-import re
 import argparse
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-# from scipy.stats import gaussian_kde
 
 import taskplan
 
@@ -86,4 +83,17 @@ if __name__ == "__main__":
     combined_data = load_logfiles(args)
     common_df = get_common_df(combined_data)
     print(common_df.describe())
-    # raise NotImplementedError
+
+    result_dict = common_df.set_index('seed').T.to_dict()
+    Learned_dict = {k: result_dict[k]['LEARNED_LSP'] for k in result_dict}
+
+    Other_strs = ['OPTIMISTIC_GREEDY', 'PESSIMISTIC_GREEDY',
+                  'OPTIMISTIC_LSP', 'PESSIMISTIC_LSP',
+                  'OPTIMISTIC_ORACLE', 'PESSIMISTIC_ORACLE', 'ORACLE']
+
+    for look_up_str in Other_strs:
+        Other_dict = {k: result_dict[k][look_up_str] for k in result_dict}
+        plt.clf()
+        taskplan.plotting.make_scatter_with_box(Other_dict, Learned_dict)
+        plt.savefig(f'{args.save_dir}/learned_vs_{look_up_str.lower()}.png', dpi=600)
+        plt.close()
