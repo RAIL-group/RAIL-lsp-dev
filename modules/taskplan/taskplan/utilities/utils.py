@@ -160,8 +160,27 @@ def get_robots_room_coords(occupancy_grid, robot_pose, rooms, return_idx=False):
 
 
 def check_skip_protocol(args):
-    IGNORE_LIST = [7007]
-    if args.current_seed in IGNORE_LIST:
-        plt.title("Skipped this troublesome seed!")
-        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
-        exit()
+    # load the ignore list from args.fail_log
+    if hasattr(args, 'fail_log') and args.fail_log:
+        IGNORE_LIST = load_fail_log(args.fail_log)
+        if args.current_seed in IGNORE_LIST:
+            plt.title("Skipping due to prior failure!")
+            plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
+            exit()
+
+
+def load_fail_log(fail_log):
+    failure_seeds = []
+    if os.path.exists(fail_log):
+        with open(fail_log, 'r') as lines:
+            for line in lines:
+                parts = line.split("]")
+                failure_seeds.append(int(parts[0][1:]))
+
+    return failure_seeds
+
+
+def save_fail_log(fail_log, seed, error_msg=''):
+    # open the file in append mode
+    with open(fail_log, 'a') as f:
+        f.write(f"[{seed}] {error_msg}\n")
