@@ -365,7 +365,7 @@ result-all:
 		--df_pes_oracle /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_oracle_logfile.txt \
 		--df_oracle /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_oracle_logfile.txt \
 		--df_learned /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)
 
 .PHONY: result-learned-vs-naive
 result-learned-vs-naive:
