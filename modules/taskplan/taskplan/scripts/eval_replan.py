@@ -53,7 +53,10 @@ def evaluate_main(args):
     )
 
     if not pddl['goal']:
-        plt.title("No valid goal found!")
+        error_msg = "No valid goal settings found!"
+        taskplan.utilities.utils.save_fail_log(
+            args.fail_log, args.current_seed, error_msg)
+        plt.title(error_msg)
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
         exit()
 
@@ -81,9 +84,12 @@ def evaluate_main(args):
 
     if not plan:
         if plan == []:
-            plt.title("Goal already satisfied with initial settings!")
+            error_msg = "Goal already satisfied with initial settings!"
         elif plan is None:
-            plt.title("No valid plan found with initial settings!")
+            error_msg = "No valid plan found with initial settings!"
+        taskplan.utilities.utils.save_fail_log(
+            args.fail_log, args.current_seed, error_msg)
+        plt.title(error_msg)
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
         exit()
 
@@ -272,7 +278,10 @@ def evaluate_main(args):
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                              planner=pddl['planner'], max_planner_time=300)
                 if plan is None:
-                    plt.title("==== Replanning Failed ====")
+                    error_msg = "==== Replanning Failed ===="
+                    taskplan.utilities.utils.save_fail_log(
+                        args.fail_log, args.current_seed, error_msg)
+                    plt.title(error_msg)
                     plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
                     exit()
                 break
@@ -379,6 +388,7 @@ def get_args():
     parser.add_argument('--goal_type', type=str, required=False)
     parser.add_argument('--cost_type', type=str, required=False)
     parser.add_argument('--cache_path', type=str, required=False)
+    parser.add_argument('--fail_log', type=str, required=False)
     return parser.parse_args()
 
 
