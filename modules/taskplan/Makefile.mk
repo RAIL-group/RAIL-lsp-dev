@@ -324,35 +324,6 @@ $(eval-find-seeds-all):
 eval-find-all: $(eval-find-seeds-all)
 ##############################
 
-### Targets for 3rd-party required downloads ###
-# Procthor 10k dataset download target
-.PHONY: download-procthor-10k
-download-procthor-10k:
-	@mkdir -p $(DATA_BASE_DIR)/procthor-data/
-	@$(DOCKER_PYTHON) -m taskplan.scripts.download \
-		--save_dir /data/procthor-data
-
-# Sentesence Bert model download target
-.PHONY: download-sbert
-download-sbert:
-	@mkdir -p $(DATA_BASE_DIR)/sentence_transformers/
-	@$(DOCKER_PYTHON) -m taskplan.scripts.download \
-		--save_dir /data/sentence_transformers
-
-# ai2thor download target
-.PHONY: download-ai2thor
-download-ai2thor:
-	@mkdir -p $(RESOURCES_BASE_DIR)/ai2thor/
-	@$(DOCKER_PYTHON) -m taskplan.scripts.download_ai2thor
-
-# Combined download target
-.PHONY: download
-download:
-	$(MAKE) download-procthor-10k
-	$(MAKE) download-sbert
-	$(MAKE) download-ai2thor
-################################################
-
 # Combined Results processing targets
 .PHONY: result-all
 result-all:
