@@ -12,7 +12,8 @@ NUM_TEST_SEEDS ?= 200
 NUM_EVAL_SEEDS ?= 200
 
 CORE_ARGS ?= --resolution 0.05 \
-			--cache_path /data/.cache
+			--cache_path /data/.cache \
+			--fail_log /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/fail_log.txt
 GOAL_TYPE ?= breakfast
 
 ### Target for experiments ###
