@@ -37,23 +37,18 @@ def get_common_df(combined_data):
 
     common_seeds = pd.Series(sorted(common_seeds))  # Convert to sorted Series for consistency
 
-    # Step 2: Select up to 100 common seeds
+    # Select up to 100 common seeds
     if len(common_seeds) < 100:
         print(f"Warning: Only {len(common_seeds)} common seeds found, selecting all of them.")
     selected_seeds = common_seeds.iloc[:100]
 
-    # write the seeds to a file
-    selected_seeds.to_csv('selected_seeds.csv', index=False)
-    with open('/data/test_logs/selected_seeds.csv', 'w') as f:
-        f.write(selected_seeds.to_string(index=False))
-
-    # Step 3: Filter each table for the selected seeds
+    # Filter each table for the selected seeds
     filtered_tables = [
         table[table['seed'].isin(selected_seeds)].reset_index(drop=True)
         for table in combined_data
     ]
 
-    # Step 4: Merge all filtered tables on 'seed'
+    # Merge all filtered tables on 'seed'
     merged_df = filtered_tables[0]
     for table in filtered_tables[1:]:
         merged_df = pd.merge(merged_df, table, on='seed', how='inner')
@@ -90,6 +85,22 @@ if __name__ == "__main__":
     Other_strs = ['OPTIMISTIC_GREEDY', 'PESSIMISTIC_GREEDY',
                   'OPTIMISTIC_LSP', 'PESSIMISTIC_LSP',
                   'OPTIMISTIC_ORACLE', 'PESSIMISTIC_ORACLE', 'ORACLE']
+
+    for seed in Learned_dict:
+        # save the costs if learned_lsp cost is lower than or equal to
+        # 'OPTIMISTIC_GREEDY', 'PESSIMISTIC_GREEDY', 'OPTIMISTIC_LSP', 'PESSIMISTIC_LSP'
+        learned_cost = Learned_dict[seed]
+        other_costs = []
+        for look_up_str in Other_strs[:4]:
+            other_costs.append(result_dict[seed][look_up_str])
+
+        if learned_cost <= min(other_costs):
+            with open(f'{args.save_dir}/better-seeds-costs.csv', 'a') as f:
+                f.write(f'{seed} {learned_cost} {other_costs}\n')
+
+        if learned_cost < min(other_costs):
+            with open(f'{args.save_dir}/strictly-better-seeds.csv', 'a') as f:
+                f.write(f'{seed}\n')
 
     for look_up_str in Other_strs:
         Other_dict = {k: result_dict[k][look_up_str] for k in result_dict}
