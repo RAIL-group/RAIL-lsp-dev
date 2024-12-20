@@ -2,8 +2,6 @@ import time
 import torch
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-from pddlstream.algorithms.search import solve_from_pddl
 
 import procthor
 import taskplan
@@ -38,6 +36,7 @@ def test_fast_approximation():
 
     whole_graph = thor_data.get_graph()
     partial_map = taskplan.core.PartialMap(whole_graph, grid, distinct=True)
+    partial_map.set_room_info(init_robot_pose, thor_data.rooms)
 
     learned_data = {
         'partial_map': partial_map,
