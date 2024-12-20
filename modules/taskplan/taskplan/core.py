@@ -5,6 +5,7 @@ import numpy as np
 
 import gridmap
 import taskplan
+from taskplan.utilities.utils import get_action_costs
 import lsp_accel
 
 
@@ -436,7 +437,8 @@ def get_top_n_frontiers_new(frontiers, goal_dist, robot_dist, n, robot_pose, par
 def get_best_expected_cost_and_frontier_list(
         subgoals, partial_map, robot_pose, destination, num_frontiers_max,
         alternate_sampling=False):
-
+    for subgoal in subgoals:
+        subgoal.delta_success_cost = get_action_costs()['pick']
     # Get robot distances
     robot_distances = get_robot_distances(
         partial_map.grid, robot_pose, subgoals)
