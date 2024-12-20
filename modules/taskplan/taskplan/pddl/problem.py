@@ -1,4 +1,5 @@
-from taskplan.pddl.helper import generate_pddl_problem, goal_provider, get_expected_cost_of_finding
+from taskplan.pddl.helper import generate_pddl_problem, goal_provider, \
+    get_expected_cost_of_finding, get_action_costs
 from taskplan.utilities.utils import get_robots_room_coords
 from procthor.utils import get_generic_name, get_cost
 
@@ -9,6 +10,7 @@ grid_cost = {}
 
 
 def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfast', learned_data=None):
+    costs = get_action_costs()
     obj_of_interest = []
     cnt_of_interest = []
     containers = map_data.containers
@@ -60,13 +62,15 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                     # to to-loc is sufficient
                     for from_loc in cnt_names:
                         for to_loc in cnt_names:
-                            d = map_data.known_cost[from_loc][to_loc]
+                            # for the optimistic case, we add the fixed find cost
+                            # and the known cost of moving from from_loc to to_loc
+                            d = costs['find'] + map_data.known_cost[from_loc][to_loc]
                             if cost_type == 'pessimistic':
-                                d = d * 100
+                                d = costs['find'] * 10 + map_data.known_cost[from_loc][to_loc]
                             elif cost_type == 'known':
                                 d1 = map_data.known_cost[from_loc][cnt_name]
                                 d2 = map_data.known_cost[cnt_name][to_loc]
-                                d = d1 + d2
+                                d = d1 + d2 + costs['find']
                             elif cost_type == 'learned':
                                 if from_loc == 'initial_robot_pose':
                                     from_coord = learned_data['initial_robot_pose']
