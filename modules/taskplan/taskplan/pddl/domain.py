@@ -1,4 +1,4 @@
-from taskplan.pddl.helper import get_action_costs
+from taskplan.utilities.utils import get_action_costs
 
 
 def get_domain(whole_graph):

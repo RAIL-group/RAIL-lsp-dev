@@ -1,6 +1,6 @@
 from taskplan.pddl.helper import generate_pddl_problem, goal_provider, \
-    get_expected_cost_of_finding, get_action_costs
-from taskplan.utilities.utils import get_robots_room_coords
+    get_expected_cost_of_finding
+from taskplan.utilities.utils import get_robots_room_coords, get_action_costs
 from procthor.utils import get_generic_name, get_cost
 
 
@@ -64,13 +64,13 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                         for to_loc in cnt_names:
                             # for the optimistic case, we add the fixed find cost
                             # and the known cost of moving from from_loc to to_loc
-                            d = costs['find'] + map_data.known_cost[from_loc][to_loc]
+                            d = costs['find'] + costs['pick'] + map_data.known_cost[from_loc][to_loc]
                             if cost_type == 'pessimistic':
-                                d = costs['find'] * 10 + map_data.known_cost[from_loc][to_loc]
+                                d = costs['find'] * 10 + costs['pick'] + map_data.known_cost[from_loc][to_loc]
                             elif cost_type == 'known':
                                 d1 = map_data.known_cost[from_loc][cnt_name]
                                 d2 = map_data.known_cost[cnt_name][to_loc]
-                                d = d1 + d2 + costs['find']
+                                d = d1 + d2 + costs['find'] + costs['pick']
                             elif cost_type == 'learned':
                                 if from_loc == 'initial_robot_pose':
                                     from_coord = learned_data['initial_robot_pose']
