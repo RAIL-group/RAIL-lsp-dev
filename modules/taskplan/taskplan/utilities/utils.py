@@ -184,3 +184,18 @@ def save_fail_log(fail_log, seed, error_msg=''):
     # open the file in append mode
     with open(fail_log, 'a') as f:
         f.write(f"[{seed}] {error_msg}\n")
+
+
+def get_action_costs():
+    action_costs = {
+        'pour-water': 100,
+        'pour-coffee': 100,
+        'make-coffee': 100,
+        'boil': 100,
+        'peel': 100,
+        'toast': 100,
+        'pick': 100,
+        'place': 100,
+        'find': 50
+    }
+    return action_costs
