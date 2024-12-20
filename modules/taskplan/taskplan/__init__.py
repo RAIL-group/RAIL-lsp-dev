@@ -5,3 +5,4 @@ from . import utilities  # noqa
 from . import core  # noqa
 from . import pddl  # noqa
 from . import plotting  # noqa
+from . import environments  # noqa
