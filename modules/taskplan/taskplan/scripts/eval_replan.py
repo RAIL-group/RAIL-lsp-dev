@@ -81,6 +81,8 @@ def evaluate_main(args):
                                  planner=pddl['planner'], max_planner_time=300)
     executed_actions = []
     robot_poses = [init_robot_pose]
+    costs = taskplan.utilities.utils.get_action_costs()
+    action_cost = 0
 
     if not plan:
         if plan == []:
@@ -104,6 +106,8 @@ def evaluate_main(args):
             if action_idx == len(plan) - 1:
                 plan = []
             executed_actions.append(action)
+            if action.name != 'move':
+                action_cost += costs[action.name]
             if action.name == 'pour-water':
                 pour_from = action.args[0]
                 pour_to = action.args[1]
@@ -287,6 +291,7 @@ def evaluate_main(args):
                 break
 
     distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
+    distance += action_cost
     print(f"Planning cost: {distance}")
 
     with open(logfile, "a+") as f:
