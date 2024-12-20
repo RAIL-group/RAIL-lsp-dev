@@ -557,3 +557,17 @@ def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
         task = get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects)
 
     return task
+
+
+def get_action_costs():
+    action_costs = {
+        'pour-water': 100,
+        'pour-coffee': 100,
+        'boil': 100,
+        'peel': 100,
+        'toast': 100,
+        'pick': 100,
+        'place': 100,
+    }
+    action_costs['find'] = action_costs['pick'] + 50
+    return action_costs
