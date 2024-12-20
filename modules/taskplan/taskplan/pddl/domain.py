@@ -1,4 +1,8 @@
+from taskplan.pddl.helper import get_action_costs
+
+
 def get_domain(whole_graph):
+    costs = get_action_costs()
     loc_set = set()
     for c_idx in whole_graph['cnt_node_idx']:
         loc_set.add(whole_graph['node_names'][c_idx])
@@ -71,7 +75,7 @@ def get_domain(whole_graph):
             (filled-with-water ?pour_to)
             (not (filled-with-water ?pour_from))
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['pour-water']})
         )
     )
 
@@ -90,7 +94,7 @@ def get_domain(whole_graph):
             (filled-with-coffee ?pour_to)
             (not (filled-with-coffee ?pour_from))
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['pour-coffee']})
         )
     )
 
@@ -109,7 +113,7 @@ def get_domain(whole_graph):
             (filled-with-coffee ?receptacle)
             (not (filled-with-water ?receptacle))
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['make-coffee']})
         )
     )
 
@@ -127,7 +131,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-boiled ?boilitem)
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['boil']})
         )
     )
 
@@ -144,7 +148,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-peeled ?peelitem)
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['peel']})
         )
     )
 
@@ -162,7 +166,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-toasted ?toastitem)
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['toast']})
         )
     )
 
@@ -180,7 +184,7 @@ def get_domain(whole_graph):
             (is-holding ?obj)
             (not (hand-is-free))
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['pick']})
         )
     )
 
@@ -196,7 +200,7 @@ def get_domain(whole_graph):
             (not (is-holding ?obj))
             (hand-is-free)
             (not (ban-move))
-            (increase (total-cost) 100)
+            (increase (total-cost) {costs['place']})
         )
     )
 
