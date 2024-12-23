@@ -167,8 +167,10 @@ def get_learning_informed_plan(pddl, partial_map, subgoals, init_robot_pose, lea
 def update_problem_move(problem, end):
     x = '(rob-at '
     y = '(not (ban-move))'
+    w = '(not (ban-find))'
     insert_z = None
     replaced = False
+    replaced_w = False
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
         if x in line:
@@ -178,13 +180,19 @@ def update_problem_move(problem, end):
         if y in line:
             line = '        (ban-move)'
             replaced = True
+        if w in line:
+            line = '        (ban-find)'
+            replaced_w = True
     if not replaced:
         lines.insert(insert_z, '        (ban-move)')
+    if not replaced_w:
+        lines.insert(insert_z, '        (ban-find)')
     updated_pddl_problem = '\n'.join(lines)
     return updated_pddl_problem
 
 
 def update_problem_pick(problem, obj, loc):
+    v = '        (ban-find)'
     w = '        (ban-move)'
     x = f'        (is-holding {obj})'
     insert_x = None
@@ -192,7 +200,10 @@ def update_problem_pick(problem, obj, loc):
     z = f'        (is-at {obj} {loc})'
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif y in line:
@@ -209,6 +220,7 @@ def update_problem_pick(problem, obj, loc):
 
 
 def update_problem_place(problem, obj, loc):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = '(not (hand-is-free))'
     y = f'(not (is-at {obj} '
@@ -216,7 +228,10 @@ def update_problem_place(problem, obj, loc):
     delete_z = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -235,6 +250,7 @@ def update_problem_place(problem, obj, loc):
 
 
 def update_problem_pourwater(problem, p_from, p_to):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'        (filled-with-water {p_from})'
     y = f'        (is-located {p_to})'
@@ -243,7 +259,10 @@ def update_problem_pourwater(problem, p_from, p_to):
     insert_z = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -261,6 +280,7 @@ def update_problem_pourwater(problem, p_from, p_to):
 
 
 def update_problem_pourcoffee(problem, p_from, p_to):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'        (filled-with-coffee {p_from})'
     y = f'        (is-located {p_to})'
@@ -269,7 +289,10 @@ def update_problem_pourcoffee(problem, p_from, p_to):
     insert_z = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -287,11 +310,15 @@ def update_problem_pourcoffee(problem, p_from, p_to):
 
 
 def update_problem_makecoffee(problem, obj):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'        (filled-with-water {obj})'
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -302,13 +329,17 @@ def update_problem_makecoffee(problem, obj):
 
 
 def update_problem_boil(problem, obj):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'(is-boilable {obj})'
     y = f'(is-boiled {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -320,13 +351,17 @@ def update_problem_boil(problem, obj):
 
 
 def update_problem_peel(problem, obj):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'(is-peelable {obj})'
     y = f'(is-peeled {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
@@ -338,13 +373,17 @@ def update_problem_peel(problem, obj):
 
 
 def update_problem_toast(problem, obj):
+    v = '        (ban-find)'
     w = '(ban-move)'
     x = f'(is-toastable {obj})'
     y = f'(is-toasted {obj})'
     insert_y = None
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
-        if w in line:
+        if v in line:
+            line = '        (not (ban-find))'
+            lines[line_idx] = line
+        elif w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
         elif x in line:
