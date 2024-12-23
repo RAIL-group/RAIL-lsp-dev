@@ -187,7 +187,7 @@ def save_fail_log(fail_log, seed, error_msg=''):
 
 
 def get_action_costs():
-    scale = .2
+    scale = 1
     action_costs = {
         'pour-water': 100 * scale,
         'pour-coffee': 100 * scale,
