@@ -117,9 +117,6 @@ def evaluate_main(args):
                 # (not (ban-move))
                 pddl['problem'] = taskplan.pddl.helper.update_problem_pourwater(
                     pddl['problem'], pour_from, pour_to)
-                # Finally replan
-                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
-                break
             elif action.name == 'pour-coffee':
                 pour_from = action.args[0]
                 pour_to = action.args[1]
@@ -129,9 +126,6 @@ def evaluate_main(args):
                 # (not (ban-move))
                 pddl['problem'] = taskplan.pddl.helper.update_problem_pourcoffee(
                     pddl['problem'], pour_from, pour_to)
-                # Finally replan
-                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
-                break
             elif action.name == 'make-coffee':
                 receptacle = action.args[1]
                 # Update problem for make-coffee action.
@@ -140,8 +134,6 @@ def evaluate_main(args):
                 # (not (ban-move))
                 pddl['problem'] = taskplan.pddl.helper.update_problem_makecoffee(
                     pddl['problem'], receptacle)
-                # Finally replan
-                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
             elif action.name == 'move':
                 move_start = action.args[0]
                 ms_pose = get_container_pose(move_start, partial_map)
