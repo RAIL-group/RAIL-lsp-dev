@@ -52,6 +52,7 @@ def get_domain(whole_graph):
         (filled-with-water ?obj - item)
         (filled-with-coffee ?obj - item)
         (ban-move)
+        (ban-find)
     )
 
     (:functions
@@ -75,6 +76,7 @@ def get_domain(whole_graph):
             (filled-with-water ?pour_to)
             (not (filled-with-water ?pour_from))
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['pour-water']})
         )
     )
@@ -94,6 +96,7 @@ def get_domain(whole_graph):
             (filled-with-coffee ?pour_to)
             (not (filled-with-coffee ?pour_from))
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['pour-coffee']})
         )
     )
@@ -113,6 +116,7 @@ def get_domain(whole_graph):
             (filled-with-coffee ?receptacle)
             (not (filled-with-water ?receptacle))
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['make-coffee']})
         )
     )
@@ -131,6 +135,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-boiled ?boilitem)
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['boil']})
         )
     )
@@ -148,6 +153,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-peeled ?peelitem)
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['peel']})
         )
     )
@@ -166,6 +172,7 @@ def get_domain(whole_graph):
         :effect (and
             (is-toasted ?toastitem)
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['toast']})
         )
     )
@@ -184,6 +191,7 @@ def get_domain(whole_graph):
             (is-holding ?obj)
             (not (hand-is-free))
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['pick']})
         )
     )
@@ -200,6 +208,7 @@ def get_domain(whole_graph):
             (not (is-holding ?obj))
             (hand-is-free)
             (not (ban-move))
+            (not (ban-find))
             (increase (total-cost) {costs['place']})
         )
     )
@@ -216,6 +225,7 @@ def get_domain(whole_graph):
             (not (rob-at ?start))
             (rob-at ?end)
             (ban-move)
+            (ban-find)
             (increase (total-cost) (known-cost ?start ?end))
         )
     )
@@ -223,6 +233,7 @@ def get_domain(whole_graph):
     (:action find
         :parameters (?obj - item ?from - location ?to - location)
         :precondition (and
+            (not (ban-find))
             (not (restrict-move-to ?to))
             (rob-at ?from)
             (not (is-located ?obj))
