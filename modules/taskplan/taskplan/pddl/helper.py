@@ -394,22 +394,31 @@ def update_problem_toast(problem, obj):
     return updated_pddl_problem
 
 
-def update_problem_find(problem, obj, loc):
-    w = '(ban-move)'
-    y = f'(not (is-located {obj}))'
-    z = f'        (is-at {obj} {loc})'
-    insert_z = None
+def update_problem_find(problem, objs, loc):
+    v = '(rob-at '
+    w = '        (ban-move)'
+    # first just update v and w in the lines
     lines = problem.splitlines()
     for line_idx, line in enumerate(lines):
+        if v in line:
+            line = '        ' + v + f'{loc})'
+            lines[line_idx] = line
         if w in line:
             line = '        (not (ban-move))'
             lines[line_idx] = line
-        elif y in line:
-            line = f'        (is-located {obj})'
-            lines[line_idx] = line
-            insert_z = line_idx + 1
-    if insert_z:
-        lines.insert(insert_z, z)
+
+    # then update the objects
+    for obj in objs:
+        y = f'(not (is-located {obj}))'
+        z = f'        (is-at {obj} {loc})'
+        insert_z = None
+        for line_idx, line in enumerate(lines):
+            if y in line:
+                line = f'        (is-located {obj})'
+                lines[line_idx] = line
+                insert_z = line_idx + 1
+        if insert_z:
+            lines.insert(insert_z, z)
     updated_pddl_problem = '\n'.join(lines)
     return updated_pddl_problem
 
