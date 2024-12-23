@@ -263,11 +263,8 @@ def evaluate_main(args):
                 #                   (is-at obj found_at)
                 # add all the contents of that container in the known space [set as located and where]
                 robot_poses.append(partial_map.container_poses[explored_loc])
-                pddl['problem'] = taskplan.pddl.helper.update_problem_move(
-                    pddl['problem'], found_at)
-                for obj in found_objects:
-                    pddl['problem'] = taskplan.pddl.helper.update_problem_find(
-                        pddl['problem'], obj, found_at)
+                pddl['problem'] = taskplan.pddl.helper.update_problem_find(
+                    pddl['problem'], found_objects, found_at)
 
                 # Finally replan
                 print('Replanning .. .. ..')
