@@ -131,3 +131,4 @@ notebook: build
 include modules/procthor/Makefile.mk
 include modules/lsp/Makefile.mk
 include modules/mrlsp/Makefile.mk
+include modules/mr_task/Makefile.mk
