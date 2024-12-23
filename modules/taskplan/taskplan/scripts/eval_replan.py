@@ -366,7 +366,7 @@ def evaluate_main(args):
     plt.box(False)
     plt.xticks([])
     plt.yticks([])
-    plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1200)
+    plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
 
 
 def get_args():
