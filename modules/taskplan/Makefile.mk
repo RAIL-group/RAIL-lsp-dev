@@ -12,7 +12,9 @@ NUM_TEST_SEEDS ?= 200
 NUM_EVAL_SEEDS ?= 200
 
 CORE_ARGS ?= --resolution 0.05 \
-			--cache_path /data/.cache \
+			--cache_path /data/.cache
+EVAL_ARGS ?= --save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+			--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt \
 			--fail_log /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/fail_log.txt
 GOAL_TYPE ?= breakfast
 
@@ -74,6 +76,27 @@ $(eval-find-seeds-naive):
 .PHONY: eval-find-naive
 eval-find-naive: $(eval-find-seeds-naive)
 
+# Object search: all target #
+eval-find-seeds-all = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/combined_$${ii}.png"; done)
+$(eval-find-seeds-all): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-find-seeds-all):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Combined"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_find_all \
+		$(CORE_ARGS) \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+	 	--image_filename combined_$(seed).png \
+	 	--logfile_name combined_logfile.txt \
+		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+
+.PHONY: eval-find-all
+eval-find-all: $(eval-find-seeds-all)
+##############################
+
 #############################
 #########  GREEDY  ##########
 #############################
@@ -88,7 +111,7 @@ $(eval-task-seeds-optimistic-greedy):
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_optimistic_greedy_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
@@ -115,7 +138,7 @@ $(eval-task-seeds-pessimistic-greedy):
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_pessimistic_greedy_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
@@ -146,7 +169,7 @@ $(eval-task-seeds-optimistic-oracle):
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_optimistic_oracle_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
@@ -173,7 +196,7 @@ $(eval-task-seeds-pessimistic-oracle):
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_pessimistic_oracle_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
@@ -202,7 +225,7 @@ $(eval-task-seeds-oracle):
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_oracle_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
@@ -233,12 +256,11 @@ $(eval-task-seeds-optimistic-lsp): #$(train-file)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_optimistic_lsp_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
-	 	--logfile_name task_optimistic_lsp_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+	 	--logfile_name task_optimistic_lsp_logfile.txt
 
 .PHONY: eval-task-optimistic-lsp
 eval-task-optimistic-lsp: $(eval-task-seeds-optimistic-lsp)
@@ -261,13 +283,12 @@ $(eval-task-seeds-pessimistic-lsp): #$(train-file)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_pessimistic_lsp_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
 		--cost_type pessimistic \
-	 	--logfile_name task_pessimistic_lsp_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+	 	--logfile_name task_pessimistic_lsp_logfile.txt
 
 .PHONY: eval-task-pessimistic-lsp
 eval-task-pessimistic-lsp: $(eval-task-seeds-pessimistic-lsp)
@@ -290,38 +311,16 @@ $(eval-task-seeds-learned): #$(train-file)
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
 		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
+		$(EVAL_ARGS) \
 	 	--current_seed $(seed) \
 	 	--image_filename task_learned_$(seed).png \
 		--goal_type $(GOAL_TYPE) \
 		--cost_type learned \
-	 	--logfile_name task_learned_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+	 	--logfile_name task_learned_logfile.txt
 
 .PHONY: eval-task-learned
 eval-task-learned: $(eval-task-seeds-learned)
 	$(MAKE) result-learned
-##############################
-
-# Object search: all target #
-eval-find-seeds-all = \
-	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
-		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/combined_$${ii}.png"; done)
-$(eval-find-seeds-all): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(eval-find-seeds-all):
-	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | Combined"]
-	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
-	@$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_find_all \
-		$(CORE_ARGS) \
-		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
-	 	--current_seed $(seed) \
-	 	--image_filename combined_$(seed).png \
-	 	--logfile_name combined_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
-
-.PHONY: eval-find-all
-eval-find-all: $(eval-find-seeds-all)
 ##############################
 
 # Combined Results processing targets
