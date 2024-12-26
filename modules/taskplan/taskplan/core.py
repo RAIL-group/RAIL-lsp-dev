@@ -246,7 +246,7 @@ class FState(object):
                 kc = distances['frontier'][frozenset([nf, of])]
             except KeyError:
                 kc = distances['frontier'][frozenset([nf.id, of.id])]
-            self.cost = old_state.cost + old_state.prob * (kc + p * sc +
+            self.cost = old_state.cost + old_state.prob * (kc + 50 + p * sc +
                                                            (1 - p) * ec)
             self.prob = old_state.prob * (1 - p)
         else:
@@ -260,7 +260,7 @@ class FState(object):
 
             if nf.is_from_last_chosen:
                 kc -= IS_FROM_LAST_CHOSEN_REWARD
-            self.cost = kc + p * sc + (1 - p) * ec
+            self.cost = kc + 50 + p * sc + (1 - p) * ec
             self.prob = (1 - p)
 
     def __lt__(self, other):
