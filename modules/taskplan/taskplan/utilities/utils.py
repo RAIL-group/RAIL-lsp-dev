@@ -1,5 +1,6 @@
 import os
 import glob
+import math
 import torch
 import random
 import numpy as np
@@ -71,7 +72,9 @@ def get_pose_from_coord(coords, whole_graph):
 
 def initialize_environment(cnt_node_idx, seed=0):
     random.seed(seed)
-    sample_count = random.randint(1, len(cnt_node_idx))
+    # at least 80% of the containers should be undiscovered
+    cnt_count = len(cnt_node_idx)
+    sample_count = random.randint(math.ceil(0.8 * cnt_count), cnt_count)
     undiscovered_cnts = random.sample(cnt_node_idx, sample_count)
     srtd_und_cnts = sorted(undiscovered_cnts)
     return srtd_und_cnts
