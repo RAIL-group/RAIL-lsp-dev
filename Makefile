@@ -127,6 +127,13 @@ notebook: build
 		--ip 0.0.0.0 \
 		--NotebookApp.token='' --NotebookApp.password=''
 
+tensorboard:
+	@docker run -it \
+		-p 0.0.0.0:6006:6006 \
+		$(DOCKER_CORE_VOLUMES) \
+		$(IMAGE_NAME):$(VERSION) tensorboard \
+		--logdir /data --host 0.0.0.0
+
 # ==== Includes ====
 include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
