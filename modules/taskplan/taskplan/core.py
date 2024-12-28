@@ -178,10 +178,12 @@ class PartialMap:
 
         return graph, subgoal_idx
 
-    def prepare_gcn_input(self, curr_graph, subgoals):
+    def prepare_gcn_input(self, curr_graph, subgoals, simplify=False):
         # add the target node and connect it to all the subgoal nodes
         # with edges
         graph = curr_graph.copy()
+        if simplify:
+            graph = self._get_object_free_graph()
 
         for subgoal in subgoals:
             graph['edge_index'][0].append(subgoal)
@@ -196,9 +198,9 @@ class PartialMap:
         graph['is_target'] = is_target
         return graph
 
-    def get_training_data(self):
+    def get_training_data(self, simplify=False):
         current_graph, subgoals = self.initialize_graph_and_subgoals()
-        input_graph = self.prepare_gcn_input(current_graph, subgoals)
+        input_graph = self.prepare_gcn_input(current_graph, subgoals, simplify)
 
         label = [0] * len(input_graph['node_feats'])
         for target_container in self.target_container:
