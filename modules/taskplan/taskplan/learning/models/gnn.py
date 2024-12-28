@@ -42,8 +42,8 @@ class Gnn(nn.Module):
 
         # Following class weighting factors have
         # been calculated after observing the data
-        self.pos = 1
-        self.neg = 1
+        self.pos = 9.00  # 9.74
+        self.neg = 0.50  # 0.53
 
     def forward(self, data, device):
         lf = data['latent_features'].type(torch.float).to(device)
@@ -84,7 +84,7 @@ class Gnn(nn.Module):
         # Compute the contribution from the is_feasible_label
         is_feasible_xentropy = self.pos * \
             is_feasible_label * -F.logsigmoid(is_feasible_logits) + \
-            (1 - is_feasible_label) * -F.logsigmoid(-is_feasible_logits)
+            self.neg * (1 - is_feasible_label) * -F.logsigmoid(-is_feasible_logits)
         is_feasible_xentropy = torch.sum(is_subgoal * is_feasible_xentropy)
         is_feasible_xentropy /= torch.sum(is_subgoal) + 0.000001
 
