@@ -20,6 +20,7 @@ def get_args():
     args.save_dir = '/data/test_logs/'
     args.image_filename = 'tester.png'
     args.network_file = '/data/taskplan/logs/00_test/gnn.pt'
+    args.cache_path = '/data/.cache'
 
     random.seed(args.current_seed)
     np.random.seed(args.current_seed)
