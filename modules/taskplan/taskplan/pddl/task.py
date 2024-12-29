@@ -130,17 +130,19 @@ def multiple_goal(goals):
 
 def get_related_goal(goal_cnt, goal_objs, combine=True):
     obj1 = goal_objs[1].split('|')[0]
+    obj2 = goal_objs[0].split('|')[0]
     if obj1 == 'egg':
-        state_str = f'(is-boiled {goal_objs[1]})'
+        state_str = '(is-boiled ?obj1)'
     elif obj1 in ['apple', 'tomato', 'potato']:
-        state_str = f'(is-peeled {goal_objs[1]})'
+        state_str = '(is-peeled ?obj1)'
     elif obj1 == 'bread':
-        state_str = f'(is-toasted {goal_objs[1]})'
-    obj1_loc_str = f'(is-at {goal_objs[1]} {goal_cnt})'
-    obj2_loc_str = f'(is-at {goal_objs[0]} {goal_cnt})'
+        state_str = '(is-toasted ?obj1)'
+    # obj1_loc_str = f'(is-at {goal_objs[1]} {goal_cnt})'
+    obj1_loc_str = f'(exists (?obj1 - item) (and (obj-type-{obj1} ?obj1) {state_str} (is-at ?obj1 {goal_cnt})))'
+    obj2_loc_str = f'(exists (?obj2 - item) (and (obj-type-{obj2} ?obj2) (is-at ?obj2 {goal_cnt})))'
     if not combine:
-        return f'{state_str} {obj1_loc_str} {obj2_loc_str}'
-    combined_str = f'(and {state_str} {obj1_loc_str} {obj2_loc_str})'
+        return f'{obj1_loc_str} {obj2_loc_str}'
+    combined_str = f'(and {obj1_loc_str} {obj2_loc_str})'
     return combined_str
 
 
