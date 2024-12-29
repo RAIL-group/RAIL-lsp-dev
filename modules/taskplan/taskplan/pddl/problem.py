@@ -73,12 +73,12 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                 d = d1 + d2 + costs['find'] + costs['pick']
                             elif cost_type == 'learned':
                                 if from_loc == 'initial_robot_pose':
-                                    from_coord = learned_data['initial_robot_pose']
+                                    from_coord = map_data.get_robot_pose()
                                 else:
                                     from_coord = learned_data['partial_map'].node_coords[
                                         learned_data['partial_map'].idx_map[from_loc]]
                                 if to_loc == 'initial_robot_pose':
-                                    to_coord = learned_data['initial_robot_pose']
+                                    to_coord = map_data.get_robot_pose()
                                 else:
                                     to_coord = learned_data['partial_map'].node_coords[
                                         learned_data['partial_map'].idx_map[to_loc]]

@@ -39,7 +39,6 @@ def evaluate_main(args):
     if args.cost_type == 'learned':
         learned_data = {
             'partial_map': partial_map,
-            'initial_robot_pose': init_robot_pose,
             'learned_net': args.network_file
         }
     else:
