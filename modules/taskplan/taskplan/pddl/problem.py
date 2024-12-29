@@ -150,6 +150,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
 
     #             if 'pickable' in child and child['pickable'] == 1:
                 init_states.append(f"(is-pickable {child_name})")
+                init_states.append(f"(obj-type-{gen_name_child} {child_name})")
                 if gen_name_child == 'egg':
                     init_states.append(f"(is-boilable {child_name})")
                 if gen_name_child in ['pot', 'kettle']:
