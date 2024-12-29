@@ -51,48 +51,19 @@ def evaluate_main(args):
         learned_data=learned_data
     )
 
-    if not pddl['goal']:
-        error_msg = "No valid goal settings found!"
-        taskplan.utilities.utils.save_fail_log(
-            args.fail_log, args.current_seed, error_msg)
-        plt.title(error_msg)
-        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
-        exit()
+    taskplan.utilities.utils.check_pddl_validity(pddl, args)
 
-    if args.logfile_name == 'task_learned_logfile.txt':
-        cost_str = 'learned'
-    elif args.logfile_name == 'task_optimistic_greedy_logfile.txt':
-        cost_str = 'optimistic_greedy'
-    elif args.logfile_name == 'task_pessimistic_greedy_logfile.txt':
-        cost_str = 'pessimistic_greedy'
-    elif args.logfile_name == 'task_optimistic_lsp_logfile.txt':
-        cost_str = 'optimistic_lsp'
-    elif args.logfile_name == 'task_pessimistic_lsp_logfile.txt':
-        cost_str = 'pessimistic_lsp'
-    elif args.logfile_name == 'task_optimistic_oracle_logfile.txt':
-        cost_str = 'optimistic_oracle'
-    elif args.logfile_name == 'task_pessimistic_oracle_logfile.txt':
-        cost_str = 'pessimistic_oracle'
-    elif args.logfile_name == 'task_oracle_logfile.txt':
-        cost_str = 'oracle'
+    cost_str = taskplan.utilities.utils.get_cost_string(args)
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                  planner=pddl['planner'], max_planner_time=300)
+
+    taskplan.utilities.utils.check_plan_validity(plan, args)
+
     executed_actions = []
     robot_poses = [init_robot_pose]
     costs = taskplan.utilities.utils.get_action_costs()
     action_cost = 0
-
-    if not plan:
-        if plan == []:
-            error_msg = "Goal already satisfied with initial settings!"
-        elif plan is None:
-            error_msg = "No valid plan found with initial settings!"
-        taskplan.utilities.utils.save_fail_log(
-            args.fail_log, args.current_seed, error_msg)
-        plt.title(error_msg)
-        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
-        exit()
 
     # Intialize logfile
     logfile = os.path.join(args.save_dir, args.logfile_name)
@@ -269,17 +240,7 @@ def evaluate_main(args):
                 print('Replanning .. .. ..')
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                              planner=pddl['planner'], max_planner_time=300)
-                if plan is None:
-                    pddl['planner'] = 'ff-astar5'
-                    plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                                 planner=pddl['planner'], max_planner_time=300)
-                    if plan is None:
-                        error_msg = f"==== Replanning Failed [{cost_str}] ===="
-                        taskplan.utilities.utils.save_fail_log(
-                            args.fail_log, args.current_seed, error_msg)
-                        plt.title(error_msg)
-                        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
-                        exit()
+                taskplan.utilities.utils.check_plan_validity(plan, args, cost_str)
                 break
 
     distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
