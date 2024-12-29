@@ -147,9 +147,11 @@ def get_related_goal(goal_cnt, goal_objs, combine=True):
 
 
 def get_coffee_task(goal_cnt, goal_obj, combine=True):
-    state_str = f'(filled-with-coffee {goal_obj})'
-    obj_loc_str = f'(is-at {goal_obj} {goal_cnt})'
+    gen_obj = goal_obj.split('|')[0]
+    state_str = '(filled-with-coffee ?obj)'
+    obj_loc_str = f'(is-at ?obj {goal_cnt})'
+    t_str = f'(exists (?obj - item) (and (obj-type-{gen_obj} ?obj) {state_str} {obj_loc_str}))'
     if not combine:
-        return f'{state_str} {obj_loc_str}'
-    combined_str = f'(and {state_str} {obj_loc_str})'
+        return f'{t_str}'
+    combined_str = f'(and {t_str})'
     return combined_str
