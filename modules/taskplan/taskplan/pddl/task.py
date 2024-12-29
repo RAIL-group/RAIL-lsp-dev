@@ -102,12 +102,21 @@ def place_one_object(locs, objs):
 
 
 def place_two_objects(locs, objs):
-    t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}))'
+    # t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}))'
+    gen_obj = [obj.split('|')[0] for obj in objs]
+    t_str1 = f'(exists (?obj - item) (and (is-at ?obj {locs[0]}) (obj-type-{gen_obj[0]} ?obj)))'
+    t_str2 = f'(exists (?obj - item) (and (is-at ?obj {locs[1]}) (obj-type-{gen_obj[1]} ?obj)))'
+    t_str = f'(and {t_str1} {t_str2})'
     return t_str
 
 
 def place_three_objects(locs, objs):
-    t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}) (is-at {objs[2]} {locs[2]}))'
+    # t_str = f'(and (is-at {objs[0]} {locs[0]}) (is-at {objs[1]} {locs[1]}) (is-at {objs[2]} {locs[2]}))'
+    gen_obj = [obj.split('|')[0] for obj in objs]
+    t_str1 = f'(exists (?obj - item) (and (is-at ?obj {locs[0]}) (obj-type-{gen_obj[0]} ?obj)))'
+    t_str2 = f'(exists (?obj - item) (and (is-at ?obj {locs[1]}) (obj-type-{gen_obj[1]} ?obj)))'
+    t_str3 = f'(exists (?obj - item) (and (is-at ?obj {locs[2]}) (obj-type-{gen_obj[2]} ?obj)))'
+    t_str = f'(and {t_str1} {t_str2} {t_str3})'
     return t_str
 
 
