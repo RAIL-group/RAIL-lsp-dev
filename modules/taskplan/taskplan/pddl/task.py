@@ -94,7 +94,10 @@ def set_napkin(location, napkin=None):
 
 
 def place_one_object(locs, objs):
-    t_str = f'(is-at {objs[0]} {locs[0]})'
+    # t_str = f'(is-at {objs[0]} {locs[0]})'
+    # get generic name of the object
+    gen_obj = [obj.split('|')[0] for obj in objs]
+    t_str = f'(exists (?obj - item) (and (is-at ?obj {locs[0]}) (obj-type-{gen_obj[0]} ?obj)))'
     return t_str
 
 
