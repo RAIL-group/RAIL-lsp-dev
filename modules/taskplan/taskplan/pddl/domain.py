@@ -17,6 +17,12 @@ def get_domain(whole_graph):
     for obj in obj_set:
         obj_str += ' ' + obj
 
+    # create object-type predicates for the objects
+    for idx, obj in enumerate(obj_set):
+        if idx == 0:
+            obj_type_preds = f'(obj-type-{obj} ?obj - item)'
+        else:
+            obj_type_preds += f'\n        (obj-type-{obj} ?obj - item)'
     DOMAIN_PDDL = f"""
     (define
     (domain indoor)
@@ -51,6 +57,7 @@ def get_domain(whole_graph):
         (is-coffeeingredient ?obj - item)
         (filled-with-water ?obj - item)
         (filled-with-coffee ?obj - item)
+        {obj_type_preds}
         (ban-move)
         (ban-find)
     )
