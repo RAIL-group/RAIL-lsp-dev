@@ -95,16 +95,46 @@ if __name__ == "__main__":
             other_costs.append(result_dict[seed][look_up_str])
 
         if learned_cost <= min(other_costs):
-            with open(f'{args.save_dir}/better-seeds-costs.csv', 'a') as f:
+            with open(f'{args.save_dir}/better-seeds-costs.csv', 'w') as f:
                 f.write(f'{seed} {learned_cost} {other_costs}\n')
 
         if learned_cost < min(other_costs):
-            with open(f'{args.save_dir}/strictly-better-seeds.csv', 'a') as f:
+            with open(f'{args.save_dir}/strictly-better-seeds.csv', 'w') as f:
                 f.write(f'{seed}\n')
 
+    opt_seeds = []
+    pes_seeds = []
+    for seed in Learned_dict:
+        oracle_cost = result_dict[seed]['ORACLE']
+        opt_oracle_cost = result_dict[seed]['OPTIMISTIC_ORACLE']
+        pes_oracle_cost = result_dict[seed]['PESSIMISTIC_ORACLE']
+        if opt_oracle_cost < pes_oracle_cost and \
+           oracle_cost <= opt_oracle_cost:
+            opt_seeds.append(seed)
+        elif opt_oracle_cost > pes_oracle_cost and \
+           oracle_cost <= pes_oracle_cost:
+            pes_seeds.append(seed)
+
+    limit = min(len(opt_seeds), len(pes_seeds))
+    opt_seeds = opt_seeds[:limit]
+    pes_seeds = pes_seeds[:limit]
+    opt_dict = {seed: result_dict[seed] for seed in opt_seeds}
+    pes_dict = {seed: result_dict[seed] for seed in pes_seeds}
+    # change result_dict back to original dataframe format of common_df
+    opt_df = pd.DataFrame.from_dict(opt_dict, orient='index')
+    pes_df = pd.DataFrame.from_dict(pes_dict, orient='index')
+    print('Optimistic favoring maps')
+    print(opt_df.describe())
+    print('Pessimistic favoring maps')
+    print(pes_df.describe())
+
     for look_up_str in Other_strs:
-        Other_dict = {k: result_dict[k][look_up_str] for k in result_dict}
+        opt_other_dict = {k: opt_dict[k][look_up_str] for k in opt_dict}
+        opt_learned_dict = {k: Learned_dict[k] for k in opt_dict}
+        pes_other_dict = {k: pes_dict[k][look_up_str] for k in pes_dict}
+        pes_learned_dict = {k: Learned_dict[k] for k in pes_dict}
         plt.clf()
-        taskplan.plotting.make_scatter_with_box(Other_dict, Learned_dict)
+        taskplan.plotting.make_scatter_compare(opt_other_dict, opt_learned_dict,
+                                               pes_other_dict, pes_learned_dict)
         plt.savefig(f'{args.save_dir}/learned_vs_{look_up_str.lower()}.png', dpi=600)
         plt.close()
