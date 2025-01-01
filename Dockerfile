@@ -82,6 +82,10 @@ RUN pip3 install modules/mrlsp_accel
 COPY modules/mrlsp modules/mrlsp
 RUN pip3 install modules/mrlsp
 RUN cp -r /usr/local/lib/python3.8/dist-packages/mrlsp* /temp
+COPY modules/pouct_planner modules/pouct_planner
+RUN pip3 install modules/pouct_planner
+RUN cp -r /usr/local/lib/python3.8/dist-packages/pouct_planner* /temp
+
 
 FROM base-python AS target
 
