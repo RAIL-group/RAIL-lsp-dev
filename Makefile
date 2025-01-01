@@ -93,9 +93,9 @@ test: build
 	@$(call xhost_activate)
 	@mkdir -p $(DATA_BASE_DIR)/test_logs
 	@$(DOCKER_PYTHON) \
-		-m pytest -vk $(PYTEST_FILTER) \
+		-m pytest -vsk $(PYTEST_FILTER) \
 		-rsx \
-		--full-trace \
+		--disable-warnings \
 		--ignore-glob=**/pybind11/* \
 		--ignore-glob=**/scratch/* \
 		--html=/data/test_logs/report.html \
