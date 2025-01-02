@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import pdb
 
 class POUCTNode(object):
     def __init__(self, state, parent=None, action=None, cost=None):
@@ -32,17 +33,18 @@ class POUCTNode(object):
         action = list(self.action_n.keys())
         action_values = np.array([self.action_values[a] for a in action])
         action_n = np.array([self.action_n[a] for a in action])
-        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(action_n)/np.sum(action_n))
+        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(np.sum(action_n))/action_n)
         return action[np.argmax(uct_values)]
-        # (-1) * action_values/action_n + C * np.sqrt(np.log(action_n)/np.sum(action_n))
 
-def po_mcts(state, n_iterations=1000, C=1.0, rollout_fn=None):
+def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
     root = POUCTNode(state)
     for _ in range(n_iterations):
         leaf = traverse(root, C=C)
         simulation_result = rollout(leaf, rollout_fn=rollout_fn)
         backpropagate(leaf, simulation_result)
     best_action, cost = get_best_action(root)
+    path = get_best_path(leaf)
+    print(path)
     return best_action, cost
 
 def traverse(node, C=1.0):
@@ -116,3 +118,13 @@ def get_chance_node(node, action):
     prob = [p for p in node_action_transition.values()]
     chance_node = np.random.choice(list(node_action_transition.keys()), p=prob)
     return chance_node
+
+def get_best_path(node):
+    path = []
+    while node.parent is not None:
+        path.append(node.prev_action)
+        node = node.parent
+    return path[::-1]
+
+def get_best_path_from_root(root):
+    path = []
