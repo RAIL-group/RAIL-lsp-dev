@@ -27,25 +27,3 @@ class MDP:
 
     def __repr__(self):
         return f'{self.current_state}'
-
-
-
-# actions = {
-#     'S': {'A', 'B'}, 'S2': {'B'}, 'S4': {'A'},
-#     'S1': {}, 'S3': {}, 'S21': {}, 'S22': {}, 'S41': {}, 'S42': {}
-# }
-'''
-States: S -> S1 -> S2
-Actions: S: A leads to S1 with cost 10
-         S1: B leads to S2 with cost 5
-         S2: None
-Goal: Choose action A->B with total cost 15
-'''
-# class DeterministicMDP(MDP):
-#     def __init__(self, state='S'):
-#         super().__init__(state)
-#         self.transitions = {
-#             'S': {'A': [('S1', 1.0, 10)]},
-#             'S1': {'B': [('S2', 1.0, 5)]},
-#             'S2': {}
-#         }
