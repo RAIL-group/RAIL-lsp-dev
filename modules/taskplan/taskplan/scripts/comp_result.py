@@ -40,7 +40,7 @@ def get_common_df(combined_data):
     # Select up to 100 common seeds
     if len(common_seeds) < 100:
         print(f"Warning: Only {len(common_seeds)} common seeds found, selecting all of them.")
-    selected_seeds = common_seeds.iloc[:100]
+    selected_seeds = common_seeds.iloc[:]
 
     # Filter each table for the selected seeds
     filtered_tables = [
@@ -95,11 +95,11 @@ if __name__ == "__main__":
             other_costs.append(result_dict[seed][look_up_str])
 
         if learned_cost <= min(other_costs):
-            with open(f'{args.save_dir}/better-seeds-costs.csv', 'w') as f:
+            with open(f'{args.save_dir}/better-seeds-costs.csv', 'a') as f:
                 f.write(f'{seed} {learned_cost} {other_costs}\n')
 
         if learned_cost < min(other_costs):
-            with open(f'{args.save_dir}/strictly-better-seeds.csv', 'w') as f:
+            with open(f'{args.save_dir}/strictly-better-seeds.csv', 'a') as f:
                 f.write(f'{seed}\n')
 
     opt_seeds = []
@@ -116,11 +116,15 @@ if __name__ == "__main__":
             pes_seeds.append(seed)
 
     limit = min(len(opt_seeds), len(pes_seeds))
+    limit = min(limit, 50)
     opt_seeds = opt_seeds[:limit]
     pes_seeds = pes_seeds[:limit]
     opt_dict = {seed: result_dict[seed] for seed in opt_seeds}
     pes_dict = {seed: result_dict[seed] for seed in pes_seeds}
+    comb_dict = {**opt_dict, **pes_dict}
     # change result_dict back to original dataframe format of common_df
+    comb_df = pd.DataFrame.from_dict(comb_dict, orient='index')
+    print(comb_df.describe())
     opt_df = pd.DataFrame.from_dict(opt_dict, orient='index')
     pes_df = pd.DataFrame.from_dict(pes_dict, orient='index')
     print('Optimistic favoring maps')
