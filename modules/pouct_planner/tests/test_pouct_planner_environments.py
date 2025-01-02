@@ -54,9 +54,8 @@ def test_mdp_large_action_space():
     assert best_action == 'A0'
     assert cost == 1
 
-# @pytest.mark.parametrize('branchings', [3, 4, 5, 6, 7, 8])
-# def test_mdp_large_state_action_space(branchings):
-def test_mdp_large_state_action_space(branchings=8):
+@pytest.mark.parametrize('branchings', [3, 4, 5, 6, 7, 8])
+def test_mdp_large_state_action_space(branchings):
     dense_mdp = {f'S{i}': {f'A{j}': [(f'S{i+1}', 1.0, (i + j))] for j in range(branchings)} for i in range(branchings)}
     dense_mdp[f'S{branchings}'] = {} # terminal state
     state = MDP('S0', dense_mdp)
