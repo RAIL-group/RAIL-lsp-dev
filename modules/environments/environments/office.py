@@ -133,7 +133,7 @@ def add_walls(grid, wall_fill_val=L_BKD, space_val=L_HALL):
     kernel = np.ones([3, 3])
 
     free_grid_mask = grid == space_val
-    inflated_mask = scipy.ndimage.filters.convolve(
+    inflated_mask = scipy.ndimage.convolve(
         free_grid_mask, kernel, mode="constant", cval=0
     )
 

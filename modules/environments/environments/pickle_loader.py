@@ -28,10 +28,10 @@ def _inflate_grid_label(grid, inflation_radius, label_val):
     kernel = np.zeros((kernel_size, kernel_size))
     kernel[y * y + x * x <= inflation_radius * inflation_radius] = 1
 
-    inflated_mask = scipy.ndimage.filters.convolve(flattened_grid,
-                                                   kernel,
-                                                   mode='constant',
-                                                   cval=0)
+    inflated_mask = scipy.ndimage.convolve(flattened_grid,
+                                           kernel,
+                                           mode='constant',
+                                           cval=0)
     return inflated_mask
 
 
