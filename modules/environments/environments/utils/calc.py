@@ -12,7 +12,7 @@ def full_simplify_shapely_polygon(poly):
     if isinstance(poly, shapely.geometry.MultiPolygon) or isinstance(
             poly, shapely.geometry.GeometryCollection):
         return shapely.geometry.MultiPolygon(
-            [full_simplify_shapely_polygon(p) for p in poly])
+            [full_simplify_shapely_polygon(p) for p in poly.geoms])
 
     poly = poly.simplify(0.001, preserve_topology=True)
     # The final point is removed, since shapely will auto-close polygon
@@ -53,7 +53,7 @@ def _convert_grid_to_poly(grid, resolution, do_full_simplify=True):
                                       (x, y + r)
                                       ]).buffer(0.001 * resolution, 0))
 
-    joined_poly = shapely.ops.cascaded_union(polys)
+    joined_poly = shapely.ops.unary_union(polys)
 
     if do_full_simplify:
         return full_simplify_shapely_polygon(joined_poly)
@@ -85,7 +85,7 @@ def split_semantic_grid_to_polys(occupancy_grid, semantic_grid, semantic_class_i
     for label in wall_class_labels:
         inf_poly_boundary = polys[label].buffer(0.1 * resolution, 0).boundary
         if isinstance(all_walls, shapely.geometry.GeometryCollection):
-            all_walls = shapely.geometry.MultiLineString([ls for ls in all_walls])
+            all_walls = shapely.geometry.MultiLineString([ls for ls in all_walls.geoms])
         all_walls = shapely.ops.split(
             all_walls, inf_poly_boundary)
 
@@ -94,7 +94,7 @@ def split_semantic_grid_to_polys(occupancy_grid, semantic_grid, semantic_class_i
                       for label, poly in polys.items()}
     walls = {label: [] for label in wall_class_labels}
     walls['base'] = []
-    for w in all_walls:
+    for w in all_walls.geoms:
         for label in wall_class_labels:
             if inflated_polys[label].contains(w):
                 walls[label].append(w)
@@ -112,7 +112,7 @@ def obstacles_and_boundary_from_occupancy_grid(grid, resolution):
         if isinstance(poly, shapely.geometry.MultiPolygon):
             return list(
                 itertools.chain.from_iterable([get_obstacles(p)
-                                               for p in poly]))
+                                               for p in poly.geoms]))
 
         obstacles = [
             full_simplify_shapely_polygon(shapely.geometry.Polygon(interior))

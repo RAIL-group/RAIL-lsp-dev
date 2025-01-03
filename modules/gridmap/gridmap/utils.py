@@ -38,10 +38,10 @@ def inflate_grid(grid,
     y, x = np.ogrid[-cind:kernel_size - cind, -cind:kernel_size - cind]
     kernel = np.zeros((kernel_size, kernel_size))
     kernel[y * y + x * x <= inflation_radius * inflation_radius] = 1
-    inflated_mask = scipy.ndimage.filters.convolve(obstacle_grid,
-                                                   kernel,
-                                                   mode='constant',
-                                                   cval=0)
+    inflated_mask = scipy.ndimage.convolve(obstacle_grid,
+                                           kernel,
+                                           mode='constant',
+                                           cval=0)
     inflated_mask = inflated_mask >= 1.0
     inflated_grid = grid.copy()
     inflated_grid[inflated_mask] = collision_val
