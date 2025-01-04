@@ -32,7 +32,7 @@ def test_stochastic_mdp_cost():
         'S1': {'C': [('S3', 1.0, 3)]}, 'S2': {}, 'S3': {}
     }
     state = MDP('S', stochastic_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=1000)
+    best_action, cost = core.po_mcts(state, n_iterations=10000)
     assert best_action == 'A'
     assert pytest.approx(cost, abs=1.0) == (0.8 * (5 + 3) + 0.2 * 50)
 
@@ -63,3 +63,14 @@ def test_mdp_large_state_action_space(branchings):
     expected_cost = sum(range(branchings))
     assert pytest.approx(cost, abs=1.0) == expected_cost, f"Cost mismatch: expected {expected_cost}, got {cost}"
     assert best_action == 'A0', f"Best action mismatch: expected 'A0', got {best_action}"
+
+def test_single_action_more_states():
+    single_action_mdp = {
+        'S': {'A': [('S1', 0.5, 10), ('S2', 0.3, 20), ('S3', 0.2, 30)],
+              'B': [('S1', 0.5, 30), ('S2', 0.3, 20), ('S3', 0.2, 10)]},
+        'S1': {}, 'S2': {}, 'S3': {}
+    }
+    state = MDP('S', single_action_mdp)
+    best_action, cost = core.po_mcts(state, n_iterations=10000)
+    assert best_action == 'A'
+    assert pytest.approx(cost, abs=1.0) == (0.5 * 10 + 0.3 * 20 + 0.2 * 30)
