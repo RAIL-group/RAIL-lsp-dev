@@ -14,6 +14,7 @@ class POUCTNode(object):
         self.children = set()
         self.unexplored_actions = [copy.copy(a) for a in self.state.get_actions()]
 
+        self.total_n = 0
         # the number of times each action has been taken
         self.action_n = {act: 0 for act in self.unexplored_actions}
         # the cumulative values for each action
@@ -33,7 +34,7 @@ class POUCTNode(object):
         action = list(self.action_n.keys())
         action_values = np.array([self.action_values[a] for a in action])
         action_n = np.array([self.action_n[a] for a in action])
-        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(np.sum(action_n))/action_n)
+        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(self.total_n)/action_n)
         return action[np.argmax(uct_values)]
 
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
@@ -80,6 +81,7 @@ def rollout(node, rollout_fn=None):
 
 def backpropagate(node, result):
     if node.parent is not None:
+        node.parent.total_n += 1
         node.parent.action_n[node.prev_action] += 1
         node.parent.action_values[node.prev_action] += result
         backpropagate(node.parent, result)
