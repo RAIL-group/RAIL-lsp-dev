@@ -3,7 +3,7 @@ MAKEFLAGS += --no-print-directory
 MAJOR ?= 0
 MINOR ?= 1
 VERSION = $(MAJOR).$(MINOR)
-APP_NAME ?= rail-plan-uncertain
+APP_NAME ?= rail-plan-uncertain-abhish
 NUM_BUILD_CORES ?= $(shell grep -c ^processor /proc/cpuinfo)
 
 # Handle Optional GPU
@@ -129,3 +129,5 @@ notebook: build
 
 # ==== Includes ====
 include modules/procthor/Makefile.mk
+include modules/lsp/Makefile.mk
+include modules/mrlsp/Makefile.mk
