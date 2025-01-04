@@ -24,7 +24,12 @@ def gen_data_main(args):
 
     # Iterate over the objects in whole graph and set
     # them as object to find to create training datas
+    processed = set()
     for idx, target_obj in enumerate(whole_graph['obj_node_idx']):
+        gen_name = whole_graph['node_names'][target_obj]
+        if gen_name in processed:
+            continue
+        processed.add(gen_name)
         partial_map.target_obj = target_obj
         training_data = partial_map.get_training_data()
         taskplan.utilities.utils.write_datum_to_file(args, training_data, idx)
