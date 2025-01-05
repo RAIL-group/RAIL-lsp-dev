@@ -109,12 +109,13 @@ class LearnedPlanner(Planner):
     and then uses LSP approach to pick the best available action (subgoal).
     '''
     def __init__(self, args, partial_map, device=None, verbose=True,
-                 destination=None):
+                 destination=None, normalize=False):
         super(LearnedPlanner, self).__init__(
             args, partial_map, device, verbose)
         self.destination = destination
         self.subgoal_property_net = Gnn.get_net_eval_fn(
             args.network_file, device=self.device)
+        self.normalize = normalize
 
     def _update_subgoal_properties(self):
         self.gcn_graph_input = self.partial_map.prepare_gcn_input(
@@ -125,6 +126,13 @@ class LearnedPlanner(Planner):
             datum=self.gcn_graph_input,
             subgoals=self.subgoals
         )
+        if self.normalize:
+            # normalize the probabilities
+            total_prob = 0
+            for subgoal in self.subgoals:
+                total_prob += prob_feasible_dict[subgoal]
+            for subgoal in self.subgoals:
+                prob_feasible_dict[subgoal] /= total_prob
         for subgoal in self.subgoals:
             subgoal.set_props(
                 prob_feasible=prob_feasible_dict[subgoal])

@@ -83,8 +83,8 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
 
     args = lambda: None
     args.network_file = learned_net
-    planner = LearnedPlanner(args, partial_map,
-                             verbose=False, destination=destination)
+    planner = LearnedPlanner(args, partial_map, verbose=False,
+                             destination=destination, normalize=True)
     planner.update(graph, subgoals, robot_pose)
     exp_cost, _ = planner.compute_selected_subgoal(return_cost=True)
     return round(exp_cost, 4)
