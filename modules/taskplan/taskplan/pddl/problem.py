@@ -66,7 +66,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                             # and the known cost of moving from from_loc to to_loc
                             d = costs['find'] + costs['pick'] + map_data.known_cost[from_loc][to_loc]
                             if cost_type == 'pessimistic':
-                                d = 10000
+                                d = d + 10000
                             elif cost_type == 'known':
                                 d1 = map_data.known_cost[from_loc][cnt_name]
                                 d2 = map_data.known_cost[cnt_name][to_loc]
