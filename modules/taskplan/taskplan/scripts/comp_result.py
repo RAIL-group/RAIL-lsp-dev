@@ -102,6 +102,14 @@ if __name__ == "__main__":
             with open(f'{args.save_dir}/strictly-better-seeds.csv', 'a') as f:
                 f.write(f'{seed}\n')
 
+    for look_up_str in Other_strs:
+        Other_dict = {k: result_dict[k][look_up_str] for k in result_dict}
+        plt.clf()
+        taskplan.plotting.make_scatter_with_box(Other_dict, Learned_dict)
+        plt.savefig(f'{args.save_dir}/learned_vs_{look_up_str.lower()}.png', dpi=600)
+        plt.close()
+    exit()
+
     opt_seeds = []
     pes_seeds = []
     for seed in Learned_dict:
