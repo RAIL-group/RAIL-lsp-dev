@@ -122,6 +122,6 @@ def make_scatter_plot_with_box(data_x, data_y, max_val=None, xlabel='Baseline', 
     learned_cost = np.average(data_y)
     improv = (baseline_cost - learned_cost) / baseline_cost * 100
 
-    f_ax_mid.set_title(f"{xlabel}: {baseline_cost:.1f}, {ylabel}: {learned_cost:.1f}, Improv: {improv:.1f}")
+    f_ax_mid.set_title(f"{xlabel}: {baseline_cost:.1f}, {ylabel}: {learned_cost:.1f}, Improv: {improv:.1f} %")
 
     return f_ax_mid

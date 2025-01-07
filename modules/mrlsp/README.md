@@ -23,7 +23,7 @@ The `Makefile.mk` provides multiple targets for reproducing results.
 - `make mrlsp-vis` will visualize the planner in office environment.
 - `make mrlsp-results` will first generate data using targets described in `lsp` module, trains the neural net, evaluates the planner, and generate results. Running this target produces results as shown below for 1, 2, and 3 robots in 200 procedurally generated `office2` environment.
 
-| ![Figure 1](resources/r_2_scatter.png) | ![Figure 2](resources/r_2_scatter.png) | ![Figure 3](resources/r_2_scatter.png) |
+| ![Figure 1](resources/r_1_scatter.png) | ![Figure 2](resources/r_2_scatter.png) | ![Figure 3](resources/r_3_scatter.png) |
 |:--------------------:|:--------------------:|:--------------------:|
 | Num_robots = 1          | Num_robots = 2            | Num_robots = 3            |
 
