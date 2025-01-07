@@ -129,3 +129,5 @@ notebook: build
 
 # ==== Includes ====
 include modules/procthor/Makefile.mk
+include modules/lsp/Makefile.mk
+include modules/mrlsp/Makefile.mk

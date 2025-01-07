@@ -8,7 +8,7 @@ shapely
 # opencv-python
 pyyaml
 setuptools
-# tensorboard
+tensorboard
 # pyscreenshot
 # pybullet
 prior
