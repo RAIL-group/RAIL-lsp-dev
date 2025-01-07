@@ -3,7 +3,7 @@ MAKEFLAGS += --no-print-directory
 MAJOR ?= 0
 MINOR ?= 1
 VERSION = $(MAJOR).$(MINOR)
-APP_NAME ?= rail-plan-uncertain-abhish
+APP_NAME ?= rail-plan-uncertain
 NUM_BUILD_CORES ?= $(shell grep -c ^processor /proc/cpuinfo)
 
 # Handle Optional GPU
