@@ -56,10 +56,26 @@ def test_mdp_large_action_space():
 
 @pytest.mark.parametrize('branchings', [3, 4, 5, 6, 7, 8])
 def test_mdp_large_state_action_space(branchings):
+
+    def lower_bound_cost_rollout_fn(state):
+        cost = 0
+        while not (state.is_goal_state or len(state.get_actions()) == 0):
+            actions = state.get_actions()
+            action_cost = [(action, state.transition(action)) for action in actions]
+            # [(action1, {state1: (prob, cost), state2: (prob, cost) ..}),
+            #  (action2, {state1: (prob, cost), state2: (prob, cost) ..}) ...]
+            best_action = min(action_cost, key=lambda x: list(x[1].values())[0][1])
+            state = list(best_action[1].keys())[0]
+            cost += list(best_action[1].values())[0][1]
+        return cost
+
     dense_mdp = {f'S{i}': {f'A{j}': [(f'S{i+1}', 1.0, (i + j))] for j in range(branchings)} for i in range(branchings)}
     dense_mdp[f'S{branchings}'] = {} # terminal state
     state = MDP('S0', dense_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=50000)
+    best_action, cost = core.po_mcts(state,
+                                     n_iterations=50000,
+                                     rollout_fn=lower_bound_cost_rollout_fn,
+                                     C=1.0)
     expected_cost = sum(range(branchings))
     assert pytest.approx(cost, abs=1.0) == expected_cost, f"Cost mismatch: expected {expected_cost}, got {cost}"
     assert best_action == 'A0', f"Best action mismatch: expected 'A0', got {best_action}"
