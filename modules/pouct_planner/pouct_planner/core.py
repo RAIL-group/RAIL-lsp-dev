@@ -28,7 +28,7 @@ class POUCTNode(object):
 
     def is_terminal_node(self):
         '''A state can have multiple actions, but can be a terminal node'''
-        return len(self.state.get_actions()) == 0
+        return len(self.state.get_actions()) == 0 or self.state.is_goal_state
 
     def get_best_uct_action(self, C=1.0):
         action = list(self.action_n.keys())

@@ -1,8 +1,9 @@
 class MDP:
-    def __init__(self, state, transitions):
+    def __init__(self, state, transitions, is_goal_state=False):
         self.mdp_transitions = transitions
         self.current_state = state
         self.actions = self._get_actions_in_format()
+        self.is_goal_state = is_goal_state
 
     def transition(self, action):
         outcomes = self.mdp_transitions[self.current_state][action]
