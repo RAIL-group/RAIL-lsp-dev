@@ -131,6 +131,7 @@ class LearnedPlanner(Planner):
             total_prob = 0
             for subgoal in self.subgoals:
                 total_prob += prob_feasible_dict[subgoal]
+            total_prob = min(total_prob, 1)
             for subgoal in self.subgoals:
                 prob_feasible_dict[subgoal] /= total_prob
         for subgoal in self.subgoals:
