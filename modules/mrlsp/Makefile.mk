@@ -36,16 +36,16 @@ define mrlsp_get_seeds
 endef
 
 MRLSP_NUM_ROBOTS = 1 2 3
-all-targets = $(foreach num_robots, $(MRLSP_NUM_ROBOTS), \
-				$(foreach seed, $(call mrlsp_get_seeds), \
-					$(DATA_BASE_DIR)/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME)/mrlsp_eval_$(seed)_r$(num_robots).png))
+all-targets-mrlsp-eval = $(foreach num_robots, $(MRLSP_NUM_ROBOTS), \
+							$(foreach seed, $(call mrlsp_get_seeds), \
+								$(DATA_BASE_DIR)/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME)/mrlsp_eval_$(seed)_r$(num_robots).png))
 
 .PHONY: mrlsp-eval
-mrlsp-eval: $(all-targets)
-$(all-targets): $(lsp-office-train-file)
-$(all-targets): seed = $(shell echo $@ | grep -oE 'mrlsp_eval_[0-9]+' | cut -d'_' -f3)
-$(all-targets): num_robots = $(shell echo $@ | grep -oE 'r[0-9]+' | grep -oE '[0-9]+')
-$(all-targets):
+mrlsp-eval: $(all-targets-mrlsp-eval)
+$(all-targets-mrlsp-eval): $(lsp-office-train-file)
+$(all-targets-mrlsp-eval): seed = $(shell echo $@ | grep -oE 'mrlsp_eval_[0-9]+' | cut -d'_' -f3)
+$(all-targets-mrlsp-eval): num_robots = $(shell echo $@ | grep -oE 'r[0-9]+' | grep -oE '[0-9]+')
+$(all-targets-mrlsp-eval):
 	@echo "Evaluating: $(num_robots) robots, seed: $(seed)"
 	$(call xhost_activate)
 	@mkdir -p $(DATA_BASE_DIR)/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME)
@@ -56,10 +56,14 @@ $(all-targets):
 		--logfile_dir data/$(MRLSP_BASENAME)/log \
 		--seed $(seed)
 
-MRLSP_NUM_ROBOTS_RESULTS = 2
+MRLSP_NUM_ROBOTS_RESULTS = $(MRLSP_NUM_ROBOTS)
+all-targets-mrlsp-results = $(foreach num_robots, $(MRLSP_NUM_ROBOTS_RESULTS), \
+								$(DATA_BASE_DIR)/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME)/r_${num_robots}_scatter.png)
 .PHONY: mrlsp-results
-mrlsp-results:
-	@echo "Results for MRLSP: Robots $(MRLSP_NUM_ROBOTS_RESULTS)"
+mrlsp-results: $(all-targets-mrlsp-results)
+$(all-targets-mrlsp-results): num_robots = $(shell echo $@ | grep -oE '[0-9]+')
+$(all-targets-mrlsp-results):
+	@echo "Results for MRLSP: Robots $(num_robots)"
 	@$(DOCKER_PYTHON) -m mrlsp.scripts.mrlsp_results \
 		--save_dir data/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME) \
-		--num_robots $(MRLSP_NUM_ROBOTS_RESULTS)
+		--num_robots $(num_robots)
