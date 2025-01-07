@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # Get the data from the log file
     regex_match = re.compile(r"SEED\s*:\s*(\d+)\s*\|\s*learned\s*:\s*([\d.]+)\s*\|\s*optimistic\s*:\s*([\d.]+)")
-    logfile = Path(args.save_dir).parent / f'{args.logfile_name}_robots_{args.num_robots}_gcn.txt'
+    logfile = Path(args.save_dir).parent / f'{args.logfile_name}_robots_{args.num_robots}.txt'
     with open(logfile) as f:
         for line in f:
             match = regex_match.match(line)
