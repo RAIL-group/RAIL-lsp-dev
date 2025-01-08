@@ -42,8 +42,8 @@ class Gnn(nn.Module):
 
         # Following class weighting factors have
         # been calculated after observing the data
-        self.pos = 9.00  # 9.74
-        self.neg = 0.50  # 0.53
+        self.pos = 1  # 9.74
+        self.neg = 1  # 0.53
 
     def forward(self, data, device):
         lf = data['latent_features'].type(torch.float).to(device)
