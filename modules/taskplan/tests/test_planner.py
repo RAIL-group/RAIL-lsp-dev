@@ -40,7 +40,6 @@ def test_fast_approximation():
 
     learned_data = {
         'partial_map': partial_map,
-        'initial_robot_pose': init_robot_pose,
         'learned_net': args.network_file
     }
 
