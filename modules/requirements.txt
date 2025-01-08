@@ -13,6 +13,7 @@ tensorboard
 # pybullet
 prior
 ai2thor
+ortools
 
 # Plotting & Data Handling
 matplotlib
