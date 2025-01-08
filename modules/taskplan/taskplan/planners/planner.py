@@ -109,7 +109,7 @@ class LearnedPlanner(Planner):
     and then uses LSP approach to pick the best available action (subgoal).
     '''
     def __init__(self, args, partial_map, device=None, verbose=True,
-                 destination=None, normalize=False):
+                 destination=None, normalize=True):
         super(LearnedPlanner, self).__init__(
             args, partial_map, device, verbose)
         self.destination = destination
