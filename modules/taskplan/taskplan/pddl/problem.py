@@ -115,7 +115,8 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                         child_name,
                                         from_room_coords,  # robot_pose
                                         to_room_coords,  # destination_pose
-                                        learned_data['learned_net'])
+                                        learned_data['learned_net'],
+                                        learned_data['tsp_cost'])
                                     pre_compute[(child_name, from_room_coords, to_room_coords)] = intermediate_d
                                 if (from_coord, from_room_coords) in grid_cost:
                                     part_from = grid_cost[(from_coord, from_room_coords)]
@@ -128,7 +129,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                 else:
                                     part_to = get_cost(map_data.occupancy_grid, to_coord, to_room_coords)
                                     grid_cost[(to_coord, to_room_coords)] = part_to
-                                d = part_from + intermediate_d + part_to
+                                d = costs['find'] + costs['pick'] + part_from + intermediate_d + part_to
 
                             init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
                     # or else we can optimistically assume the object is in the nearest
