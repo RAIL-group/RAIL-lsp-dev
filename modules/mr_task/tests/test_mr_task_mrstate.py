@@ -5,111 +5,11 @@ from mr_task.core import (MRState,
                           Action,
                           History,
                           EventOutcome,
-                          get_state_with_history,
-                          advance_mrstate)
+                          advance_mrstate,
+                          get_state_from_history)
 from mr_task.robot import Robot
 
-
-def test_mrtask_mrstate_outcome_states_test_with_history():
-    robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
-
-    subgoal_node1 = Node(is_subgoal=True)
-    subgoal_node2 = Node(is_subgoal=True)
-    subgoal_node3 = Node(is_subgoal=True)
-
-    subgoal_prop_dict = {
-        (subgoal_node1, 'objA'): [0.8, 10, 20],
-        (subgoal_node2, 'objB'): [0.2, 50, 30],
-        (subgoal_node3, 'objB'): [0.5, 110, 100]
-    }
-    distances = {
-        (robot_node, subgoal_node1): 20,
-        (robot_node, subgoal_node2): 30,
-        (subgoal_node1, subgoal_node3): 200,
-        (subgoal_node2, subgoal_node3): 150
-    }
-    action_unknownAS1 = Action(subgoal_node1, ('objA',), subgoal_prop_dict)
-    action_unknownBS2 = Action(subgoal_node2, ('objB',), subgoal_prop_dict)
-    action_unknownBS3 = Action(subgoal_node3, ('objB',), subgoal_prop_dict)
-
-    specification = "F objA & F objB"
-    planner = DFAManager(specification)
-    mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                      planner=planner)
-    print(subgoal_node1, subgoal_node2, subgoal_node3)
-
-    outcome_states = mrstate.get_outcome_states(action_unknownAS1, distances)
-    assert len(outcome_states) == 1
-    outcome_states = outcome_states[0].get_outcome_states(action_unknownBS2, distances)
-    assert len(outcome_states) == 2
-
-    success_AS1_history = History()
-    success_AS1_history.add_event(action_unknownAS1, EventOutcome.SUCCESS)
-    success_AS1_state = get_state_with_history(outcome_states, success_AS1_history)
-    assert success_AS1_state.history.get_action_outcome(action_unknownAS1) == EventOutcome.SUCCESS
-    assert success_AS1_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.CHANCE
-    assert success_AS1_state.cost == 30
-    assert success_AS1_state.prob == pytest.approx(0.8)
-    assert not planner.is_accepting_state(success_AS1_state.dfa_state)
-
-    failure_AS1_history = History()
-    failure_AS1_history.add_event(action_unknownAS1, EventOutcome.FAILURE)
-    failure_AS1_state = get_state_with_history(outcome_states, failure_AS1_history)
-    assert failure_AS1_state.history.get_action_outcome(action_unknownAS1) == EventOutcome.FAILURE
-    assert failure_AS1_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.CHANCE
-    assert failure_AS1_state.cost == 30.0
-    assert failure_AS1_state.prob == pytest.approx(0.2)
-    assert not planner.is_accepting_state(failure_AS1_state.dfa_state)
-
-    # Object A is found
-    outcome_success_state = success_AS1_state.get_outcome_states(action_unknownBS3, distances)
-    assert len(outcome_success_state) == 2
-
-    # Object A is found, Object B is found
-    success_AS1_success_BS2_history = success_AS1_history.copy()
-    success_AS1_success_BS2_history.add_event(action_unknownBS2, EventOutcome.SUCCESS)
-    success_AS1_success_BS2_state = get_state_with_history(outcome_success_state, success_AS1_success_BS2_history)
-    assert success_AS1_success_BS2_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.SUCCESS
-    assert success_AS1_success_BS2_state.cost == 80
-    assert success_AS1_success_BS2_state.prob == pytest.approx(0.8 * 0.2)
-    assert planner.is_accepting_state(success_AS1_success_BS2_state.dfa_state)
-
-    # Object A is found, Object B is NOT found
-    success_AS1_failure_BS2_history = success_AS1_history.copy()
-    success_AS1_failure_BS2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
-    success_AS1_failure_BS2_state = get_state_with_history(outcome_success_state, success_AS1_failure_BS2_history)
-    assert success_AS1_failure_BS2_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.FAILURE
-    assert success_AS1_failure_BS2_state.cost == 60
-    assert success_AS1_failure_BS2_state.prob == pytest.approx(0.8 * (1 - 0.2))
-    assert not planner.is_accepting_state(success_AS1_failure_BS2_state.dfa_state)
-
-    # Object A is NOT Found
-    outcome_failure_state = failure_AS1_state.get_outcome_states(action_unknownBS3, distances)
-    assert len(outcome_failure_state) == 2
-
-    # Object A is NOT found, Object B is not found
-    failure_AS1_failure_BS2_history = failure_AS1_history.copy()
-    failure_AS1_failure_BS2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
-    failure_AS1_failure_BS2_state = get_state_with_history(outcome_failure_state, failure_AS1_failure_BS2_history)
-    assert failure_AS1_failure_BS2_state.cost == 60
-    assert failure_AS1_failure_BS2_state.prob == pytest.approx((1 - 0.8) * (1 - 0.2))
-    assert not planner.is_accepting_state(failure_AS1_failure_BS2_state.dfa_state)
-
-    # Object A is NOT found, Object B is not found, Final action assignment (B is not found)
-    outcome_failureA_failureB_state = failure_AS1_failure_BS2_state.get_outcome_states(action_unknownBS3, distances)
-    assert len(outcome_failure_state) == 2
-
-    failure_AS1_failure_BS2_failure_BS3_history = failure_AS1_failure_BS2_history.copy()
-    failure_AS1_failure_BS2_failure_BS3_history.add_event(action_unknownBS3, EventOutcome.FAILURE)
-    failure_AS1_failure_BS2_failure_BS3_state = get_state_with_history(outcome_failureA_failureB_state,
-                                                                       failure_AS1_failure_BS2_failure_BS3_history)
-    assert failure_AS1_failure_BS2_failure_BS3_state.cost == 60 + 280
-    assert failure_AS1_failure_BS2_failure_BS3_state.prob == pytest.approx((1-0.8) * (1 - 0.2) * (1 - 0.5))
-    assert not planner.is_accepting_state(failure_AS1_failure_BS2_failure_BS3_state.dfa_state)
-
-def test_mrtask_more_mrstate_outcomes():
+def test_mrstate_transition_function_cost_and_prob():
     robot_node = Node()
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
@@ -131,37 +31,140 @@ def test_mrtask_more_mrstate_outcomes():
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                      planner=planner)
-    outcome_states = [mrstate]
-    for action in [action_unknownAS1, action_unknownBS2]:
-        outcome_states = outcome_states[0].get_outcome_states(action, distances)
+                      planner=planner,
+                      distances=distances)
+
+    outcome_states = mrstate.transition(action_unknownAS1)
+    assert len(outcome_states) == 1
+    prob, cost = list(outcome_states.values())[0]
+    assert cost == 0
+    assert prob == 1.0
+    mrstate = list(outcome_states.keys())[0]
+    outcome_states = mrstate.transition(action_unknownBS2)
     assert len(outcome_states) == 3
+    state1_history = History()
+    state2_history = History()
+    state3_history = History()
+    state1_history.add_event(action_unknownAS1, EventOutcome.SUCCESS)
+    state1_history.add_event(action_unknownBS2, EventOutcome.SUCCESS)
+    state2_history.add_event(action_unknownAS1, EventOutcome.SUCCESS)
+    state2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
+    state3_history.add_event(action_unknownAS1, EventOutcome.FAILURE)
+    state_history_props = [(state1_history, (0.8 * 0.4, 80)),
+                          (state2_history, (0.8 * 0.6, 60)),
+                          (state3_history, (0.2, 40))]
 
-    history_A_F = History()
-    history_A_F.add_event(action_unknownAS1, EventOutcome.FAILURE)
-    A_F_state = get_state_with_history(outcome_states, history_A_F)
-    assert A_F_state.cost == 40
-    assert A_F_state.prob == pytest.approx(0.2)
-    assert not planner.is_accepting_state(A_F_state.dfa_state)
+    for history in state_history_props:
+        state = get_state_from_history(outcome_states, history[0])
+        assert outcome_states[state][1] == history[1][1]
+        assert pytest.approx(outcome_states[state][0]) == history[1][0]
 
-    history_A_S_B_S = History()
-    history_A_S_B_S.add_event(action_unknownAS1, EventOutcome.SUCCESS)
-    history_A_S_B_S.add_event(action_unknownBS2, EventOutcome.SUCCESS)
-    A_S_B_S_state = get_state_with_history(outcome_states, history_A_S_B_S)
-    assert A_S_B_S_state.cost == 80
-    assert A_S_B_S_state.prob == pytest.approx(0.8 * 0.4)
-    assert planner.is_accepting_state(A_S_B_S_state.dfa_state)
+def test_mrtask_mrstate_outcome_states_with_history():
+    robot_node = Node()
+    robot_unk1 = Robot(robot_node)
+    robot_unk2 = Robot(robot_node)
 
-    history_A_S_B_F = History()
-    history_A_S_B_F.add_event(action_unknownAS1, EventOutcome.SUCCESS)
-    history_A_S_B_F.add_event(action_unknownBS2, EventOutcome.FAILURE)
-    A_S_B_F_state = get_state_with_history(outcome_states, history_A_S_B_F)
-    assert A_S_B_F_state.cost == 60
-    assert A_S_B_F_state.prob == pytest.approx(0.8 * (1- 0.4))
-    assert not planner.is_accepting_state(A_S_B_F_state.dfa_state)
+    subgoal_node1 = Node(is_subgoal=True)
+    subgoal_node2 = Node(is_subgoal=True)
+    subgoal_node3 = Node(is_subgoal=True)
 
+    subgoal_prop_dict = {
+        (subgoal_node1, 'objA'): [0.8, 10, 20],
+        (subgoal_node2, 'objB'): [0.2, 50, 30],
+        (subgoal_node3, 'objB'): [0.5, 110, 100]
+    }
+    distances = {
+        (robot_node, subgoal_node1): 20,
+        (robot_node, subgoal_node2): 30,
+        (subgoal_node1, subgoal_node3): 190,
+        (subgoal_node2, subgoal_node3): 150
+    }
+    action_unknownAS1 = Action(subgoal_node1, ('objA',), subgoal_prop_dict)
+    action_unknownBS2 = Action(subgoal_node2, ('objB',), subgoal_prop_dict)
+    action_unknownBS3 = Action(subgoal_node3, ('objB',), subgoal_prop_dict)
 
-def test_mrtask_mrstate_advancement():
+    specification = "F objA & F objB"
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot_unk1, robot_unk2],
+                        planner=planner,
+                        distances=distances)
+
+    outcome_states = mrstate.transition(action_unknownAS1)
+    assert len(outcome_states) == 1
+    prob, cost = list(outcome_states.values())[0]
+    assert cost == 0
+    assert prob == 1.0
+    mrstate = list(outcome_states.keys())[0]
+    outcome_states = mrstate.transition(action_unknownBS2)
+    assert len(outcome_states) == 2
+
+    # Object A is found
+    success_AS1_history = History()
+    success_AS1_history.add_event(action_unknownAS1, EventOutcome.SUCCESS)
+    success_AS1_state = get_state_from_history(outcome_states, success_AS1_history)
+    assert success_AS1_state.history.get_action_outcome(action_unknownAS1) == EventOutcome.SUCCESS
+    assert success_AS1_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.CHANCE
+    assert outcome_states[success_AS1_state][0] == pytest.approx(0.8)
+    assert outcome_states[success_AS1_state][1] == 30
+    assert not planner.is_accepting_state(success_AS1_state.dfa_state)
+
+    # Object A is NOT found
+    failure_AS1_history = History()
+    failure_AS1_history.add_event(action_unknownAS1, EventOutcome.FAILURE)
+    failure_AS1_state = get_state_from_history(outcome_states, failure_AS1_history)
+    assert failure_AS1_state.history.get_action_outcome(action_unknownAS1) == EventOutcome.FAILURE
+    assert failure_AS1_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.CHANCE
+    assert outcome_states[failure_AS1_state][0] == pytest.approx(0.2)
+    assert outcome_states[failure_AS1_state][1] == 30.0
+    assert not planner.is_accepting_state(failure_AS1_state.dfa_state)
+
+    # Enumerating: Object A is found
+    outcome_success_state = success_AS1_state.transition(action_unknownBS3)
+    assert len(outcome_success_state) == 2
+
+    # Object A is found, Object B is found
+    success_AS1_success_BS2_history = success_AS1_history.copy()
+    success_AS1_success_BS2_history.add_event(action_unknownBS2, EventOutcome.SUCCESS)
+    success_AS1_success_BS2_state = get_state_from_history(outcome_success_state, success_AS1_success_BS2_history)
+    assert success_AS1_success_BS2_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.SUCCESS
+    assert outcome_success_state[success_AS1_success_BS2_state][0] == pytest.approx(0.2)
+    assert outcome_success_state[success_AS1_success_BS2_state][1] == 50
+    assert planner.is_accepting_state(success_AS1_success_BS2_state.dfa_state)
+
+    # Object A is found, Object B is NOT found
+    success_AS1_failure_BS2_history = success_AS1_history.copy()
+    success_AS1_failure_BS2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
+    success_AS1_failure_BS2_state = get_state_from_history(outcome_success_state, success_AS1_failure_BS2_history)
+    assert success_AS1_failure_BS2_state.history.get_action_outcome(action_unknownBS2) == EventOutcome.FAILURE
+    assert outcome_success_state[success_AS1_failure_BS2_state][0] == pytest.approx(1 - 0.2)
+    assert outcome_success_state[success_AS1_failure_BS2_state][1] == 30
+    assert not planner.is_accepting_state(success_AS1_failure_BS2_state.dfa_state)
+
+    # Enumerating: Object A is NOT Found
+    outcome_failure_state = failure_AS1_state.transition(action_unknownBS3)
+    assert len(outcome_failure_state) == 2
+
+    # Object A is NOT found, Object B is not found
+    failure_AS1_failure_BS2_history = failure_AS1_history.copy()
+    failure_AS1_failure_BS2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
+    failure_AS1_failure_BS2_state = get_state_from_history(outcome_failure_state, failure_AS1_failure_BS2_history)
+    assert outcome_failure_state[failure_AS1_failure_BS2_state][0] == pytest.approx((1 - 0.2))
+    assert outcome_failure_state[failure_AS1_failure_BS2_state][1] == 30
+    assert not planner.is_accepting_state(failure_AS1_failure_BS2_state.dfa_state)
+
+    # Object A is NOT found, Object B is not found, Final action assignment (B is not found)
+    outcome_failureA_failureB_state = failure_AS1_failure_BS2_state.transition(action_unknownBS3)
+    assert len(outcome_failure_state) == 2
+
+    failure_AS1_failure_BS2_failure_BS3_history = failure_AS1_failure_BS2_history.copy()
+    failure_AS1_failure_BS2_failure_BS3_history.add_event(action_unknownBS3, EventOutcome.FAILURE)
+    failure_AS1_failure_BS2_failure_BS3_state = get_state_from_history(outcome_failureA_failureB_state,
+                                                                       failure_AS1_failure_BS2_failure_BS3_history)
+    assert outcome_failureA_failureB_state[failure_AS1_failure_BS2_failure_BS3_state][0] == pytest.approx(1 - 0.5)
+    assert outcome_failureA_failureB_state[failure_AS1_failure_BS2_failure_BS3_state][1] == 270
+    assert not planner.is_accepting_state(failure_AS1_failure_BS2_failure_BS3_state.dfa_state)
+
+def test_mrtask_mrstate_advancement_with_known_props():
     # Set up the environment
     robot_node = Node()
     robot_known = Robot(robot_node)
@@ -189,19 +192,21 @@ def test_mrtask_mrstate_advancement():
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_known, robot_unknownA, robot_unknownB],
-                      planner=planner)
+                      planner=planner,
+                      distances=distances)
     child_mrstates = advance_mrstate(mrstate)
 
     # In this case, the known space node will be reached first
     # Thus the only "child" state will be the success state
     old_dfa_state = mrstate.dfa_state
     assert len(child_mrstates) == 1
-    assert not old_dfa_state == child_mrstates[0].dfa_state
-    assert planner.is_accepting_state(child_mrstates[0].dfa_state)
-    assert len([robot for robot in child_mrstates[0].robots if robot.needs_action]) == 3
+    child_mrstate = list(child_mrstates.keys())[0]
+    assert not old_dfa_state == child_mrstate.dfa_state
+    assert planner.is_accepting_state(child_mrstate.dfa_state)
+    assert len([robot for robot in child_mrstate.robots if robot.needs_action]) == 3
 
 
-def test_mrtask_mrstate_advance_act_advance_1():
+def test_mrtask_mrstate_advance_action_single_reassign_cost():
     # Idea:
     # - Spec A & B & C
     # - Simple environment with 2 subgoal nodes: one A and one B
@@ -237,13 +242,12 @@ def test_mrtask_mrstate_advance_act_advance_1():
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                      planner=planner)
+                      planner=planner,
+                      distances=distances)
     outcome_mrstates = advance_mrstate(mrstate)
 
     # Two outcome_mrstates (either objA is found or not found)
     assert len(outcome_mrstates) == 2
-    assert outcome_mrstates[0].history.get_action_outcome(action_unknownA) == EventOutcome.SUCCESS
-    assert outcome_mrstates[1].history.get_action_outcome(action_unknownA) == EventOutcome.FAILURE
     for outcome_mrstate in outcome_mrstates:
         # In both success and failure states, R1 needs to be re-assigned
         assert len([robot for robot in outcome_mrstate.robots if robot.needs_action]) == 1
@@ -267,53 +271,7 @@ def test_mrtask_mrstate_advance_act_advance_1():
                                             distances[(subgoal_node1, subgoal_node3)] + \
                                             min(subgoal_prop_dict[(subgoal_node3, 'objB')][1], subgoal_prop_dict[(subgoal_node3, 'objB')][2])
 
-
-def test_mrtask_mrstate_advance_act_advance_1_with_history():
-    # Idea:
-    # - Spec A & B & C
-    # - Simple environment with 2 subgoal nodes: one A and one B
-    # - One of those finishes
-    # - Then assign another action to the robot needing reassignment (something *very* far away, objC)
-    # -  Confirm the 'time remaining' computed correctly.
-    robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
-
-    subgoal_node1 = Node(is_subgoal=True)
-    subgoal_node2 = Node(is_subgoal=True)
-    subgoal_node3 = Node(is_subgoal=True)
-
-    subgoal_prop_dict = {
-        (subgoal_node1, 'objA'): [0.8, 10, 20],
-        (subgoal_node2, 'objB'): [0.2, 50, 30],
-        (subgoal_node3, 'objB'): [0.5, 110, 100]
-    }
-    distances = {
-        (robot_node, subgoal_node1): 20,
-        (robot_node, subgoal_node2): 30,
-        (subgoal_node1, subgoal_node3): 200,
-        (subgoal_node2, subgoal_node3): 150
-    }
-    action_unknownS1A = Action(subgoal_node1, ('objA',), subgoal_prop_dict)
-    action_unknownS2B = Action(subgoal_node2, ('objB',), subgoal_prop_dict)
-    action_unknownS3B = Action(subgoal_node3, ('objB',), subgoal_prop_dict)
-
-    robot_unk1.retarget(action_unknownS1A, distances)
-    robot_unk2.retarget(action_unknownS2B, distances)
-
-    specification = "F objA & F objB"
-    # With a success history, we succeed and have to travel all of RS
-    history = History()
-    history.add_event(action_unknownS1A, EventOutcome.SUCCESS)
-    history.add_event(action_unknownS2B, EventOutcome.FAILURE)
-    history.add_event(action_unknownS3B, EventOutcome.SUCCESS)
-    planner = DFAManager(specification)
-    mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                      planner=planner, history=history)
-    outcomes = advance_mrstate(mrstate)
-
-
-def test_mrtask_mrstate_advance_act_advance_2():
+def test_mrtask_mrstate_advance_action_all_reassign_cost():
     # pass
     # Idea:
     # - Spec A & B & C
@@ -354,10 +312,18 @@ def test_mrtask_mrstate_advance_act_advance_2():
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                      planner=planner)
+                      planner=planner,
+                      distances=distances)
     outcome_mrstates = advance_mrstate(mrstate)
-    assert len(outcome_mrstates) == 2
-    success_state, failure_state = outcome_mrstates[0], outcome_mrstates[1]
+    # assert len(outcome_mrstates) == 2
+    # success_state, failure_state = outcome_mrstates[0], outcome_mrstates[1]
+    success_history = History()
+    success_history.add_event(action_unknownS1A, EventOutcome.SUCCESS)
+    success_state = get_state_from_history(outcome_mrstates, success_history)
+
+    failure_history = History()
+    failure_history.add_event(action_unknownS1A, EventOutcome.FAILURE)
+    failure_state = get_state_from_history(outcome_mrstates, failure_history)
     # Two outcome_mrstates (either objA is found or not found)
     # In SUCCESS STATE, BOTH R1 and R2 needs to be re-targeted
     assert success_state.history.get_action_outcome(action_unknownS1A)==EventOutcome.SUCCESS
