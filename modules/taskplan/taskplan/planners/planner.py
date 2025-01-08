@@ -161,6 +161,25 @@ class LearnedPlanner(Planner):
             for subgoal in frontier_ordering:
                 fail_prob = 1 - subgoal.prob_feasible
                 prod_fail_prob *= fail_prob
-            min_cost += prod_fail_prob * 1000
+            remaining_subgoals = [s for s in self.subgoals if s not in frontier_ordering]
+            # computing tsp cost is taking too long, so limiting the number of subgoals
+            # still did not help, so thinking about accumulating failure cost with random walk
+            # of the remaining subgoals
+            if remaining_subgoals:
+                remaining_subgoals = remaining_subgoals[:12]
+                distances = taskplan.core.get_subgoal_distances(
+                    self.partial_map.grid, remaining_subgoals)
+                # Compute the distance matrix for TSP
+                dist = [[0 for _ in range(len(remaining_subgoals))] for _ in range(len(remaining_subgoals))]
+                for i, f1 in enumerate(remaining_subgoals):
+                    for j, f2 in enumerate(remaining_subgoals):
+                        if i == j:
+                            continue
+                        fsg_set = frozenset([f1, f2])
+                        dist[i][j] = distances[fsg_set]
+                failure_cost = taskplan.core.tsp_dynamic_programming(dist)
+            else:
+                failure_cost = 0
+            min_cost += prod_fail_prob * failure_cost
             return min_cost, frontier_ordering[0]
         return frontier_ordering[0]
