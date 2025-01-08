@@ -10,6 +10,7 @@ prior
 ai2thor
 sentence_transformers
 google-generativeai
+ortools
 
 # Plotting & Data Handling
 matplotlib
