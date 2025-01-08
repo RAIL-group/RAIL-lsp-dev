@@ -568,26 +568,6 @@ def compute_path_cost(grid, path):
     return total_cost, total_path
 
 
-def tsp_dynamic_programming(dist):
-    n = len(dist)
-    dp = [[float('inf')] * n for _ in range(1 << n)]
-    dp[1][0] = 0  # Start at node 0
-
-    for mask in range(1 << n):
-        for i in range(n):
-            if mask & (1 << i):
-                for j in range(n):
-                    if mask & (1 << j) and j != i:
-                        dp[mask][i] = min(dp[mask][i], dp[mask ^ (1 << i)][j] + dist[j][i])
-
-    # Find the minimum cost to return to the starting node
-    min_cost = float('inf')
-    for i in range(1, n):
-        min_cost = min(min_cost, dp[(1 << n) - 1][i] + dist[i][0])
-
-    return min_cost
-
-
 def solve_tsp_for_distance(dist_matrix):
     # Number of nodes in the problem
     num_nodes = len(dist_matrix)
