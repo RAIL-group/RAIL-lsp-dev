@@ -55,6 +55,7 @@ def test_mdp_large_action_space():
     assert cost == 1
 
 @pytest.mark.parametrize('branchings', [3, 4, 5, 6, 7, 8])
+# @pytest.mark.parametrize('branchings', [3, 4, 5, 6])
 def test_mdp_large_state_action_space(branchings):
 
     def lower_bound_cost_rollout_fn(state):
