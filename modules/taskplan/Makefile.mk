@@ -343,13 +343,12 @@ result-learned:
 		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
 		--learned
 
-.PHONY: result-learned-vs-lsp
-result-learned-vs-lsp:
-	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
-		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
-		--data_file2 /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_sp_logfile.txt \
-		--output_image_file /data//$(BASENAME)/results/results_$(EXPERIMENT_NAME)_scatter_2.png \
-		--scatter2
+.PHONY: result-learned-vs-pes-lsp
+result-learned-vs-pes-lsp:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.comp_two \
+		--df_learned /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
+		--df_pes_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_logfile.txt \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)
 #############################
 
 NUM_INFO_SEEDS ?= 100
