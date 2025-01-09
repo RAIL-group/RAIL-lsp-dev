@@ -129,4 +129,4 @@ notebook: build
 
 # ==== Includes ====
 include modules/procthor/Makefile.mk
-include modules/pouct_planner/Makefile.mk
+include modules/sctp/Makefile.mk
