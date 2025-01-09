@@ -186,13 +186,23 @@ class PartialMap:
         if simplify:
             graph = self._get_object_free_graph()
 
+        # for subgoal in subgoals:
+        #     graph['edge_index'][0].append(subgoal)
+        #     graph['edge_index'][1].append(len(graph['node_feats']))
+        # graph['node_feats'].append(self.org_node_feats[self.target_obj])
+        # is_subgoal = [0] * len(graph['node_feats'])
+        # is_target = [0] * len(graph['node_feats'])
+        # is_target[-1] = 1
+
+        len_nf = len(graph['node_feats'])
         for subgoal in subgoals:
             graph['edge_index'][0].append(subgoal)
-            graph['edge_index'][1].append(len(graph['node_feats']))
-        graph['node_feats'].append(self.org_node_feats[self.target_obj])
-        is_subgoal = [0] * len(graph['node_feats'])
-        is_target = [0] * len(graph['node_feats'])
-        is_target[-1] = 1
+            graph['edge_index'][1].append(len_nf)
+            graph['node_feats'].append(self.org_node_feats[self.target_obj])
+            len_nf += 1
+        is_subgoal = [0] * len_nf
+        is_target = [0] * len_nf
+        is_target[-len(subgoals):] = [1] * len(subgoals)
         for subgoal_idx in subgoals:
             is_subgoal[subgoal_idx] = 1
         graph['is_subgoal'] = is_subgoal
