@@ -83,6 +83,9 @@ RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
 COPY modules/pouct_planner modules/pouct_planner
 RUN pip3 install modules/pouct_planner
 RUN cp -r /usr/local/lib/python3.8/dist-packages/pouct_planner* /temp
+COPY modules/sctp modules/sctp
+RUN pip3 install modules/sctp
+RUN cp -r /usr/local/lib/python3.8/dist-packages/sctp* /temp
 
 
 # Build the final image

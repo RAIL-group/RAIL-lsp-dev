@@ -3,22 +3,18 @@ import numpy as np
 import pytest
 import random
 import matplotlib.pyplot as plt
-
-
    
 class RobotData:
-   def __init__(self, *,robot_id=None, coord_x=None, 
-                coord_y=None, cur_vertex=None, last_robot=None):
+   def __init__(self, *,robot_id=None, position=None, 
+                cur_vertex=None, last_robot=None):
       if last_robot is not None:
          self.robotID = last_robot.robotID
-         self.coord_x = last_robot.coord_x
-         self.coord_y = last_robot.coord_y
+         self.position = last_robot.position
          self.cur_vertex = last_robot.cur_vertex
          self.last_vertex = self.cur_vertex
       else:
          self.robotID = robot_id
-         self.coord_x = coord_x
-         self.coord_y = coord_y
+         self.position = position
          self.cur_vertex = cur_vertex
          self.last_vertex = self.cur_vertex
 
@@ -26,11 +22,11 @@ class RobotData:
       return self.robotID
 
 class Vertex:
-   def __init__(self, id: int, x: float, y: float):
+   def __init__(self, id: int, coord):
       self.id = id
       self.parent = None
-      self.x = x
-      self.y = y
+      self.coord = coord
+    #   self.y = y
       self.neighbors = []
    
    def get_id(self):
@@ -42,13 +38,14 @@ class Edge:
       self.v1 = v1
       self.v2 = v2
       
-      self.dist = np.linalg.norm(np.array((v1.x, v1.y)) - np.array((v2.x, v2.y)))
+      self.dist = np.linalg.norm(np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
       self.cost = self.dist
       self.poi_coord = None
       self.block_prob = block_prob
       self.block_status = 1 if random.random() < block_prob else 0
    
    def get_cost(self) -> float:
+    
       return self.cost
 
    def update_cost(self, value):
@@ -128,7 +125,7 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
     for i in range(grid_rows):
         for j in range(grid_cols):
             x, y = 5.0*j + random.uniform(-1.0,1.0), 5.0*i + random.uniform(-1.0,1.0)  # Nodes aligned in a grid pattern
-            nodes.append( Vertex(node_id, x, y))
+            nodes.append( Vertex(node_id, (x, y)))
             node_id += 1
 
     # Connect nodes with edges (including diagonals)
@@ -168,20 +165,20 @@ def plot_street_graph(nodes, edges, name="Testing Graph"):
     plt.figure(figsize=(10, 10))
     
     # Plot edges
-    # for edge in edges:
-    #     x_values = [edge.v1.x, edge.v2.x]
-    #     y_values = [edge.v1.y, edge.v2.y]
-    #     plt.plot(x_values, y_values, 'b-', alpha=0.7)
-    #     # Display block probability
-    #     mid_x = (edge.v1.x + edge.v2.x) / 2
-    #     mid_y = (edge.v1.y + edge.v2.y) / 2
-    #     probs = f"{edge.block_prob:.2f}/" + f"{edge.block_status}/{edge.cost:.1f}"
-    #     plt.text(mid_x, mid_y, probs, color='red', fontsize=8)
+    for edge in edges:
+        x_values = [edge.v1.coord[0], edge.v2.coord[0]]
+        y_values = [edge.v1.coord[1], edge.v2.coord[1]]
+        plt.plot(x_values, y_values, 'b-', alpha=0.7)
+        # Display block probability
+        mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
+        mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
+        probs = f"{edge.block_prob:.2f}/" + f"{edge.block_status}/{edge.cost:.1f}"
+        plt.text(mid_x, mid_y, probs, color='red', fontsize=8)
     
-    # # Plot nodes
-    # for node in nodes:
-    #     plt.scatter(node.x, node.y, color='black', s=50)
-    #     plt.text(node.x + 0.1, node.y + 0.1, f"{node.id}", color='blue', fontsize=8)
+    # Plot nodes
+    for node in nodes:
+        plt.scatter(node.coord[0], node.coord[1], color='black', s=50)
+        plt.text(node.coord[0] + 0.1, node.coord[1] + 0.1, f"{node.id}", color='blue', fontsize=8)
     
     plt.title(name)
     plt.xlabel("X-coordinate")
@@ -193,19 +190,19 @@ def plot_street_graph(nodes, edges, name="Testing Graph"):
 def simple_graph():
     """Generate a simple graph for testing purposes."""
     nodes = []
-    node1 = Vertex(1, -3.0, 4.0)
+    node1 = Vertex(1, (-3.0, 4.0))
     nodes.append(node1)
-    node2 = Vertex(2, 0.0, 5.5)
+    node2 = Vertex(2, (0.0, 5.5))
     nodes.append(node2)
-    node3 = Vertex(3, 0.0, 2.0)
+    node3 = Vertex(3, (0.0, 2.0))
     nodes.append(node3)
-    node4 = Vertex(4, 4.0, 0.0)
+    node4 = Vertex(4, (4.0, 0.0))
     nodes.append(node4)
-    node5 = Vertex(5, 4.0, 4.0)
+    node5 = Vertex(5, (4.0, 4.0))
     nodes.append(node5)
-    node6 = Vertex(6, 4.0, 8.0)
+    node6 = Vertex(6, (4.0, 8.0))
     nodes.append(node6)
-    node7 = Vertex(7, 8.0, 4.0)
+    node7 = Vertex(7, (8.0, 4.0))
     nodes.append(node7)
     edges = []
     edge1 = Edge(node1, node2, random.uniform(0.0, 0.1))
@@ -287,15 +284,15 @@ def simple_graph():
 def disjoint_graph():
     """Generate a disjoint graph for testing purposes."""
     nodes = []
-    node1 = Vertex(1, 4.0, 0)
+    node1 = Vertex(1, (4.0, 0))
     nodes.append(node1)
-    node2 =  Vertex(2, 0, 4.0)
+    node2 =  Vertex(2, (0.0, 4.0))
     nodes.append(node2)
-    node3 =  Vertex(3, 4.0, 8.0)
+    node3 =  Vertex(3, (4.0, 8.0))
     nodes.append(node3)
-    node4 =  Vertex(4, 8.0, 4.0)
+    node4 =  Vertex(4, (8.0, 4.0))
     nodes.append(node4)
-    node5 =  Vertex(5, 4.0, 4.0)
+    node5 =  Vertex(5, (4.0, 4.0))
     nodes.append(node5)
     edges = []
     edge1 =  Edge(node1, node2, random.uniform(0.0, 0.2))
@@ -321,23 +318,26 @@ def disjoint_graph():
 def simple_disjoint_graph():
     """Generate a disjoint graph for testing purposes."""
     nodes = []
-    node1 =  Vertex(1, 4.0, 0)
+    node1 =  Vertex(1, (4.0, 0))
     nodes.append(node1)
-    node2 =  Vertex(2, 0, 4.0)
+    node2 =  Vertex(2, (0.0, 4.0))
     nodes.append(node2)
-    node3 =  Vertex(3, 4.0, 8.0)
+    node3 =  Vertex(3, (4.0, 8.0))
     nodes.append(node3)
-    node4 =  Vertex(4, 8.0, 4.0)
+    node4 =  Vertex(4, (8.0, 4.0))
     nodes.append(node4)
-    # node5 =  Vertex(5, 4.0, 4.0)
-    # nodes.append(node5)
+    
     edges = []
     edge1 =  Edge(node1, node2, random.uniform(0.0, 0.2))
     edge1.block_status = 0
     edges.append(edge1)
+    node1.neighbors.append(node2.id)
+    node2.neighbors.append(node1.id)
     edge2 =  Edge(node3, node4, 0.1)
     edge2.block_status = 0
     edges.append(edge2)
+    node3.neighbors.append(node4.id)
+    node4.neighbors.append(node3.id)
     # edge4 =  Edge(node2, node5, random.uniform(0.0, 0.2))
     # edge4.block_status = 0
     # edges.append(edge4)
@@ -347,16 +347,20 @@ def simple_disjoint_graph():
     edge7 =  Edge(node1, node4, 0.92)
     edge7.block_status = 1
     edges.append(edge7)
+    node1.neighbors.append(node4.id)
+    node4.neighbors.append(node1.id)
     edge8 =  Edge(node2, node3, random.uniform(0.0, 0.2))
     edge8.block_status = 0
     edges.append(edge8)
+    node2.neighbors.append(node3.id)
+    node3.neighbors.append(node2.id)
     return nodes, edges
 
 def print_graph(nodes, edges, show_edge=False, show_node=False):
     """Print the graph details."""
     if show_node:
         for node in nodes:
-            print(f"Node {node.id}: ({node.x:.2f}, {node.y:.2f}) with neighbors: {node.neighbors}")
+            print(f"Node {node.id}: ({node.coord[0]:.2f}, {node.coord[1]:.2f}) with neighbors: {node.neighbors}")
             print(f"The neighbors features:")
             for n in node.neighbors:
                 edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == n) or (edge.v1.id == n and edge.v2.id == node.id))][0] 
@@ -377,7 +381,10 @@ if __name__ == "__main__":
     # nodes, edges = simple_graph()
     # name = "Simple Graph"
     nodes, edges = simple_disjoint_graph()
-    # name = "Disjoint Graph"
+    name = "Simple Disjoint Graph"
     # print_graph(nodes, edges, show_edge=True)
+    # print("THe neighbors are:")
+    # for node in nodes:
+    #     print(f"Node {node.id}: with neighbors: {node.neighbors}")
 
-    # plot_street_graph(nodes, edges, name)
+    plot_street_graph(nodes, edges, name)
