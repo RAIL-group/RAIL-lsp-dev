@@ -9,8 +9,9 @@ import taskplan
 
 
 def gen_data_main(args):
+    coffee_objects = taskplan.utilities.utils.get_coffee_objects()
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.ThorInterface(args=args, preprocess=coffee_objects)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
