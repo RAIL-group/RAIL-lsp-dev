@@ -1,10 +1,6 @@
-# import itertools
-# import numpy as np
-# import matplotlib.pyplot as plt
-# import math
 import copy, random   
-from pouct_planner import graphs
-from pouct_planner import pomdp_state
+from sctp import graphs
+from sctp import pomdp_state
 from pouct_planner import core   
 
 def sctpbase_pomcp_navigating(nodes, edges, robots, start, goal):
@@ -38,21 +34,27 @@ def sctpbase_pomcp_navigating(nodes, edges, robots, start, goal):
          break 
    return False, exe_path, total_cost 
 
-def move(state, action=None):
+def move(state, action):
    cost = 0.0
-   if action is not None:
-      edge_id = tuple(sorted((state.robots.cur_vertex, action)))
-      edge = [edge for edge in state.edges if edge.id == edge_id][0]
-      cost = edge.get_cost()
-      state.robot_move(action)
-   # sense the neighbors
+   if action is None:
+      raise ValueError("Action cannot be None")
+   
+   edge_id = tuple(sorted((state.robots.cur_vertex, action)))
+   edge = [edge for edge in state.edges if edge.id == edge_id][0]
+   cost = edge.get_cost()
+   state.robot_move(action)
+   
+   return state, cost
+
+def sense(state):
    neighbors = [node for node in state.vertices if node.id == state.robots.cur_vertex][0].neighbors
    observed_status = {}
    for n in neighbors:
       e_id = tuple(sorted((state.robots.cur_vertex, n)))
       next_edge = [edge for edge in state.edges if edge.id == e_id][0]
       observed_status[e_id] = float(next_edge.block_status)
-   return state, observed_status, cost
+   # print(f"observed_status: {observed_status}")
+   return observed_status
 
 def update_belief_state(state, observed_status):
    need_update = False
