@@ -1,6 +1,4 @@
-import itertools
 import numpy as np
-import pytest
 import random
 import matplotlib.pyplot as plt
    
@@ -318,13 +316,13 @@ def disjoint_graph():
 def simple_disjoint_graph():
     """Generate a disjoint graph for testing purposes."""
     nodes = []
-    node1 =  Vertex(1, (4.0, 0))
+    node1 =  Vertex(1, (0.0, 0))
     nodes.append(node1)
     node2 =  Vertex(2, (0.0, 4.0))
     nodes.append(node2)
-    node3 =  Vertex(3, (4.0, 8.0))
+    node3 =  Vertex(3, (4.0, 4.0))
     nodes.append(node3)
-    node4 =  Vertex(4, (8.0, 4.0))
+    node4 =  Vertex(4, (5.0, 4.0))
     nodes.append(node4)
     
     edges = []
@@ -338,12 +336,6 @@ def simple_disjoint_graph():
     edges.append(edge2)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
-    # edge4 =  Edge(node2, node5, random.uniform(0.0, 0.2))
-    # edge4.block_status = 0
-    # edges.append(edge4)
-    # edge6 =  Edge(node4, node5, 0.85)
-    # edge6.block_status = 1
-    # edges.append(edge6)
     edge7 =  Edge(node1, node4, 0.92)
     edge7.block_status = 1
     edges.append(edge7)
