@@ -1,3 +1,3 @@
 from . import graphs  # noqa
-from . import pomdp_state  # noqa
-from . import planning_loop  # noqa
+from . import base_pomdpstate  # noqa
+from . import base_navigation  # noqa

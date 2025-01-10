@@ -1,22 +1,19 @@
-# import itertools
-# import numpy as np
 from enum import Enum
 from sctp import graphs
 
-EventOutcome = Enum('EventOutcome', ['BLOCK', 'CHANCE', 'TRAV'])
+EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 
 class History(object):
    def __init__(self, data=None):
       self._data = data if data is not None else dict()
 
-   def add_history(self, action, outcome):
+   def add_history(self, action, start, prob, outcome):
       assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
-      self._data[action] = outcome
+      self._data[(action, start, prob)] = outcome
    
-   def get_action_outcome(self, action):
+   def get_action_outcome(self, action, start, prob):
       # return the history or, it it doesn't exist, return CHANCE
-      raiseError ValueError("Action not in history")
-      return self._data.get(action, None) #??????????????????????/
+      return self._data.get((action, start, prob), EventOutcome.CHANCE)
    
    def copy(self):
       return History(data=self._data.copy())
@@ -33,10 +30,8 @@ class History(object):
 class SCTPBaseState(object):
    def __init__(self, edge_probs, last_state= None, history=None, goal=None,
                      vertices=None, edges=None, robots=None):
-      # print("SCTPBaseState")
       self.edge_probs = edge_probs
       self.action_cost = 0.0
-      # self.block_status = False
       if history is None:
          self.history = History()
       else:
@@ -46,11 +41,13 @@ class SCTPBaseState(object):
          self.edges = edges
          self.goalID = goal 
          self.robots = robots
+         # self.history = History()
       else:
          self.vertices = last_state.vertices
          self.edges = last_state.edges
          self.goalID = last_state.goalID
          self.robots = graphs.RobotData(last_robot=last_state.robots)
+         # self.history = last_state.history.copy()
       self.actions = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
 
 
@@ -70,19 +67,20 @@ class SCTPBaseState(object):
       belief_state = {}
       edge_id = tuple(sorted((self.robots.cur_vertex, action)))
       block_prob = self.edge_probs[edge_id]
-
-      new_state_block = SCTPBaseState(self.edge_probs, start_state=self)
+      # for blocking 
+      block_history = self.history.copy()
+      block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
+      new_state_block = SCTPBaseState(self.edge_probs, last_state=self, history=block_history)
       new_state_block.robot_move(action)
       new_state_block.action_cost = 10e5
-      new_state_block.block_status = True
-      
       belief_state[new_state_block] = (block_prob, new_state_block.action_cost)
 
-      new_state_traversable = SCTPBaseState(self.edge_probs, start_state=self)
+      # for traversable
+      trav_history = self.history.copy()
+      trav_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.TRAV)
+      new_state_traversable = SCTPBaseState(self.edge_probs, last_state=self, history=trav_history)
       new_state_traversable.robot_move(action)
       new_state_traversable.action_cost = [edge for edge in self.edges if edge.id == edge_id][0].cost
-      new_state_traversable.block_status = False
-      
       belief_state[new_state_traversable] = (1.0 - block_prob, new_state_traversable.action_cost)
 
 
