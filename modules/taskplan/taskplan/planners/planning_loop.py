@@ -54,8 +54,9 @@ class PlanningLoop():
         # add initial robot pose at the end to close the search loop
         if self.close_loop:
             self.robot.append(self.robot[0])
-        elif self.robot[-1] != self.destination:
-            self.robot.append(self.destination)
+        elif self.destination:
+            if self.robot[-1] != self.destination:
+                self.robot.append(self.destination)
 
         if self.verbose:
             print("TOTAL TIME:", time.time() - fn_start_time)
