@@ -1,6 +1,5 @@
-import copy, random   
-from sctp import graphs
-from sctp import pomdp_state
+import copy
+from sctp import base_pomdpstate
 from pouct_planner import core   
 
 def sctpbase_pomcp_navigating(nodes, edges, robots, start, goal):
@@ -9,8 +8,7 @@ def sctpbase_pomcp_navigating(nodes, edges, robots, start, goal):
    total_cost = 0.0
    count = 0
    edge_probs = {edge.id: edge.block_prob for edge in edges}
-   # robot = robots #graphs.RobotData(robot_id = 1, coord_x = 1.0, coord_y = 1.0, cur_vertex=start, vel=1.0)
-   initial_state = pomdp_state.SCTPBaseState(edge_probs=edge_probs, 
+   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, 
                      goal=goal, vertices=nodes, edges=edges, robots=robots)
    state = copy.deepcopy(initial_state)
    state, observed_status, cost = move(state) # move then sense
@@ -53,7 +51,6 @@ def sense(state):
       e_id = tuple(sorted((state.robots.cur_vertex, n)))
       next_edge = [edge for edge in state.edges if edge.id == e_id][0]
       observed_status[e_id] = float(next_edge.block_status)
-   # print(f"observed_status: {observed_status}")
    return observed_status
 
 def update_belief_state(state, observed_status):
@@ -65,4 +62,4 @@ def update_belief_state(state, observed_status):
       if state.edge_probs[key] == 1.0:
          edge = [edge for edge in state.edges if edge.id == key][0]
          edge.update_cost(10e5)
-   return need_update
+   return state, need_update
