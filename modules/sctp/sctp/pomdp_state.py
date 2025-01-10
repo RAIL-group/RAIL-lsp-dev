@@ -1,43 +1,56 @@
 # import itertools
 # import numpy as np
+from enum import Enum
 from sctp import graphs
+
+EventOutcome = Enum('EventOutcome', ['BLOCK', 'CHANCE', 'TRAV'])
 
 class History(object):
    def __init__(self, data=None):
       self._data = data if data is not None else dict()
-      # self.action = action
-      # self.cost = cost
-   
-   def add_history(self, action, outcome):
-      # assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
-      self._data[action] = outcome
-      return History(self.state, action, outcome)
 
-   def __hash__(self):
-      return hash((self.state, self.action, self.cost))
+   def add_history(self, action, outcome):
+      assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
+      self._data[action] = outcome
+   
+   def get_action_outcome(self, action):
+      # return the history or, it it doesn't exist, return CHANCE
+      raiseError ValueError("Action not in history")
+      return self._data.get(action, None) #??????????????????????/
+   
+   def copy(self):
+      return History(data=self._data.copy())
+
    def __eq__(self, other):
-      return (self.state, self.action, self.cost) == (other.state, other.action, other.cost)
-   def __repr__(self):
-      return f'{self.state, self.action, self.cost}'
+      if not isinstance(other, History):
+         return False
+      return self._data == other._data
+      
+   def __str__(self):
+      return f'{self._data}'
 
 
 class SCTPBaseState(object):
-   def __init__(self, edge_probs, goal=None, start_state= None,
+   def __init__(self, edge_probs, last_state= None, history=None, goal=None,
                      vertices=None, edges=None, robots=None):
       # print("SCTPBaseState")
       self.edge_probs = edge_probs
       self.action_cost = 0.0
-      self.block_status = False
-      if start_state is None:
+      # self.block_status = False
+      if history is None:
+         self.history = History()
+      else:
+         self.history = history
+      if last_state is None:
          self.vertices = vertices
          self.edges = edges
          self.goalID = goal 
          self.robots = robots
       else:
-         self.vertices = start_state.vertices
-         self.edges = start_state.edges
-         self.goalID = start_state.goalID
-         self.robots = graphs.RobotData(last_robot=start_state.robots)
+         self.vertices = last_state.vertices
+         self.edges = last_state.edges
+         self.goalID = last_state.goalID
+         self.robots = graphs.RobotData(last_robot=last_state.robots)
       self.actions = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
 
 

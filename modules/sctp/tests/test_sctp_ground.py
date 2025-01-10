@@ -4,34 +4,19 @@ from sctp import graphs, pomdp_state
 from sctp import planning_loop as pl
 
 def test_sctpbase_simplegraph():
-    nodes = None 
-    edges = None
-    start = 1
-    goal = 1
-    # nodes, edges = disjoint_graph()
-    # name = "Disjoint Graph"
-   #  print_graph(nodes, edges)
-    # nodes, edges = disjoint_graph()
-    # name = "Disjoint Graph"
-   #  print_graph(nodes, edges)
-    # nodes, edges = disjoint_graph()
-    # name = "Disjoint Graph"
-   #  print_graph(nodes, edges)
-   # if graph_type == "simple_graph":
-    start = 1
-    goal = 7
-    nodes, edges = graphs.simple_graph()
-    robots = graphs.RobotData(robot_id = 1, coord_x = 1.0, coord_y = 1.0, cur_vertex=start)
-    
+   start = 1
+   goal = 7
+   nodes, edges = graphs.simple_graph()
+   robots = graphs.RobotData(robot_id = 1, position=(1.0, 1.0), cur_vertex=start)
+   
+   # find_path, exe_path, cost = pl.sctpbase_pomcp_navigating(nodes, edges, robots, start, goal)
+   # if find_path:
+   #     print(f"find path: {exe_path} with cost: {cost}")
 
-    # find_path, exe_path, cost = pl.sctpbase_pomcp_navigating(nodes, edges, robots, start, goal)
-    # if find_path:
-    #     print(f"find path: {exe_path} with cost: {cost}")
+   name = "Simple Graph"
+   graphs.plot_street_graph(nodes, edges, name)
 
-    name = "Simple Graph"
-    graphs.plot_street_graph(nodes, edges, name)
-
-    assert 3 == 3
+   assert 3 == 3
 
 
 def test_sctpbase_lineargraph():
@@ -92,6 +77,18 @@ def test_sctpbase_lineargraph():
    assert cost == pytest.approx(15.0, abs=0.1)
 
 
+def test_sctpbase_disjointgraph_simple():
+   start = 1
+   goal = 7
+   nodes, edges = graphs.simple_disjoint_graph()
+   robots = graphs.RobotData(robot_id = 1, position=(1.0, 1.0), cur_vertex=start)
+   
+   # find_path, exe_path, cost = pl.sctpbase_pomcp_navigating(nodes, edges, robots, start, goal)
+   # if find_path:
+   #     print(f"find path: {exe_path} with cost: {cost}")
+
+   # name = "Simple Disjoint Graph"
+   # graphs.plot_street_graph(nodes, edges, name)
 
 if __name__ == "__main__":
     # test_sctpbase_simplegraph()
