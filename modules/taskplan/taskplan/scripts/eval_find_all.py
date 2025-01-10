@@ -25,6 +25,7 @@ def evaluate_main(args):
 
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid)
+    partial_map.set_room_info(init_robot_pose, thor_data.rooms)
 
     # Intialize logfile
     logfile = os.path.join(args.save_dir, args.logfile_name)
@@ -37,8 +38,8 @@ def evaluate_main(args):
     naive_planner = ClosestActionPlanner(args, partial_map)
     naive_cost_str = 'naive'
     naive_planning_loop = taskplan.planners.planning_loop.PlanningLoop(
-        partial_map=partial_map, robot=init_robot_pose, args=args,
-        verbose=True)
+        partial_map=partial_map, robot=init_robot_pose, destination=None,
+        args=args, verbose=True)
 
     for counter, step_data in enumerate(naive_planning_loop):
         # Update the planner objects
@@ -60,8 +61,8 @@ def evaluate_main(args):
     learned_planner = LearnedPlanner(args, partial_map)
     learned_cost_str = 'learned'
     learned_planning_loop = taskplan.planners.planning_loop.PlanningLoop(
-        partial_map=partial_map, robot=init_robot_pose, args=args,
-        verbose=True)
+        partial_map=partial_map, robot=init_robot_pose, destination=None,
+        args=args, verbose=True)
 
     for counter, step_data in enumerate(learned_planning_loop):
         # Update the planner objects
@@ -197,6 +198,7 @@ def get_args():
     parser.add_argument('--save_dir', type=str, required=True)
     parser.add_argument('--resolution', type=float, required=True)
     parser.add_argument('--network_file', type=str, required=False)
+    parser.add_argument('--cache_path', type=str, required=False)
     return parser.parse_args()
 
 
