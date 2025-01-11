@@ -349,6 +349,12 @@ result-learned-vs-pes-lsp:
 		--df_learned /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
 		--df_pes_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_logfile.txt \
 		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)
+
+.PHONY: result-find-all
+result-find-all:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.find_result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/combined_logfile.txt \
+		--output_image_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)_learnedVSnaive.png
 #############################
 
 NUM_INFO_SEEDS ?= 100
