@@ -9,8 +9,12 @@ pd.set_option('display.max_columns', None)
 
 def load_logfiles(args):
     combined_df = []
-    args.data_file = args.df_pes_lsp
-    combined_df.append(taskplan.utilities.result.process_pessimistic_lsp_data(args))
+    if args.df_opt_lsp:
+        args.data_file = args.df_opt_lsp
+        combined_df.append(taskplan.utilities.result.process_optimistic_lsp_data(args))
+    elif args.df_pes_lsp:
+        args.data_file = args.df_pes_lsp
+        combined_df.append(taskplan.utilities.result.process_pessimistic_lsp_data(args))
     args.data_file = args.df_learned
     combined_df.append(taskplan.utilities.result.process_learned_data(args))
 
@@ -49,6 +53,7 @@ if __name__ == "__main__":
         description='Generate a figure (and write to file) for results from the interpretability project.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--df_pes_lsp', type=str, required=False, default=None)
+    parser.add_argument('--df_opt_lsp', type=str, required=False, default=None)
     parser.add_argument('--df_learned', type=str, required=False, default=None)
     parser.add_argument('--save_dir', type=str, required=False, default=None)
     args = parser.parse_args()
@@ -62,7 +67,10 @@ if __name__ == "__main__":
     result_dict = common_df.set_index('seed').T.to_dict()
     Learned_dict = {k: result_dict[k]['LEARNED_LSP'] for k in result_dict}
 
-    Other_strs = ['PESSIMISTIC_LSP']
+    if args.df_opt_lsp:
+        Other_strs = ['OPTIMISTIC_LSP']
+    elif args.df_pes_lsp:
+        Other_strs = ['PESSIMISTIC_LSP']
 
     for seed in Learned_dict:
         # save the costs if learned_lsp cost is lower than or equal to
