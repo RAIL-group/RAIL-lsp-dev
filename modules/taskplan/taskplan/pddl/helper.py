@@ -443,16 +443,16 @@ def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
     goal_cnt = random.sample(cnt_of_interest, 1)
     goal_obj = random.sample(obj_of_interest, 1)
     task1 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+    task = task1
+    # goal_cnt = random.sample(cnt_of_interest, 1)
+    # goal_obj = random.sample(obj_of_interest, 1)
+    # task2 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
 
-    goal_cnt = random.sample(cnt_of_interest, 1)
-    goal_obj = random.sample(obj_of_interest, 1)
-    task2 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
-
-    goal_cnt = random.sample(cnt_of_interest, 1)
-    goal_obj = random.sample(obj_of_interest, 1)
-    task3 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
-    task = [task3, task2, task1]
-    task = taskplan.pddl.task.multiple_goal(task)
+    # goal_cnt = random.sample(cnt_of_interest, 1)
+    # goal_obj = random.sample(obj_of_interest, 1)
+    # task3 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+    # task = [task3, task2, task1]
+    # task = taskplan.pddl.task.multiple_goal(task)
     return task
 
 
@@ -461,16 +461,16 @@ def get_goals_for_two(seed, cnt_of_interest, obj_of_interest):
     goal_cnt = random.sample(cnt_of_interest, 2)
     goal_obj = random.sample(obj_of_interest, 2)
     task1 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
+    task = task1
+    # goal_cnt = random.sample(cnt_of_interest, 2)
+    # goal_obj = random.sample(obj_of_interest, 2)
+    # task2 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
 
-    goal_cnt = random.sample(cnt_of_interest, 2)
-    goal_obj = random.sample(obj_of_interest, 2)
-    task2 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
-
-    goal_cnt = random.sample(cnt_of_interest, 2)
-    goal_obj = random.sample(obj_of_interest, 2)
-    task3 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
-    task = [task3, task2, task1]
-    task = taskplan.pddl.task.multiple_goal(task)
+    # goal_cnt = random.sample(cnt_of_interest, 2)
+    # goal_obj = random.sample(obj_of_interest, 2)
+    # task3 = taskplan.pddl.task.place_two_objects(goal_cnt, goal_obj)
+    # task = [task3, task2, task1]
+    # task = taskplan.pddl.task.multiple_goal(task)
     return task
 
 
@@ -481,16 +481,16 @@ def get_goals_for_three(seed, cnt_of_interest, obj_of_interest):
     goal_cnt = random.sample(cnt_of_interest, 3)
     goal_obj = random.sample(obj_of_interest, 3)
     task1 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
+    task = task1
+    # goal_cnt = random.sample(cnt_of_interest, 3)
+    # goal_obj = random.sample(obj_of_interest, 3)
+    # task2 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
 
-    goal_cnt = random.sample(cnt_of_interest, 3)
-    goal_obj = random.sample(obj_of_interest, 3)
-    task2 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
-
-    goal_cnt = random.sample(cnt_of_interest, 3)
-    goal_obj = random.sample(obj_of_interest, 3)
-    task3 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
-    task = [task3, task2, task1]
-    task = taskplan.pddl.task.multiple_goal(task)
+    # goal_cnt = random.sample(cnt_of_interest, 3)
+    # goal_obj = random.sample(obj_of_interest, 3)
+    # task3 = taskplan.pddl.task.place_three_objects(goal_cnt, goal_obj)
+    # task = [task3, task2, task1]
+    # task = taskplan.pddl.task.multiple_goal(task)
     return task
 
 
