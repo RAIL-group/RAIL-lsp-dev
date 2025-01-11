@@ -350,6 +350,13 @@ result-learned-vs-pes-lsp:
 		--df_pes_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_pessimistic_lsp_logfile.txt \
 		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)
 
+.PHONY: result-learned-vs-opt-lsp
+result-learned-vs-opt-lsp:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.comp_two \
+		--df_learned /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_learned_logfile.txt \
+		--df_opt_lsp /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_optimistic_lsp_logfile.txt \
+		--save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME)
+
 .PHONY: result-find-all
 result-find-all:
 	@$(DOCKER_PYTHON) -m taskplan.scripts.find_result \
