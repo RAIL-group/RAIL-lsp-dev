@@ -17,7 +17,7 @@ def get_model_prep_fn_and_training_strs(args):
     train_writer_str = 'train_fcnn'
     test_writer_str = 'test_fcnn'
     lr_writer_str = 'learning_rate/fcnn'
-    model_name_str = 'gnn.pt'
+    model_name_str = 'fcnn.pt'
 
     return {
         'model': model,
