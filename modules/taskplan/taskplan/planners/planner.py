@@ -4,6 +4,7 @@ import torch
 import taskplan
 from taskplan.core import Subgoal
 from taskplan.learning.models.gnn import Gnn
+from taskplan.learning.models.fcnn import Fcnn
 
 
 NUM_MAX_FRONTIERS = 8
@@ -109,19 +110,27 @@ class LearnedPlanner(Planner):
     and then uses LSP approach to pick the best available action (subgoal).
     '''
     def __init__(self, args, partial_map, device=None, verbose=True,
-                 destination=None, normalize=True):
+                 destination=None, normalize=True, fcnn=True):
         super(LearnedPlanner, self).__init__(
             args, partial_map, device, verbose)
         self.destination = destination
-        self.subgoal_property_net = Gnn.get_net_eval_fn(
-            args.network_file, device=self.device)
+        self.is_fcnn = fcnn
+        if fcnn:
+            self.subgoal_property_net = Fcnn.get_net_eval_fn(
+                args.network_file, device=self.device)
+        else:
+            self.subgoal_property_net = Gnn.get_net_eval_fn(
+                args.network_file, device=self.device)
         self.normalize = normalize
 
     def _update_subgoal_properties(self):
-        self.gcn_graph_input = self.partial_map.prepare_gcn_input(
-            curr_graph=self.graph,
-            subgoals=self.new_subgoals
-        )
+        if self.is_fcnn:
+            self.gcn_graph_input = self.partial_map.prepare_fcnn_input(
+                subgoals=self.new_subgoals)
+        else:
+            self.gcn_graph_input = self.partial_map.prepare_gcn_input(
+                curr_graph=self.graph,
+                subgoals=self.new_subgoals)
         prob_feasible_dict = self.subgoal_property_net(
             datum=self.gcn_graph_input,
             subgoals=self.subgoals
