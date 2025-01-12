@@ -11,13 +11,25 @@ import learning
 import procthor
 
 
-def write_datum_to_file(args, datum, counter):
-    data_filename = os.path.join('pickles', f'dat_{args.current_seed}_{counter}.pgz')
-    learning.data.write_compressed_pickle(
-        os.path.join(args.save_dir, data_filename), datum)
+def write_datum_to_file(args, datum, counter, fcnn=False):
     csv_filename = f'{args.data_file_base_name}_{args.current_seed}.csv'
-    with open(os.path.join(args.save_dir, csv_filename), 'a') as f:
-        f.write(f'{data_filename}\n')
+    if fcnn:
+        for idx, _ in enumerate(datum['labels']):
+            data_filename = os.path.join('pickles', f'dat_{args.current_seed}_{counter}_{idx}.pgz')
+            data = {
+                'node_feats': datum['node_feats'][idx],
+                'labels': datum['labels'][idx]
+            }
+            learning.data.write_compressed_pickle(
+                os.path.join(args.save_dir, data_filename), data)
+            with open(os.path.join(args.save_dir, csv_filename), 'a') as f:
+                f.write(f'{data_filename}\n')
+    else:
+        data_filename = os.path.join('pickles', f'dat_{args.current_seed}_{counter}.pgz')
+        learning.data.write_compressed_pickle(
+            os.path.join(args.save_dir, data_filename), datum)
+        with open(os.path.join(args.save_dir, csv_filename), 'a') as f:
+            f.write(f'{data_filename}\n')
 
 
 def get_data_path_names(args):
