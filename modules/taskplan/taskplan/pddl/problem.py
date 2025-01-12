@@ -129,7 +129,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                 else:
                                     part_to = get_cost(map_data.occupancy_grid, to_coord, to_room_coords)
                                     grid_cost[(to_coord, to_room_coords)] = part_to
-                                d = costs['find'] + costs['pick'] + part_from + intermediate_d + part_to
+                                d = part_from + intermediate_d + part_to
 
                             init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
                     # or else we can optimistically assume the object is in the nearest
