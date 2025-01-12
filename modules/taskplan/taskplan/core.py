@@ -201,7 +201,41 @@ class PartialMap:
         graph['is_target'] = is_target
         return graph
 
-    def get_training_data(self, simplify=False):
+    def prepare_fcnn_input(self, subgoals):
+        # there will be a data for all subgoals
+        # data will be node features of the room, the subgooal and the target
+        # the target will be the same for all subgoals
+        # the subgoal will be different for each subgoal
+        # the room will be the room of the subgoal
+        # the label will be 1 if the subgoal is the target and 0 otherwise
+        input = []
+        for subgoal in subgoals:
+            temp = []
+            # find the room of the subgoal from edge_index of graph
+            room = self.org_edge_index[0][self.org_edge_index[1].index(subgoal)]
+            temp.extend(self.org_node_feats[room])
+            temp.extend(self.org_node_feats[subgoal])
+            temp.extend(self.org_node_feats[self.target_obj])
+
+            # add to input
+            input.append(temp)
+        return {'node_feats': input}
+
+    def get_training_data(self, simplify=False, fcnn=False):
+        if fcnn:
+            _, subgoals = self.initialize_graph_and_subgoals()
+            input_graph = self.prepare_fcnn_input(subgoals)
+
+            # create the label
+            label = []
+            for subgoal in subgoals:
+                if subgoal in self.target_container:
+                    label.append(1)
+                else:
+                    label.append(0)
+            input_graph['labels'] = label
+            return input_graph
+
         current_graph, subgoals = self.initialize_graph_and_subgoals()
         input_graph = self.prepare_gcn_input(current_graph, subgoals, simplify)
 
