@@ -79,6 +79,13 @@ def preprocess_gcn_data(datum):
     return data
 
 
+def preprocess_fcnn_data(datum):
+    data = datum.copy()
+    data['latent_features'] = torch.tensor(np.array(
+        data['node_feats']), dtype=torch.float)
+    return data
+
+
 def get_pose_from_coord(coords, whole_graph):
     coords_list = []
     for node in whole_graph['node_coords']:
