@@ -182,7 +182,7 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                              planner=pddl['planner'], max_planner_time=300)
                 cost_str = taskplan.utilities.utils.get_cost_string(args)
-                taskplan.utilities.utils.check_plan_validity(plan, args, cost_str)
+                taskplan.utilities.utils.check_replan_validity(plan, args, cost_str)
                 break
 
     return executed_actions, robot_poses, action_cost
