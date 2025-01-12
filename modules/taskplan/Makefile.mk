@@ -14,7 +14,7 @@ NUM_EVAL_SEEDS ?= 200
 CORE_ARGS ?= --resolution 0.05 \
 			--cache_path /data/.cache
 EVAL_ARGS ?= --save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
-			--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt \
+			--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/fcnn.pt \
 			--fail_log /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/fail_log.txt
 GOAL_TYPE ?= breakfast
 
@@ -55,6 +55,19 @@ $(train-file): $(data-gen-seeds)
 
 .PHONY: train
 train: $(train-file)
+
+# Network training target
+fcnn-train-file = $(DATA_BASE_DIR)/$(BASENAME)/logs/$(EXPERIMENT_NAME)/fcnn.pt
+$(fcnn-train-file): #$(data-gen-seeds)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.train_fcnn \
+		--num_epochs 8 \
+		--learning_rate 1e-4 \
+		--learning_rate_decay_factor .9 \
+		--save_dir /data/$(BASENAME)/logs/$(EXPERIMENT_NAME) \
+		--data_csv_dir /data/$(BASENAME)/
+
+.PHONY: train-fcnn
+train-fcnn: $(fcnn-train-file)
 
 ## Evaluation targets ##
 # Object search: Naive target #
