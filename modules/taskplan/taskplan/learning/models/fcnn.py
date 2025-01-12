@@ -86,22 +86,22 @@ class Fcnn(nn.Module):
     @classmethod
     def get_net_eval_fn(_, network_file,
                         device=None):
-        model = Gnn()
+        model = Fcnn()
         model.load_state_dict(torch.load(network_file,
                                          map_location=device))
         model.eval()
         model.to(device)
 
         def frontier_net(datum, subgoals):
-            graph = taskplan.utilities.utils.preprocess_gcn_data(datum)
+            graph = taskplan.utilities.utils.preprocess_fcnn_data(datum)
             prob_feasible_dict = {}
             with torch.no_grad():
                 out = model.forward(graph, device)
                 out[:, 0] = torch.sigmoid(out[:, 0])
                 out = out.detach().cpu().numpy()
-                for subgoal in subgoals:
+                for idx, subgoal in enumerate(subgoals):
                     # Extract subgoal properties for a subgoal
-                    subgoal_props = out[subgoal.value]
+                    subgoal_props = out[idx]
                     prob_feasible_dict[subgoal] = subgoal_props[0]
                 return prob_feasible_dict
         return frontier_net
