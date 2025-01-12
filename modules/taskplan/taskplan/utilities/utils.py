@@ -246,10 +246,20 @@ def check_plan_validity(plan, args, cost_str=None):
     if not plan:
         if plan == []:
             error_msg = "Goal already satisfied with initial settings!"
-        elif cost_str:
-            error_msg = f"==== Replanning Failed [{cost_str}] ===="
         elif plan is None:
             error_msg = "No valid plan found with initial settings!"
+        save_fail_log(args.fail_log, args.current_seed, error_msg)
+        plt.title(error_msg)
+        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
+        exit()
+
+
+def check_replan_validity(plan, args, cost_str=None):
+    if not plan:
+        if plan == []:  # When target object is found where it needs to be
+            return
+        else:
+            error_msg = f"==== Replanning Failed [{cost_str}] ===="
         save_fail_log(args.fail_log, args.current_seed, error_msg)
         plt.title(error_msg)
         plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
