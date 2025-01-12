@@ -60,6 +60,15 @@ def preprocess_training_data(args=None):
     return make_graph
 
 
+def preprocess_fcnn_training_data():
+    def make_data(data):
+        data['node_feats'] = torch.tensor(
+            np.array(data['node_feats']), dtype=torch.float)
+        data['labels'] = torch.tensor(data['labels'], dtype=torch.float)
+        return data
+    return make_data
+
+
 def preprocess_gcn_data(datum):
     data = datum.copy()
     data['edge_data'] = torch.tensor(data['edge_index'], dtype=torch.long)
