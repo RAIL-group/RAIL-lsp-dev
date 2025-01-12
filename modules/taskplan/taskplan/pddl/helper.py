@@ -80,7 +80,7 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
         goal_type=args.goal_type, learned_data=learned_data)
-    pddl['planner'] = 'ff-astar2'  # 'max-astar'
+    pddl['planner'] = 'ff-astar1'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
 
