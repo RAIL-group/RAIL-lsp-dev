@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import procthor
 import taskplan
 
+IS_FCNN = True
+
 
 def gen_data_main(args):
     coffee_objects = taskplan.utilities.utils.get_coffee_objects()
@@ -32,8 +34,8 @@ def gen_data_main(args):
             continue
         processed.add(gen_name)
         partial_map.target_obj = target_obj
-        training_data = partial_map.get_training_data()
-        taskplan.utilities.utils.write_datum_to_file(args, training_data, idx)
+        training_data = partial_map.get_training_data(fcnn=IS_FCNN)
+        taskplan.utilities.utils.write_datum_to_file(args, training_data, idx, fcnn=IS_FCNN)
 
     plt.figure(figsize=(12, 4))
     plt.suptitle(f'Seed: [{args.current_seed}]')
