@@ -29,7 +29,8 @@ def test_sctpbase_state_lineargraph():
    robots = graphs.RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
 
    edge_probs = {edge.id: edge.block_prob for edge in edges}
-   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, 
+   edge_costs = {edge.id: edge.cost for edge in edges}
+   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
                      goal=goal, vertices=nodes, edges=edges, robots=robots)
    all_actions = initial_state.get_actions()
    assert len(all_actions) == 1
@@ -78,7 +79,8 @@ def test_sctpbase_state_disjointgraph_noblock():
    node3.neighbors.append(node2.id)
    robots = graphs.RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
    edge_probs = {edge.id: edge.block_prob for edge in edges}
-   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, 
+   edge_costs = {edge.id: edge.cost for edge in edges}
+   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
                      goal=goal, vertices=nodes, edges=edges, robots=robots)
    all_actions = initial_state.get_actions()
    assert len(all_actions) == 2
@@ -151,4 +153,29 @@ def test_sctpbase_state_disjointgraph_probs():
    assert best_action == 2
    # assert cost == pytest.approx(expected_path123, abs=100.1)
 
+
+def test_sctpbase_state_sgraph():
+   start, goal, nodes, edges, robots = graphs.s_graph_unc()
+
+   for edge in edges:
+      edge.block_status = 0
+      edge.block_prob = 0.1
    
+   # for edge in edges:
+   #    print(f"edge {edge.id} block status {edge.block_status} block prob {edge.block_prob} and cost {edge.cost}")
+
+   edge_probs = {edge.id: edge.block_prob for edge in edges}
+   edge_costs = {edge.id: edge.cost for edge in edges}
+   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
+                     goal=goal, vertices=nodes, edges=edges, robots=robots)
+   all_actions = initial_state.get_actions()
+   assert len(all_actions) == 2
+
+   action = all_actions[0]
+   # print(f"action {action}")
+   assert action == 2 or action == 3
+   best_action, exp_cost = core.po_mcts(initial_state, n_iterations=1000)
+
+   assert best_action == 3
+   # assert exp_cost == pytest.approx(8.0, abs=0.2)
+   assert exp_cost == pytest.approx(0.9*8.0+0.2*1e6, abs=10.0)

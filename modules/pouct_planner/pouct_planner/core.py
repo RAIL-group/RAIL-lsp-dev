@@ -9,7 +9,7 @@ class POUCTNode(object):
         if self.parent is not None:
             self.cost = self.parent.cost + cost
         else:
-            self.cost = 0
+            self.cost = 0.0
         self.prev_action = action
         self.children = set()
         self.unexplored_actions = [copy.copy(a) for a in self.state.get_actions()]
@@ -18,7 +18,7 @@ class POUCTNode(object):
         # the number of times each action has been taken
         self.action_n = {act: 0 for act in self.unexplored_actions}
         # the cumulative values for each action
-        self.action_values = {act: 0 for act in self.unexplored_actions}
+        self.action_values = {act: 0.0 for act in self.unexplored_actions}
 
         # to save computation, action outcome stores next node for each action from the state
         self.action_outcomes = {}
@@ -32,9 +32,9 @@ class POUCTNode(object):
 
     def get_best_uct_action(self, C=1.0):
         action = list(self.action_n.keys())
-        action_values = np.array([self.action_values[a] for a in action])
-        action_n = np.array([self.action_n[a] for a in action])
-        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(self.total_n)/action_n)
+        action_values = np.array([float(self.action_values[a]) for a in action])
+        action_n = np.array([float(self.action_n[a]) for a in action])
+        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(float(self.total_n))/action_n)
         return action[np.argmax(uct_values)]
 
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):

@@ -158,7 +158,7 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
 
     return nodes, edges
 
-def s_graph_unc():
+def m_graph_unc():
     """Generate a simple graph for testing purposes."""
     start = 1
     goal = 7
@@ -252,6 +252,56 @@ def s_graph_unc():
     node5.neighbors.append(node6.id)
     robots = RobotData(robot_id = 1, position=(-3.0, 4.0), cur_vertex=start)
     return start, goal, nodes, edges, robots
+
+def s_graph_unc():
+    """Generate a simple graph for testing purposes."""
+    start = 1
+    goal = 4
+    nodes = []
+    node1 = Vertex(1, (0.0, 0.0))
+    nodes.append(node1)
+    node2 = Vertex(2, (4.0, 4.0))
+    nodes.append(node2)
+    node3 = Vertex(3, (4.0, 0.0))
+    nodes.append(node3)
+    node4 = Vertex(4, (8.0, 0.0))
+    nodes.append(node4)
+    
+
+    edges = []
+    edge1 = Edge(node1, node2, random.uniform(0.1, 0.3))
+    edge1.block_status = 0
+    edges.append(edge1)
+    node1.neighbors.append(node2.id)
+    node2.neighbors.append(node1.id)
+
+    edge2 = Edge(node1, node3, random.uniform(0.2, 0.4))
+    edge2.block_status = 0
+    edges.append(edge2)
+    node1.neighbors.append(node3.id)
+    node3.neighbors.append(node1.id)
+    
+    edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
+    edge3.block_status = 0
+    edges.append(edge3)
+    node2.neighbors.append(node3.id)
+    node3.neighbors.append(node2.id)
+    
+    edge4 = Edge(node2, node4, random.uniform(0.08, 0.14))
+    edge4.block_status = 0
+    edges.append(edge4)
+    node2.neighbors.append(node4.id)
+    node4.neighbors.append(node2.id)
+    
+    edge5 = Edge(node3, node4, random.uniform(0.1, 0.4))
+    edge5.block_status = 0
+    edges.append(edge5)
+    node3.neighbors.append(node4.id)
+    node4.neighbors.append(node3.id)
+    
+    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+    return start, goal, nodes, edges, robots
+
 
 def disjoint_unc(): # edge 34 is blocked
     start = 1
