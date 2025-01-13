@@ -343,3 +343,25 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
     failure_state.robots[0].retarget(action_unknownS3B, distances)
     assert failure_state.robots[0].time_remaining == 250
     assert failure_state.robots[0].info_time == 250
+
+
+def test_mrtask_mrstate_cost():
+    # Set up the environment
+    robot_node = Node()
+    robot_known = Robot(robot_node)
+    known_space_node = Node(props=('objA', 'objB',))
+
+    distances = {
+        (robot_node, known_space_node): 5
+    }
+
+    specification = "F objA & F objB"
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot_known],
+                      planner=planner,
+                      distances=distances,
+                      subgoal_prop_dict={},
+                      known_space_nodes=[known_space_node],
+                      unknown_space_nodes=[])
+
+    # Continue with PO-UCT code
