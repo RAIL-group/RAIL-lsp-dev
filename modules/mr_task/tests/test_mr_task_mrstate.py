@@ -344,16 +344,20 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
     assert failure_state.robots[0].time_remaining == 250
     assert failure_state.robots[0].info_time == 250
 
+import pouct_planner
 
 def test_mrtask_mrstate_cost():
     # Set up the environment
     robot_node = Node()
     robot_known = Robot(robot_node)
-    known_space_node = Node(props=('objA', 'objB',))
+    known_space_node_near = Node(props=('objA', 'objB',), location=(5, 0))
+    known_space_node_far = Node(props=('objA', 'objB',), location=(100, 0))
 
     distances = {
-        (robot_node, known_space_node): 5
+        (robot_node, known_space_node_near): 5,
+        (robot_node, known_space_node_far): 100
     }
+    expected_best_action = Action(known_space_node_near)
 
     specification = "F objA & F objB"
     planner = DFAManager(specification)
@@ -361,7 +365,9 @@ def test_mrtask_mrstate_cost():
                       planner=planner,
                       distances=distances,
                       subgoal_prop_dict={},
-                      known_space_nodes=[known_space_node],
+                      known_space_nodes=[known_space_node_near, known_space_node_far],
                       unknown_space_nodes=[])
 
-    # Continue with PO-UCT code
+    best_action, cost = pouct_planner.core.po_mcts(mrstate, n_iterations=50000)
+    assert cost == 5
+    assert best_action == expected_best_action
