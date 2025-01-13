@@ -25,12 +25,16 @@ class History(object):
       
    def __str__(self):
       return f'{self._data}'
+   
+   def __hash__(self):
+      return hash(tuple(self._data.items()))
 
 
 class SCTPBaseState(object):
-   def __init__(self, edge_probs, last_state= None, history=None, goal=None,
+   def __init__(self, edge_probs, edge_costs, last_state= None, history=None, goal=None,
                      vertices=None, edges=None, robots=None):
       self.edge_probs = edge_probs
+      self.edge_costs = edge_costs
       self.action_cost = 0.0
       if history is None:
          self.history = History()
@@ -41,13 +45,11 @@ class SCTPBaseState(object):
          self.edges = edges
          self.goalID = goal 
          self.robots = robots
-         # self.history = History()
       else:
          self.vertices = last_state.vertices
          self.edges = last_state.edges
          self.goalID = last_state.goalID
          self.robots = graphs.RobotData(last_robot=last_state.robots)
-         # self.history = last_state.history.copy()
       self.actions = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
 
 
@@ -70,7 +72,7 @@ class SCTPBaseState(object):
       # for blocking 
       block_history = self.history.copy()
       block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
-      new_state_block = SCTPBaseState(self.edge_probs, last_state=self, history=block_history)
+      new_state_block = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=block_history)
       new_state_block.robot_move(action)
       new_state_block.action_cost = 10e5
       belief_state[new_state_block] = (block_prob, new_state_block.action_cost)
@@ -78,11 +80,14 @@ class SCTPBaseState(object):
       # for traversable
       trav_history = self.history.copy()
       trav_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.TRAV)
-      new_state_traversable = SCTPBaseState(self.edge_probs, last_state=self, history=trav_history)
+      new_state_traversable = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=trav_history)
       new_state_traversable.robot_move(action)
-      new_state_traversable.action_cost = [edge for edge in self.edges if edge.id == edge_id][0].cost
+      new_state_traversable.action_cost = self.edge_costs[edge_id]
       belief_state[new_state_traversable] = (1.0 - block_prob, new_state_traversable.action_cost)
 
+      if new_state_block==new_state_traversable:
+         raise ValueError("new_state_block==new_state_traversable")
+         
 
       return belief_state
       
@@ -103,7 +108,7 @@ class SCTPBaseState(object):
       graph_hash = self.hash_graph()
       robot_hash = self.hash_robot()
       # Combine the two hashes
-      combined_hash = hash((graph_hash, robot_hash, self.action_cost))
+      combined_hash = hash((graph_hash, robot_hash, self.history))
       return combined_hash
 
    def __hash__(self):
@@ -116,4 +121,11 @@ class SCTPBaseState(object):
    def __repr__(self):
       return f'{self.edge_probs, self.robots.cur_vertex}'
 
-      
+def sctpbase_rollout(state):
+   # not allow the robot to move back to the parent node
+   # for _ in range(n_steps):
+   #    if state.is_goal_state:
+   #       return state
+   #    action = state.get_actions()[0]
+   #    state = state.transition(action)
+   pass

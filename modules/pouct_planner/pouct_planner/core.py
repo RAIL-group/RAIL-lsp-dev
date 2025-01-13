@@ -74,7 +74,7 @@ def rollout(node, rollout_fn=None):
         return node.cost + rollout_fn(node.state)
     else:
         # do a random rollout
-        rollout_cost = 0
+        rollout_cost = 0.0
         while not node.is_terminal_node():
             action = np.random.choice(node.unexplored_actions)
             node = get_chance_node(node, action)
