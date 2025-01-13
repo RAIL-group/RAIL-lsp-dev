@@ -4,9 +4,10 @@ from enum import Enum
 EventOutcome = Enum('EventOutcome', ['CHANCE', 'SUCCESS', 'FAILURE'])
 
 class Node(object):
-    def __init__(self, props=[], is_subgoal=False):
+    def __init__(self, props=[], is_subgoal=False, location=None):
         self.props = props
         self.is_subgoal = is_subgoal
+        self.location = location
 
 
 class Action(object):
@@ -74,15 +75,17 @@ def get_next_event_and_time(robot, history):
         return outcome, robot.info_time
 
 class MRState(object):
-    def __init__(self, robots, planner, distances, history=None):
+    def __init__(self, robots, planner, distances,
+                 known_space_nodes=[], unknown_space_nodes=[],
+                 subgoal_prop_dict = {}, history=History()):
         self.dfa_state = planner.state
         self.robots = robots
         self.distances = distances
         self.planner = planner
-        if history is None:
-            self.history = History()
-        else:
-            self.history = history
+        self.known_space_nodes = known_space_nodes
+        self.unknown_space_nodes = unknown_space_nodes
+        self.subgoal_prop_dict = subgoal_prop_dict
+        self.history = history
 
     def transition(self, action):
         needs_action = [robot.needs_action for robot in self.robots]
@@ -95,7 +98,12 @@ class MRState(object):
         return normalized_outcome
 
     def get_actions(self):
-        pass
+        useful_props = self.planner.get_useful_props()
+        ks_actions = [Action(node) for node in self.known_space_nodes]
+        unk_actions = [Action(node, (props,), self.subgoal_prop_dict)
+                       for node in self.unknown_space_nodes
+                       for props in useful_props]
+        return ks_actions + unk_actions
 
 def advance_mrstate(mrstate, prob=1.0, cost=0.0):
     # TODO If any of the robots need an action, return:
