@@ -86,6 +86,10 @@ class MRState(object):
         self.unknown_space_nodes = unknown_space_nodes
         self.subgoal_prop_dict = subgoal_prop_dict
         self.history = history
+        if planner.is_accepting_state(self.dfa_state):
+            self.is_goal_state = True
+        else:
+            self.is_goal_state = False
 
     def transition(self, action):
         needs_action = [robot.needs_action for robot in self.robots]
