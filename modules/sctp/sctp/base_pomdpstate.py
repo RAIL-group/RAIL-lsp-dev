@@ -118,8 +118,8 @@ class SCTPBaseState(object):
    def __eq__(self, other):
       return self.hash_id == other.hash_id
 
-   def __repr__(self):
-      return f'{self.edge_probs, self.robots.cur_vertex}'
+   # def __repr__(self):
+   #    return f'{self.edge_probs, self.robots.cur_vertex}'
 
 def sctpbase_rollout(state):
    # not allow the robot to move back to the parent node
