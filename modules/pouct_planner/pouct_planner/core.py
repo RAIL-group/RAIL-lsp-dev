@@ -52,6 +52,7 @@ def traverse(node, C=1.0):
         action = node.get_best_uct_action(C=C)
         child_node = get_chance_node(node, action)
         if child_node not in node.children:
+            node.children.add(child_node)
             return child_node
         else:
             node = child_node
