@@ -95,13 +95,12 @@ class Fcnn(nn.Module):
         def frontier_net(datum, subgoals):
             graph = taskplan.utilities.utils.preprocess_fcnn_data(datum)
             prob_feasible_dict = {}
-            with torch.no_grad():
-                out = model.forward(graph, device)
-                out[:, 0] = torch.sigmoid(out[:, 0])
-                out = out.detach().cpu().numpy()
-                for idx, subgoal in enumerate(subgoals):
-                    # Extract subgoal properties for a subgoal
-                    subgoal_props = out[idx]
-                    prob_feasible_dict[subgoal] = subgoal_props[0]
-                return prob_feasible_dict
+            for idx, subgoal in enumerate(subgoals):
+                sub_data = {'latent_features': graph['latent_features'][idx].unsqueeze(0)}
+                with torch.no_grad():
+                    out = model.forward(sub_data, device)
+                    out[:, 0] = torch.sigmoid(out[:, 0])
+                    out = out.detach().cpu().numpy()
+                    prob_feasible_dict[subgoal] = out[0][0]
+            return prob_feasible_dict
         return frontier_net
