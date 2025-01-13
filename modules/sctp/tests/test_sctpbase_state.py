@@ -1,5 +1,5 @@
 import pytest
-from sctp import base_pomdpstate
+from sctp import base_pomdpstate, base_navigation
 from pouct_planner import core
 from sctp import graphs
 
@@ -100,6 +100,7 @@ def test_sctpbase_state_disjointgraph_noblock():
    assert cost == pytest.approx(7.4, abs=0.1)
 
 def test_sctpbase_state_disjointgraph_probs():
+
    start = 1
    goal = 3
    # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
@@ -146,17 +147,8 @@ def test_sctpbase_state_disjointgraph_probs():
    assert len(all_actions) == 2
    action = all_actions[0]
    assert action == 2 or action == 4
-
-   # outcome_states = initial_state.transition(action)
-   # assert len(outcome_states) == 2
-   # for state, (prob, cost) in outcome_states.items():
-   #    if prob == 0.0:
-   #       assert state.history.get_action_outcome(action, start, prob) == base_pomdpstate.EventOutcome.BLOCK
-   #       assert cost == pytest.approx(10e5, abs=0.1)
-   #    if prob ==1.0:
-   #       assert state.history.get_action_outcome(action, start, 1.0-prob) == base_pomdpstate.EventOutcome.TRAV
-   #       assert cost == pytest.approx(4.0, abs=0.1)   
-
    best_action, cost = core.po_mcts(initial_state, n_iterations=1000)
    assert best_action == 2
    # assert cost == pytest.approx(expected_path123, abs=100.1)
+
+   

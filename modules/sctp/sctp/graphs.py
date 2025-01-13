@@ -14,7 +14,7 @@ class RobotData:
          self.robotID = robot_id
          self.position = position
          self.cur_vertex = cur_vertex
-         self.last_vertex = self.cur_vertex
+         self.last_vertex = None
 
    def get_robotID(self) -> int:
       return self.robotID
@@ -158,6 +158,168 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
 
     return nodes, edges
 
+def s_graph_unc():
+    """Generate a simple graph for testing purposes."""
+    start = 1
+    goal = 7
+    nodes = []
+    node1 = Vertex(1, (-3.0, 4.0))
+    nodes.append(node1)
+    node2 = Vertex(2, (-15.0, 7.5))
+    nodes.append(node2)
+    node3 = Vertex(3, (0.0, 2.0))
+    nodes.append(node3)
+    node4 = Vertex(4, (4.0, 0.0))
+    nodes.append(node4)
+    node5 = Vertex(5, (4.0, 4.0))
+    nodes.append(node5)
+    node6 = Vertex(6, (4.0, 8.0))
+    nodes.append(node6)
+    node7 = Vertex(7, (8.0, 4.0))
+    nodes.append(node7)
+
+    edges = []
+    edge1 = Edge(node1, node2, random.uniform(0.1, 0.3))
+    edge1.block_status = 0
+    edges.append(edge1)
+    node1.neighbors.append(node2.id)
+    node2.neighbors.append(node1.id)
+
+    edge2 = Edge(node1, node3, random.uniform(0.2, 0.4))
+    edge2.block_status = 0
+    edges.append(edge2)
+    node1.neighbors.append(node3.id)
+    node3.neighbors.append(node1.id)
+    
+    edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
+    edge3.block_status = 0
+    edges.append(edge3)
+    node2.neighbors.append(node3.id)
+    node3.neighbors.append(node2.id)
+    
+    edge4 = Edge(node2, node5, random.uniform(0.08, 0.14))
+    edge4.block_status = 0
+    edges.append(edge4)
+    node2.neighbors.append(node5.id)
+    node5.neighbors.append(node2.id)
+    
+    edge5 = Edge(node2, node6, random.uniform(0.1, 0.4))
+    edge5.block_status = 0
+    edges.append(edge5)
+    node2.neighbors.append(node6.id)
+    node6.neighbors.append(node2.id)
+    
+    edge6 = Edge(node3, node4, random.uniform(0.9, 1.0))
+    edge6.block_status = 1
+    edges.append(edge6)
+    node3.neighbors.append(node4.id)
+    node4.neighbors.append(node3.id)
+    
+    edge7 = Edge(node3, node5, random.uniform(0.1, 0.3))
+    edge7.block_status = 0
+    edges.append(edge7)
+    node3.neighbors.append(node5.id)
+    node5.neighbors.append(node3.id)
+    
+    edge8 = Edge(node4, node5, random.uniform(0.0, 0.2))
+    edge8.block_status = 0
+    edges.append(edge8)
+    node4.neighbors.append(node5.id)
+    node5.neighbors.append(node4.id)
+    
+    edge9 = Edge(node7, node4, random.uniform(0.2, 0.3))
+    edge9.block_status = 0
+    edges.append(edge9)
+    node7.neighbors.append(node4.id)
+    node4.neighbors.append(node7.id)
+
+    edge10 = Edge(node7, node5, random.uniform(0.9, 1.0))
+    edge10.block_status = 1
+    edges.append(edge10)
+    node7.neighbors.append(node5.id)
+    node5.neighbors.append(node7.id)
+    
+    edge11 = Edge(node6, node7, random.uniform(0.9, 1.0))
+    edge11.block_status = 1
+    edges.append(edge11)
+    node6.neighbors.append(node7.id)
+    node7.neighbors.append(node6.id)
+
+    edge12 = Edge(node6, node5, random.uniform(0.5, 0.7))
+    edge12.block_status = 0
+    edges.append(edge12)
+    node6.neighbors.append(node5.id)
+    node5.neighbors.append(node6.id)
+    robots = RobotData(robot_id = 1, position=(-3.0, 4.0), cur_vertex=start)
+    return start, goal, nodes, edges, robots
+
+def disjoint_unc(): # edge 34 is blocked
+    start = 1
+    goal = 3
+    # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
+    nodes = []
+    node1 =  Vertex(1, (0.0, 0))
+    nodes.append(node1)
+    node2 =  Vertex(2, (0.0, 4.0))
+    nodes.append(node2)
+    node3 =  Vertex(3, (4.0, 4.0))
+    nodes.append(node3)
+    node4 =  Vertex(4, (5.0, 4.0))
+    nodes.append(node4)
+    
+    edges = []
+    # edge 1
+    edge1 =  Edge(node1, node2, 0.1)
+    edge1.block_status = 0
+    edges.append(edge1)
+    node1.neighbors.append(node2.id)
+    node2.neighbors.append(node1.id)
+    # edge 2
+    edge2 =  Edge(node3, node4, 0.9)
+    edge2.block_status = 1
+    edges.append(edge2)
+    node3.neighbors.append(node4.id)
+    node4.neighbors.append(node3.id)
+    # edge 3
+    edge3 =  Edge(node1, node4, 0.2) # length = 6.4
+    edge3.block_status = 0
+    edges.append(edge3)
+    node1.neighbors.append(node4.id)
+    node4.neighbors.append(node1.id)
+    # edge 4
+    edge4 =  Edge(node2, node3, 0.1)
+    edge4.block_status = 0
+    edges.append(edge4)
+    node2.neighbors.append(node3.id)
+    node3.neighbors.append(node2.id)
+    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+    return start, goal, nodes, edges, robots
+
+def linear_graph_unc():
+    start = 1
+    goal = 3
+    nodes = []
+    node1 = Vertex(1, (0.0, 0.0))
+    nodes.append(node1)
+    node2 =  Vertex(2, (5.0, 0.0))
+    nodes.append(node2)
+    node3 =  Vertex(3, (15.0, 0.0))
+    nodes.append(node3)
+    
+    edges = []
+    edge1 =  Edge(node1, node2, 0.9)
+    edge1.block_status = 1
+    edges.append(edge1)
+    node1.neighbors.append(node2.id)
+    node2.neighbors.append(node1.id)
+    edge2 =  Edge(node2, node3, 0.0)
+    edge2.block_status = 0
+    edges.append(edge2)
+    node2.neighbors.append(node3.id)
+    node3.neighbors.append(node2.id)
+    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+    return start, goal, nodes, edges, robots
+# helper functions
 def plot_street_graph(nodes, edges, name="Testing Graph"):
     """Plot graph using matplotlib."""
     plt.figure(figsize=(10, 10))
@@ -184,169 +346,6 @@ def plot_street_graph(nodes, edges, name="Testing Graph"):
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.axis("equal")
     plt.show()
-
-def simple_graph():
-    """Generate a simple graph for testing purposes."""
-    nodes = []
-    node1 = Vertex(1, (-3.0, 4.0))
-    nodes.append(node1)
-    node2 = Vertex(2, (0.0, 5.5))
-    nodes.append(node2)
-    node3 = Vertex(3, (0.0, 2.0))
-    nodes.append(node3)
-    node4 = Vertex(4, (4.0, 0.0))
-    nodes.append(node4)
-    node5 = Vertex(5, (4.0, 4.0))
-    nodes.append(node5)
-    node6 = Vertex(6, (4.0, 8.0))
-    nodes.append(node6)
-    node7 = Vertex(7, (8.0, 4.0))
-    nodes.append(node7)
-    edges = []
-    edge1 = Edge(node1, node2, random.uniform(0.0, 0.1))
-    edge1.block_status = 0
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
-
-    edge2 = Edge(node1, node3, random.uniform(0.2, 0.4))
-    edge2.block_status = 0
-    edges.append(edge2)
-    node1.neighbors.append(node3.id)
-    node3.neighbors.append(node1.id)
-    
-    edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
-    edge3.block_status = 0
-    edges.append(edge3)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-    
-    edge4 = Edge(node2, node5, random.uniform(0.05, 0.14))
-    edge4.block_status = 0
-    edges.append(edge4)
-    node2.neighbors.append(node5.id)
-    node5.neighbors.append(node2.id)
-    
-    edge5 = Edge(node2, node6, random.uniform(0.0, 0.4))
-    edge5.block_status = 0
-    edges.append(edge5)
-    node2.neighbors.append(node6.id)
-    node6.neighbors.append(node2.id)
-    
-    edge6 = Edge(node3, node4, random.uniform(0.9, 1.0))
-    edge6.block_status = 1
-    edges.append(edge6)
-    node3.neighbors.append(node4.id)
-    node4.neighbors.append(node3.id)
-    
-    edge7 = Edge(node3, node5, random.uniform(0.1, 0.3))
-    edge7.block_status = 0
-    edges.append(edge7)
-    node3.neighbors.append(node5.id)
-    node5.neighbors.append(node3.id)
-    
-    edge8 = Edge(node4, node5, random.uniform(0.0, 0.2))
-    edge8.block_status = 0
-    edges.append(edge8)
-    node4.neighbors.append(node5.id)
-    node5.neighbors.append(node4.id)
-    
-    edge = Edge(node7, node4, random.uniform(0.2, 0.3))
-    edge.block_status = 0
-    edges.append(edge)
-    node7.neighbors.append(node4.id)
-    node4.neighbors.append(node7.id)
-
-
-    edge = Edge(node6, node5, random.uniform(0.5, 0.7))
-    edge.block_status = 0
-    edges.append(edge)
-    node6.neighbors.append(node5.id)
-    node5.neighbors.append(node6.id)
-    
-    edge = Edge(node7, node5, random.uniform(0.9, 1.0))
-    edge.block_status = 1
-    edges.append(edge)
-    node7.neighbors.append(node5.id)
-    node5.neighbors.append(node7.id)
-    
-    edge = Edge(node6, node7, random.uniform(0.9, 1.0))
-    edge.block_status = 1
-    edges.append(edge)
-    node6.neighbors.append(node7.id)
-    node7.neighbors.append(node6.id)
-    
-
-    return nodes, edges
-
-def disjoint_graph():
-    """Generate a disjoint graph for testing purposes."""
-    nodes = []
-    node1 = Vertex(1, (4.0, 0))
-    nodes.append(node1)
-    node2 =  Vertex(2, (0.0, 4.0))
-    nodes.append(node2)
-    node3 =  Vertex(3, (4.0, 8.0))
-    nodes.append(node3)
-    node4 =  Vertex(4, (8.0, 4.0))
-    nodes.append(node4)
-    node5 =  Vertex(5, (4.0, 4.0))
-    nodes.append(node5)
-    edges = []
-    edge1 =  Edge(node1, node2, random.uniform(0.0, 0.2))
-    edge1.block_status = 0
-    edges.append(edge1)
-    edge2 =  Edge(node3, node4, 0.1)
-    edge2.block_status = 0
-    edges.append(edge2)
-    edge4 =  Edge(node2, node5, random.uniform(0.0, 0.2))
-    edge4.block_status = 0
-    edges.append(edge4)
-    edge6 =  Edge(node4, node5, 0.85)
-    edge6.block_status = 1
-    edges.append(edge6)
-    edge7 =  Edge(node1, node4, 0.92)
-    edge7.block_status = 1
-    edges.append(edge7)
-    edge8 =  Edge(node2, node3, random.uniform(0.0, 0.2))
-    edge8.block_status = 0
-    edges.append(edge8)
-    return nodes, edges
-
-def simple_disjoint_graph():
-    """Generate a disjoint graph for testing purposes."""
-    nodes = []
-    node1 =  Vertex(1, (0.0, 0))
-    nodes.append(node1)
-    node2 =  Vertex(2, (0.0, 4.0))
-    nodes.append(node2)
-    node3 =  Vertex(3, (4.0, 4.0))
-    nodes.append(node3)
-    node4 =  Vertex(4, (5.0, 4.0))
-    nodes.append(node4)
-    
-    edges = []
-    edge1 =  Edge(node1, node2, random.uniform(0.0, 0.2))
-    edge1.block_status = 0
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
-    edge2 =  Edge(node3, node4, 0.1)
-    edge2.block_status = 0
-    edges.append(edge2)
-    node3.neighbors.append(node4.id)
-    node4.neighbors.append(node3.id)
-    edge7 =  Edge(node1, node4, 0.92)
-    edge7.block_status = 1
-    edges.append(edge7)
-    node1.neighbors.append(node4.id)
-    node4.neighbors.append(node1.id)
-    edge8 =  Edge(node2, node3, random.uniform(0.0, 0.2))
-    edge8.block_status = 0
-    edges.append(edge8)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-    return nodes, edges
 
 def print_graph(nodes, edges, show_edge=False, show_node=False):
     """Print the graph details."""
