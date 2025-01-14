@@ -201,7 +201,7 @@ def check_skip_protocol(args):
 
 
 def load_fail_log(fail_log):
-    failure_seeds = []
+    failure_seeds = [7306]
     if os.path.exists(fail_log):
         with open(fail_log, 'r') as lines:
             for line in lines:
