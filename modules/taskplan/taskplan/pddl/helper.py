@@ -57,21 +57,6 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
         whole_graph['nodes'], init_subgoals_idx)
     if learned_data:
         learned_data['subgoals'] = init_subgoals_idx
-        # Calculate the TSP cost for the subgoals
-        dist = [[0 for _ in range(len(subgoal_IDs))] for _ in range(len(subgoal_IDs))]
-        for i, f1 in enumerate(subgoal_IDs):
-            for j, f2 in enumerate(subgoal_IDs):
-                if i == j:
-                    continue
-                if f1 in map_data.known_cost:
-                    _to = f1
-                    _from = f2
-                else:
-                    _to = f2
-                    _from = f1
-                dist[i][j] = map_data.known_cost[_to][_from]
-                dist[j][i] = map_data.known_cost[_from][_to]
-        learned_data['tsp_cost'] = taskplan.core.solve_tsp_for_distance(dist)
 
     # initialize pddl related contents
     pddl = {}
@@ -80,14 +65,14 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
         goal_type=args.goal_type, learned_data=learned_data)
-    pddl['planner'] = 'ff-astar1'  # 'max-astar'
+    pddl['planner'] = 'ff-astar2'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
 
 
 def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
                                  robot_pose, destination,
-                                 learned_net, tsp_cost):
+                                 learned_net):
     ''' This function calculates and returns the expected cost of finding an object
     given the partial map, initial subgoals, object name, initial robot pose, and a
     learned network path
@@ -101,7 +86,7 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
     planner = LearnedPlanner(args, partial_map, verbose=False,
                              destination=destination)
     planner.update(graph, subgoals, robot_pose)
-    exp_cost, _ = planner.compute_selected_subgoal(return_cost=tsp_cost)
+    exp_cost, _ = planner.compute_selected_subgoal(return_cost=True)
     return round(exp_cost, 4)
 
 
