@@ -166,10 +166,10 @@ class LearnedPlanner(Planner):
                 alternate_sampling=True))
         if return_cost:
             # add failure cost to the minimum cost
-            prod_fail_prob = 1
-            for subgoal in frontier_ordering:
-                fail_prob = 1 - subgoal.prob_feasible
-                prod_fail_prob *= fail_prob
-            min_cost += prod_fail_prob * return_cost
+            # prod_fail_prob = 1
+            # for subgoal in frontier_ordering:
+            #     fail_prob = 1 - subgoal.prob_feasible
+            #     prod_fail_prob *= fail_prob
+            # min_cost += prod_fail_prob * return_cost
             return min_cost, frontier_ordering[0]
         return frontier_ordering[0]
