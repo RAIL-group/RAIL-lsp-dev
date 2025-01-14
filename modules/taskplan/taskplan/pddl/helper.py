@@ -72,22 +72,31 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
 
 def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
                                  robot_pose, destination,
-                                 learned_net):
+                                 learned_net, sub_pred=None):
     ''' This function calculates and returns the expected cost of finding an object
     given the partial map, initial subgoals, object name, initial robot pose, and a
     learned network path
     '''
     obj_idx = partial_map.idx_map[obj_name]
     partial_map.target_obj = obj_idx
-    graph, subgoals = partial_map.update_graph_and_subgoals(subgoals)
-
-    args = lambda: None
-    args.network_file = learned_net
-    planner = LearnedPlanner(args, partial_map, verbose=False,
-                             destination=destination)
-    planner.update(graph, subgoals, robot_pose)
-    exp_cost, _ = planner.compute_selected_subgoal(return_cost=True)
-    return round(exp_cost, 4)
+    # avoid re-computing the subgoals predictions if already computed for obj_name
+    if sub_pred is None:
+        graph, subgoals = partial_map.update_graph_and_subgoals(subgoals)
+        args = lambda: None
+        args.network_file = learned_net
+        planner = LearnedPlanner(args, partial_map, verbose=False,
+                                 destination=destination)
+        planner.update(graph, subgoals, robot_pose)
+        sub_pred = planner.subgoals
+    exp_cost, _ = (
+        taskplan.core.get_best_expected_cost_and_frontier_list(
+            sub_pred,
+            partial_map,
+            robot_pose,
+            destination,
+            num_frontiers_max=8,
+            alternate_sampling=True))
+    return round(exp_cost, 4), sub_pred
 
 
 def update_problem(problem, obj, from_loc, to_loc, distance):
