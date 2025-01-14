@@ -1,3 +1,4 @@
+import os
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,24 +10,41 @@ pd.set_option('display.max_columns', None)
 
 def load_logfiles(args):
     combined_df = []
-    args.data_file = args.df_opt_greedy
-    combined_df.append(taskplan.utilities.result.process_optimistic_greedy_data(args))
-    args.data_file = args.df_pes_greedy
-    combined_df.append(taskplan.utilities.result.process_pessimistic_greedy_data(args))
-    args.data_file = args.df_opt_lsp
-    combined_df.append(taskplan.utilities.result.process_optimistic_lsp_data(args))
-    args.data_file = args.df_pes_lsp
-    combined_df.append(taskplan.utilities.result.process_pessimistic_lsp_data(args))
-    args.data_file = args.df_learned
-    combined_df.append(taskplan.utilities.result.process_learned_data(args))
-    args.data_file = args.df_opt_oracle
-    combined_df.append(taskplan.utilities.result.process_optimistic_oracle_data(args))
-    args.data_file = args.df_pes_oracle
-    combined_df.append(taskplan.utilities.result.process_pessimistic_oracle_data(args))
-    args.data_file = args.df_oracle
-    combined_df.append(taskplan.utilities.result.process_oracle_data(args))
+    # check if args.df_opt_greedy exists in the directory
+    other_planners = []
+    if os.path.exists(args.df_opt_greedy):
+        args.data_file = args.df_opt_greedy
+        combined_df.append(taskplan.utilities.result.process_optimistic_greedy_data(args))
+        other_planners.append('OPTIMISTIC_GREEDY')
+    if os.path.exists(args.df_pes_greedy):
+        args.data_file = args.df_pes_greedy
+        combined_df.append(taskplan.utilities.result.process_pessimistic_greedy_data(args))
+        other_planners.append('PESSIMISTIC_GREEDY')
+    if os.path.exists(args.df_opt_lsp):
+        args.data_file = args.df_opt_lsp
+        combined_df.append(taskplan.utilities.result.process_optimistic_lsp_data(args))
+        other_planners.append('OPTIMISTIC_LSP')
+    if os.path.exists(args.df_pes_lsp):
+        args.data_file = args.df_pes_lsp
+        combined_df.append(taskplan.utilities.result.process_pessimistic_lsp_data(args))
+        other_planners.append('PESSIMISTIC_LSP')
+    if os.path.exists(args.df_learned):
+        args.data_file = args.df_learned
+        combined_df.append(taskplan.utilities.result.process_learned_data(args))
+    if os.path.exists(args.df_opt_oracle):
+        args.data_file = args.df_opt_oracle
+        combined_df.append(taskplan.utilities.result.process_optimistic_oracle_data(args))
+        other_planners.append('OPTIMISTIC_ORACLE')
+    if os.path.exists(args.df_pes_oracle):
+        args.data_file = args.df_pes_oracle
+        combined_df.append(taskplan.utilities.result.process_pessimistic_oracle_data(args))
+        other_planners.append('PESSIMISTIC_ORACLE')
+    if os.path.exists(args.df_oracle):
+        args.data_file = args.df_oracle
+        combined_df.append(taskplan.utilities.result.process_oracle_data(args))
+        other_planners.append('ORACLE')
 
-    return combined_df
+    return combined_df, other_planners
 
 
 def get_common_df(combined_data):
@@ -75,16 +93,12 @@ if __name__ == "__main__":
 
     # Load data and create the pd.dataframe for each planner with its seed
     # and corresponding cost
-    combined_data = load_logfiles(args)
+    combined_data, Other_strs = load_logfiles(args)
     common_df = get_common_df(combined_data)
     print(common_df.describe())
 
     result_dict = common_df.set_index('seed').T.to_dict()
     Learned_dict = {k: result_dict[k]['LEARNED_LSP'] for k in result_dict}
-
-    Other_strs = ['OPTIMISTIC_GREEDY', 'PESSIMISTIC_GREEDY',
-                  'OPTIMISTIC_LSP', 'PESSIMISTIC_LSP',
-                  'OPTIMISTIC_ORACLE', 'PESSIMISTIC_ORACLE', 'ORACLE']
 
     for seed in Learned_dict:
         # save the costs if learned_lsp cost is lower than or equal to
