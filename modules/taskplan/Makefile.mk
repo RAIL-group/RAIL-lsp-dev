@@ -104,7 +104,7 @@ $(eval-find-seeds-all):
 	 	--current_seed $(seed) \
 	 	--image_filename combined_$(seed).png \
 	 	--logfile_name combined_logfile.txt \
-		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/gnn.pt
+		--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/fcnn.pt
 
 .PHONY: eval-find-all
 eval-find-all: $(eval-find-seeds-all)
