@@ -47,7 +47,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
 
                 cnt_names = ['initial_robot_pose']
                 cnt_names += [loc['id'] for loc in containers]
-
+                pred_sub = None
                 if cnt_name in unvisited:
                     # Object is in the unknown space
                     init_states.append(f"(not (is-located {child_name}))")
@@ -109,13 +109,14 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                 if (child_name, from_room_coords, to_room_coords) in pre_compute:
                                     intermediate_d = pre_compute[(child_name, from_room_coords, to_room_coords)]
                                 else:
-                                    intermediate_d = get_expected_cost_of_finding(
+                                    intermediate_d, pred_sub = get_expected_cost_of_finding(
                                         learned_data['partial_map'],
                                         learned_data['subgoals'],
                                         child_name,
                                         from_room_coords,  # robot_pose
                                         to_room_coords,  # destination_pose
-                                        learned_data['learned_net'])
+                                        learned_data['learned_net'],
+                                        pred_sub)
                                     pre_compute[(child_name, from_room_coords, to_room_coords)] = intermediate_d
                                 if (from_coord, from_room_coords) in grid_cost:
                                     part_from = grid_cost[(from_coord, from_room_coords)]
