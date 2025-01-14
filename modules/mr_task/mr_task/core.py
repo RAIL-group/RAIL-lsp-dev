@@ -92,10 +92,13 @@ class MRState(object):
             self.is_goal_state = False
 
     def transition(self, action):
-        needs_action = [robot.needs_action for robot in self.robots]
+        temp_state = self.copy(robots=[robot.copy() for robot in self.robots],
+                               planner=copy.copy(self.planner),
+                               history=self.history.copy())
+        needs_action = [robot.needs_action for robot in temp_state.robots]
         if any(needs_action):
-            self.robots[needs_action.index(True)].retarget(action, self.distances)
-        outcome = advance_mrstate(self)
+            temp_state.robots[needs_action.index(True)].retarget(action, temp_state.distances)
+        outcome = advance_mrstate(temp_state)
         # normalize the probabilities (just to be sure)
         total_prob = sum([values[0] for values in outcome.values()])
         normalized_outcome = {key: (values[0]/total_prob, values[1]) for key, values in outcome.items()}
@@ -107,16 +110,27 @@ class MRState(object):
         unk_actions = [Action(node, (props,), self.subgoal_prop_dict)
                        for node in self.unknown_space_nodes
                        for props in useful_props]
+        unk_actions = [action for action in unk_actions
+                       if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
         return ks_actions + unk_actions
+
+    def copy(self, robots, planner, history):
+        return MRState(robots=robots,
+                       planner=planner,
+                       history=history,
+                       distances=self.distances,
+                       known_space_nodes=self.known_space_nodes,
+                       unknown_space_nodes=self.unknown_space_nodes,
+                       subgoal_prop_dict=self.subgoal_prop_dict)
 
 def advance_mrstate(mrstate, prob=1.0, cost=0.0):
     # TODO If any of the robots need an action, return:
     if any(robot.needs_action for robot in mrstate.robots):
         print("robots need actions")
         robots = [robot.copy() for robot in mrstate.robots]
-        state = MRState(robots=robots, planner=copy.copy(mrstate.planner),
-                        history=copy.copy(mrstate.history), distances=mrstate.distances)
-        return {state: (prob, cost)}
+        planner = copy.copy(mrstate.planner)
+        history = mrstate.history.copy()
+        return {mrstate.copy(robots, planner, history): (prob, cost)}
 
     # Propagate the MRState class as far as it will go
     robots = [robot.copy() for robot in mrstate.robots]
@@ -130,7 +144,8 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         # If SUCCESS, advance time and return
         # History unchanged, so copy unnecessary
         [robot.advance_time(event_time) for robot in robots]
-        mrstate.planner.advance(event_robot.action.props)
+        dfa_planner = copy.copy(mrstate.planner)
+        dfa_planner.advance(event_robot.action.props)
         event_robot.reset_needs_action()
 
         # INFO: if DFA state is updated, check for 'waiting' agents
@@ -141,21 +156,20 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
             for robot in robots:
                 # [REVISIT: If info time is <=0 (which is set to 0 in the advance function), the robot
                 # is waiting.]
-                if (robot != event_robot and mrstate.planner.does_transition_state(robot.action.props)
+                if (robot != event_robot and dfa_planner.does_transition_state(robot.action.props)
                    and robot.info_time == 0):
-                    mrstate.planner.advance(robot.action.props)
+                    dfa_planner.advance(robot.action.props)
                     robot.reset_needs_action()
                     do_loop = True
 
         # INFO: if the DFA state is updated, some agents' actions
         # will not be 'useful' anymore and also need retargeting.
-        useful_props = mrstate.planner.get_useful_props()
+        useful_props = dfa_planner.get_useful_props()
         for robot in robots:
             action_prop_still_useful = any([prop in useful_props for prop in robot.action.props])
             if (robot != event_robot and not action_prop_still_useful):
                 robot.reset_needs_action()
-        state = MRState(robots=robots, planner=copy.copy(mrstate.planner),
-                        history=copy.copy(mrstate.history), distances=mrstate.distances)
+        state = mrstate.copy(robots=robots, planner=dfa_planner, history=mrstate.history.copy())
         return {state: (prob, cost + event_time)}
 
     if event_outcome == EventOutcome.CHANCE:
@@ -164,10 +178,9 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         success_history = mrstate.history.copy()
         success_history.add_event(event_robot.action, EventOutcome.SUCCESS)
 
-        success_mrstate = MRState(robots=robots,
-                                  planner=copy.copy(mrstate.planner),
-                                  history=success_history,
-                                  distances=mrstate.distances)
+        success_mrstate = mrstate.copy(robots=robots,
+                                       planner=copy.copy(mrstate.planner),
+                                       history=success_history)
         outcome_states_success = advance_mrstate(success_mrstate,
                                                  cost=cost + event_time,
                                                  prob=prob * event_robot.action.PS)
@@ -177,10 +190,9 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         event_failure_robot.reset_needs_action()
         failure_history = mrstate.history.copy()
         failure_history.add_event(event_robot.action, EventOutcome.FAILURE)
-        failure_mrstate = MRState(robots=failure_robots,
-                                  planner=copy.copy(mrstate.planner),
-                                  history=failure_history,
-                                  distances=mrstate.distances)
+        failure_mrstate = mrstate.copy(robots=failure_robots,
+                                       planner=copy.copy(mrstate.planner),
+                                       history=failure_history)
         outcome_state_failure = {
             failure_mrstate: (prob * (1 - event_robot.action.PS), cost + event_time)
         }
