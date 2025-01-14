@@ -115,8 +115,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                         child_name,
                                         from_room_coords,  # robot_pose
                                         to_room_coords,  # destination_pose
-                                        learned_data['learned_net'],
-                                        learned_data['tsp_cost'])
+                                        learned_data['learned_net'])
                                     pre_compute[(child_name, from_room_coords, to_room_coords)] = intermediate_d
                                 if (from_coord, from_room_coords) in grid_cost:
                                     part_from = grid_cost[(from_coord, from_room_coords)]
