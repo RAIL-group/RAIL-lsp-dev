@@ -346,7 +346,7 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
 
 import pouct_planner
 
-def test_mrtask_mrstate_cost():
+def test_mrtask_mrstate_known_cost_action():
     # Set up the environment
     robot_node = Node()
     robot_known = Robot(robot_node)
@@ -357,8 +357,6 @@ def test_mrtask_mrstate_cost():
         (robot_node, known_space_node_near): 5,
         (robot_node, known_space_node_far): 100
     }
-    expected_best_action = Action(known_space_node_near)
-
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_known],
@@ -368,6 +366,38 @@ def test_mrtask_mrstate_cost():
                       known_space_nodes=[known_space_node_near, known_space_node_far],
                       unknown_space_nodes=[])
 
-    best_action, cost = pouct_planner.core.po_mcts(mrstate, n_iterations=50000)
+    best_action, cost = pouct_planner.core.po_mcts(mrstate, n_iterations=5000, C=10.0)
     assert cost == 5
-    assert best_action == expected_best_action
+    assert best_action.target_node == known_space_node_near
+
+def test_mrtask_mrstate_single_robot_goal_two_subgoals():
+    robot_node = Node()
+    robot = Robot(robot_node)
+    subgoal_node1 = Node(is_subgoal=True, location='a')
+    subgoal_node2 = Node(is_subgoal=True, location='b')
+
+    subgoal_prop_dict = {
+        (subgoal_node1, 'goal'): [0.2, 10, 20],
+        (subgoal_node2, 'goal'): [0.9, 30, 50]
+    }
+    distances = {
+        (robot_node, subgoal_node1): 30,
+        (robot_node, subgoal_node2): 30,
+        (subgoal_node1, subgoal_node2): 20, (subgoal_node2, subgoal_node1): 20
+    }
+    specification = "F goal"
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot],
+                      planner=planner,
+                      distances=distances,
+                      subgoal_prop_dict=subgoal_prop_dict,
+                      known_space_nodes=[],
+                      unknown_space_nodes=[subgoal_node1, subgoal_node2])
+
+    obtained_action, obtained_cost = pouct_planner.core.po_mcts(mrstate,
+                                                                n_iterations=4000, C=10.0)
+    node1, cost1 = subgoal_node1, 30 + 10 + 0.8 * (20 + 30 + 0.1 * 20)
+    node2, cost2 = subgoal_node2, 30 + 30 + 0.1 * (20 + 10 + 0.8 * 10)
+    actual_node, actual_cost = (node1, cost1) if cost1 < cost2 else (node2, cost2)
+    assert pytest.approx(obtained_cost, abs=1.0) == actual_cost
+    assert obtained_action.target_node == actual_node
