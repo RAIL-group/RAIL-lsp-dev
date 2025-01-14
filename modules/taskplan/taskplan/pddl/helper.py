@@ -96,7 +96,7 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
             destination,
             num_frontiers_max=8,
             alternate_sampling=True))
-    return round(exp_cost, 4), sub_pred
+    return round(exp_cost, 4) + 4000, sub_pred
 
 
 def update_problem(problem, obj, from_loc, to_loc, distance):
