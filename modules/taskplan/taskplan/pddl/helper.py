@@ -599,6 +599,37 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
     return task
 
 
+def get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest):
+    gen_names = []
+    for obj in obj_of_interest:
+        g_name = obj.split('|')[0]
+        if g_name not in gen_names:
+            gen_names.append(g_name)
+    if len(gen_names) < 3 or len(cnt_of_interest) < 3:
+        return None
+
+    chosen = {}
+    random.seed(seed)
+    while len(chosen) < 3:
+        goal_obj = random.sample(obj_of_interest, 1)
+        g_name = goal_obj[0].split('|')[0]
+        if g_name not in chosen:
+            chosen[g_name] = goal_obj
+    chosen = list(chosen.values())
+    goal_cnt = random.sample(cnt_of_interest, 1)
+    goal_obj = chosen[0]
+    task1 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+
+    goal_obj = chosen[1]
+    task2 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+
+    goal_obj = chosen[2]
+    task3 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
+    task = [task3, task2, task1]
+    task = taskplan.pddl.task.multiple_goal(task)
+    return task
+
+
 def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
     if goal_type == '1object':
         task = get_goals_for_one(seed, cnt_of_interest, obj_of_interest)
@@ -612,5 +643,7 @@ def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
         task = get_goals_for_coffee(seed, cnt_of_interest, objects)
     elif goal_type == 'breakfast_coffee':
         task = get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects)
+    elif goal_type == 'any3':
+        task = get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest)
 
     return task
