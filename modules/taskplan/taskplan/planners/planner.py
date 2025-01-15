@@ -147,9 +147,16 @@ class LearnedPlanner(Planner):
         if self.assisstance:
             # Make all subgoals not in target container rooms infeasible
             # find the room of the target containers
+            all_target = []
+            for obj_idx in self.partial_map.obj_node_idx:
+                if self.partial_map.org_node_names[obj_idx] == \
+                   self.partial_map.org_node_names[self.partial_map.target_obj]:
+                    all_target.append(obj_idx)
+            all_target_containers = {self.partial_map.org_edge_index[0][self.partial_map.org_edge_index[1].index(obj_idx)]
+                                     for obj_idx in all_target}
             target_container = [subgoal.value
                                 for subgoal in self.subgoals
-                                if subgoal in self.partial_map.target_container]
+                                if subgoal in all_target_containers]
             target_rooms = set()
             for container in target_container:
                 cnt_room = self.partial_map.org_edge_index[0][self.partial_map.org_edge_index[1].index(container)]
