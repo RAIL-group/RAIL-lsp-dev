@@ -53,7 +53,7 @@ def evaluate_main(args):
     cost_str = taskplan.utilities.utils.get_cost_string(args)
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                 planner=pddl['planner'], max_planner_time=300)
+                                 planner=pddl['planner'], max_planner_time=120)
 
     taskplan.utilities.utils.check_plan_validity(plan, args)
 
