@@ -180,7 +180,7 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # Finally replan
                 print('Replanning .. .. ..')
                 plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                             planner=pddl['planner'], max_planner_time=300)
+                                             planner=pddl['planner'], max_planner_time=120)
                 cost_str = taskplan.utilities.utils.get_cost_string(args)
                 taskplan.utilities.utils.check_replan_validity(plan, args, cost_str)
                 break
