@@ -30,7 +30,7 @@ def evaluate_main(args):
     whole_graph = thor_data.get_graph()
 
     # Initialize the PartialMap with whole graph
-    partial_map = taskplan.core.PartialMap(whole_graph, grid, distinct=True)
+    partial_map = taskplan.core.PartialMap(whole_graph, grid)
     partial_map.set_room_info(init_robot_pose, thor_data.rooms)
 
     if args.cost_type == 'learned':
