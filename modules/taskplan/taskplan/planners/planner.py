@@ -110,7 +110,7 @@ class LearnedPlanner(Planner):
     and then uses LSP approach to pick the best available action (subgoal).
     '''
     def __init__(self, args, partial_map, device=None, verbose=True,
-                 destination=None, normalize=True, fcnn=True):
+                 destination=None, normalize=True, fcnn=True, assisstance=True):
         super(LearnedPlanner, self).__init__(
             args, partial_map, device, verbose)
         self.destination = destination
@@ -122,6 +122,7 @@ class LearnedPlanner(Planner):
             self.subgoal_property_net = Gnn.get_net_eval_fn(
                 args.network_file, device=self.device)
         self.normalize = normalize
+        self.assisstance = assisstance
 
     def _update_subgoal_properties(self):
         if self.is_fcnn:
@@ -143,6 +144,21 @@ class LearnedPlanner(Planner):
             total_prob = min(total_prob, 1)
             for subgoal in self.subgoals:
                 prob_feasible_dict[subgoal] /= total_prob
+        if self.assisstance:
+            # Make all subgoals not in target container rooms infeasible
+            # find the room of the target containers
+            target_container = [subgoal
+                                for subgoal in self.subgoals
+                                if subgoal in self.partial_map.target_container]
+            target_room = set()
+            for container in target_container:
+                cnt_room = self.partial_map.org_edge_index[0][self.partial_map.org_edge_index[1].index(container)]
+                target_room.add(cnt_room)
+
+            for subgoal in self.subgoals:
+                if subgoal.value not in target_room:
+                    prob_feasible_dict[subgoal] = 0
+
         for subgoal in self.subgoals:
             subgoal.set_props(
                 prob_feasible=prob_feasible_dict[subgoal])
