@@ -171,7 +171,7 @@ class LearnedPlanner(Planner):
         if self.verbose:
             print(" ")
 
-    def compute_selected_subgoal(self, return_cost=False):
+    def compute_selected_subgoal(self):
         min_cost, frontier_ordering = (
             taskplan.core.get_best_expected_cost_and_frontier_list(
                 self.subgoals,
@@ -180,12 +180,4 @@ class LearnedPlanner(Planner):
                 self.destination,
                 num_frontiers_max=NUM_MAX_FRONTIERS,
                 alternate_sampling=True))
-        if return_cost:
-            # add failure cost to the minimum cost
-            # prod_fail_prob = 1
-            # for subgoal in frontier_ordering:
-            #     fail_prob = 1 - subgoal.prob_feasible
-            #     prod_fail_prob *= fail_prob
-            # min_cost += prod_fail_prob * return_cost
-            return min_cost, frontier_ordering[0]
         return frontier_ordering[0]
