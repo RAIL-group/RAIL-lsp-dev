@@ -32,9 +32,9 @@ class POUCTNode(object):
 
     def get_best_uct_action(self, C=1.0):
         action = list(self.action_n.keys())
-        action_values = np.array([float(self.action_values[a]) for a in action])
-        action_n = np.array([float(self.action_n[a]) for a in action])
-        uct_values = (-1) * action_values/action_n + C * np.sqrt(np.log(float(self.total_n))/action_n)
+        action_values = np.array([self.action_values[a] for a in action])
+        action_n = np.array([self.action_n[a] for a in action])
+        uct_values = (-1.0) * action_values/action_n + C * np.sqrt(np.log(self.total_n)/action_n)
         return action[np.argmax(uct_values)]
 
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
@@ -76,6 +76,7 @@ def rollout(node, rollout_fn=None):
         # do a random rollout
         rollout_cost = 0.0
         while not node.is_terminal_node():
+            # print(f"Count the number of rollout--------------- start at {node.state.robots.cur_vertex}")
             action = np.random.choice(node.unexplored_actions)
             node = get_chance_node(node, action)
         return node.cost + rollout_cost

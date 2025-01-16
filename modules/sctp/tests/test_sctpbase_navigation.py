@@ -9,7 +9,7 @@ graph_types = ['linear_det', 'linear_unc', 'disjoint_det', 'disjoint_unc',
 def test_sctpbase_nav_sense_update_disjointgraph():
    # testing on a simple disjoint graph
    
-   start, goal, nodes, edges, robots = graphs.s_disjoint_unc()
+   start, goal, nodes, edges, robots = graphs.disjoint_unc()
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs, 
@@ -81,13 +81,13 @@ def test_sctpbase_nav_move_sense_update_disjointgraph():
             assert state.edge_probs[key] == edge_probs[key]
             assert state.edge_costs[key] == edge_costs[key]
    action, exp_cost = core.po_mcts(state) # apply pomcp algorithm to get the next action
-   assert action == 2
+   assert action == 4
    state, move_cost = base_navigation.move(state, action) # move the robot
    nav_cost += move_cost
    assert move_cost == 4.0
    assert state.robots.cur_vertex == 2
    observed_status = base_navigation.sense(state) # sense the env
-   assert observed_status == {(2, 3): 0.0}
+   assert observed_status == {(2, 3): 1.0}
    state, _ = base_navigation.update_belief_state(state, observed_status)
    for key, value in observed_status.items():
       for edge in state.edges:
@@ -195,7 +195,7 @@ def test_sctpbase_nav_disjoint():
    assert foundPath == True
    assert len(exe_path) == 3
    assert exe_path[0] == 1
-   assert exe_path[1] == 2
+   assert exe_path[1] == 4
    assert exe_path[2] == 3
    assert nav_cost == pytest.approx(8.0)
 
