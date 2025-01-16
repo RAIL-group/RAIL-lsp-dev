@@ -266,6 +266,15 @@ def check_replan_validity(plan, args, cost_str=None):
         exit()
 
 
+def check_map_validity(partial_map, args):
+    if len(partial_map.cnt_node_idx) > 40:
+        error_msg = "Ignoring map with over 40 containers"
+        save_fail_log(args.fail_log, args.current_seed, error_msg)
+        plt.title(error_msg)
+        plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=100)
+        exit()
+
+
 def get_cost_string(args):
     if args.logfile_name == 'task_learned_logfile.txt':
         cost_str = 'learned'
