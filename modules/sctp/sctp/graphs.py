@@ -179,56 +179,56 @@ def m_graph_unc():
     nodes.append(node7)
 
     edges = []
-    edge1 = Edge(node1, node2, random.uniform(0.1, 0.3))
+    edge1 = Edge(node1, node2, 0.1)
     edge1.block_status = 0
     edges.append(edge1)
     node1.neighbors.append(node2.id)
     node2.neighbors.append(node1.id)
 
-    edge2 = Edge(node1, node3, random.uniform(0.2, 0.4))
+    edge2 = Edge(node1, node3, 0.1)
     edge2.block_status = 0
     edges.append(edge2)
     node1.neighbors.append(node3.id)
     node3.neighbors.append(node1.id)
     
-    edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
+    edge3 = Edge(node2, node3, 0.1)
     edge3.block_status = 0
     edges.append(edge3)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
     
-    edge4 = Edge(node2, node5, random.uniform(0.08, 0.14))
+    edge4 = Edge(node2, node5, 0.1)
     edge4.block_status = 0
     edges.append(edge4)
     node2.neighbors.append(node5.id)
     node5.neighbors.append(node2.id)
     
-    edge5 = Edge(node2, node6, random.uniform(0.1, 0.4))
+    edge5 = Edge(node2, node6, 0.1)
     edge5.block_status = 0
     edges.append(edge5)
     node2.neighbors.append(node6.id)
     node6.neighbors.append(node2.id)
     
-    edge6 = Edge(node3, node4, random.uniform(0.9, 1.0))
-    edge6.block_status = 1
+    edge6 = Edge(node3, node4, 0.1)
+    edge6.block_status = 0
     edges.append(edge6)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
     
-    edge7 = Edge(node3, node5, random.uniform(0.1, 0.3))
+    edge7 = Edge(node3, node5, 0.1)
     edge7.block_status = 0
     edges.append(edge7)
     node3.neighbors.append(node5.id)
     node5.neighbors.append(node3.id)
     
-    edge8 = Edge(node4, node5, random.uniform(0.0, 0.2))
+    edge8 = Edge(node4, node5, 0.1)
     edge8.block_status = 0
     edges.append(edge8)
     node4.neighbors.append(node5.id)
     node5.neighbors.append(node4.id)
     
-    edge9 = Edge(node7, node4, random.uniform(0.2, 0.3))
-    edge9.block_status = 0
+    edge9 = Edge(node7, node4, random.uniform(0.85, 0.99))
+    edge9.block_status = 1
     edges.append(edge9)
     node7.neighbors.append(node4.id)
     node4.neighbors.append(node7.id)
@@ -239,13 +239,13 @@ def m_graph_unc():
     node7.neighbors.append(node5.id)
     node5.neighbors.append(node7.id)
     
-    edge11 = Edge(node6, node7, random.uniform(0.9, 1.0))
-    edge11.block_status = 1
+    edge11 = Edge(node6, node7, 0.1)
+    edge11.block_status = 0
     edges.append(edge11)
     node6.neighbors.append(node7.id)
     node7.neighbors.append(node6.id)
 
-    edge12 = Edge(node6, node5, random.uniform(0.5, 0.7))
+    edge12 = Edge(node6, node5, 0.1)
     edge12.block_status = 0
     edges.append(edge12)
     node6.neighbors.append(node5.id)
@@ -293,8 +293,8 @@ def s_graph_unc():
     node2.neighbors.append(node4.id)
     node4.neighbors.append(node2.id)
     
-    edge5 = Edge(node3, node4, random.uniform(0.1, 0.4))
-    edge5.block_status = 0
+    edge5 = Edge(node3, node4, random.uniform(0.85, 0.99))
+    edge5.block_status = 1
     edges.append(edge5)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
@@ -310,11 +310,11 @@ def disjoint_unc(): # edge 34 is blocked
     nodes = []
     node1 =  Vertex(1, (0.0, 0))
     nodes.append(node1)
-    node2 =  Vertex(2, (0.0, 4.0))
+    node2 =  Vertex(2, (4.0, 0.0))
     nodes.append(node2)
-    node3 =  Vertex(3, (4.0, 4.0))
+    node3 =  Vertex(3, (8.0, 0.0))
     nodes.append(node3)
-    node4 =  Vertex(4, (5.0, 4.0))
+    node4 =  Vertex(4, (4.0, 4.0))
     nodes.append(node4)
     
     edges = []
@@ -325,8 +325,8 @@ def disjoint_unc(): # edge 34 is blocked
     node1.neighbors.append(node2.id)
     node2.neighbors.append(node1.id)
     # edge 2
-    edge2 =  Edge(node3, node4, 0.9)
-    edge2.block_status = 1
+    edge2 =  Edge(node3, node4, 0.15)
+    edge2.block_status = 0
     edges.append(edge2)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
@@ -337,8 +337,8 @@ def disjoint_unc(): # edge 34 is blocked
     node1.neighbors.append(node4.id)
     node4.neighbors.append(node1.id)
     # edge 4
-    edge4 =  Edge(node2, node3, 0.1)
-    edge4.block_status = 0
+    edge4 =  Edge(node2, node3, 0.9)
+    edge4.block_status = 1
     edges.append(edge4)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
@@ -421,11 +421,11 @@ if __name__ == "__main__":
     # name = "Street Graph"
     # nodes, edges = simple_graph()
     # name = "Simple Graph"
-    nodes, edges = simple_disjoint_graph()
-    name = "Simple Disjoint Graph"
+    # nodes, edges = simple_disjoint_graph()
+    # name = "Simple Disjoint Graph"
     # print_graph(nodes, edges, show_edge=True)
     # print("THe neighbors are:")
     # for node in nodes:
     #     print(f"Node {node.id}: with neighbors: {node.neighbors}")
 
-    plot_street_graph(nodes, edges, name)
+    # plot_street_graph(nodes, edges, name)

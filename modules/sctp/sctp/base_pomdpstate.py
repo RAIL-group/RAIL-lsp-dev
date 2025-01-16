@@ -4,19 +4,23 @@ from sctp import graphs
 EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 
 class History(object):
-   def __init__(self, data=None):
+   def __init__(self, data=None, actions = None):
       self._data = data if data is not None else dict()
+      self.action_list = actions if actions is not None else set()
 
    def add_history(self, action, start, prob, outcome):
       assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
       self._data[(action, start, prob)] = outcome
+      self.action_list.add(action)
    
    def get_action_outcome(self, action, start, prob):
       # return the history or, it it doesn't exist, return CHANCE
       return self._data.get((action, start, prob), EventOutcome.CHANCE)
    
+   def get_action_list(self):
+      return self.action_list
    def copy(self):
-      return History(data=self._data.copy())
+      return History(data=self._data.copy(), actions=self.action_list.copy())
 
    def __eq__(self, other):
       if not isinstance(other, History):
@@ -45,6 +49,7 @@ class SCTPBaseState(object):
          self.edges = edges
          self.goalID = goal 
          self.robots = robots
+         self.history.action_list.add(robots.cur_vertex)
       else:
          self.vertices = last_state.vertices
          self.edges = last_state.edges
@@ -61,40 +66,72 @@ class SCTPBaseState(object):
       return self.robots.cur_vertex == self.goalID
 
 
-   def transition(self, action):
-      return self.robot_transition(action) 
+   def transition(self, action, nav=False):
+      return self.robot_transition(action, nav) 
    
 
-   def robot_transition(self, action):
+   def robot_transition(self, action, nav=False):
       belief_state = {}
+      deadend_pen = 1e2
+      blocking_cost = 1e3
       edge_id = tuple(sorted((self.robots.cur_vertex, action)))
       block_prob = self.edge_probs[edge_id]
-      # for blocking 
-      block_history = self.history.copy()
-      block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
-      new_state_block = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=block_history)
-      new_state_block.robot_move(action)
-      new_state_block.action_cost = 10e5
-      belief_state[new_state_block] = (block_prob, new_state_block.action_cost)
-
-      # for traversable
-      trav_history = self.history.copy()
-      trav_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.TRAV)
-      new_state_traversable = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=trav_history)
-      new_state_traversable.robot_move(action)
-      new_state_traversable.action_cost = self.edge_costs[edge_id]
-      belief_state[new_state_traversable] = (1.0 - block_prob, new_state_traversable.action_cost)
-
-      if new_state_block==new_state_traversable:
-         raise ValueError("new_state_block==new_state_traversable")
+      if block_prob == 0.0:
+         # certain for this action/edge traversable
+         trav_history = self.history.copy()
+         trav_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.TRAV)
+         new_state_traversable = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=trav_history)
+         new_state_traversable.robot_move(action, nav)
+         new_state_traversable.action_cost = self.edge_costs[edge_id]
+         if new_state_traversable.get_actions() == [] and not new_state_traversable.is_goal_state:
+            # print(f'this node {action} is a deadend')
+            new_state_traversable.action_cost += deadend_pen
+         belief_state[new_state_traversable] = (1.0, new_state_traversable.action_cost)
+      elif block_prob == 1.0:
+         # certain for this action/edge blocked
+         block_history = self.history.copy()
+         block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
+         new_state_block = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=block_history)
+         new_state_block.robot_move(action, nav)
+         new_state_block.action_cost = blocking_cost
+         if new_state_block.get_actions() == [] and not new_state_block.is_goal_state:
+            # print(f'this node {action} is a deadend')
+            new_state_block.action_cost += deadend_pen
+         belief_state[new_state_block] = (1.0, new_state_block.action_cost)
+      else:
+         # for blocking 
+         block_history = self.history.copy()
+         block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
          
-
+         new_state_block = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=block_history)
+         new_state_block.robot_move(action, nav)
+         new_state_block.action_cost = blocking_cost
+         if new_state_block.get_actions() == [] and not new_state_block.is_goal_state:
+            # print(f'this node {action} is a deadend')
+            new_state_block.action_cost += deadend_pen
+         belief_state[new_state_block] = (block_prob, new_state_block.action_cost)
+         # for traversable
+         trav_history = self.history.copy()
+         trav_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.TRAV)
+         new_state_traversable = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=trav_history)
+         new_state_traversable.robot_move(action, nav)
+         new_state_traversable.action_cost = self.edge_costs[edge_id]
+         if new_state_traversable.get_actions() == [] and not new_state_traversable.is_goal_state:
+            # print(f'this node {action} is a deadend')
+            new_state_traversable.action_cost += deadend_pen
+         belief_state[new_state_traversable] = (1.0 - block_prob, new_state_traversable.action_cost)
+         assert self.robots.cur_vertex != new_state_traversable.robots.cur_vertex
       return belief_state
       
-   def robot_move(self, action):
+   def robot_move(self, action, nav=False):
       self.robots.last_vertex = self.robots.cur_vertex
       self.robots.cur_vertex = action
-      self.actions = [vertex for vertex in self.vertices if vertex.id == self.robots.cur_vertex][0].neighbors
+      actions = [vertex for vertex in self.vertices if vertex.id == self.robots.cur_vertex][0].neighbors      
+      if nav:
+         self.actions = [act for act in actions]
+      else: 
+         # self.actions = [act for act in actions if act != self.robots.last_vertex]
+         self.actions = [act for act in actions if act not in self.history.get_action_list()]
 
    def hash_graph(self):
       edges_tuple = tuple(self.edge_probs)
