@@ -13,6 +13,7 @@ class Robot(object):
         self.id = Robot._id_counter
         Robot._id_counter += 1
         self._same_direction = True
+        self.hash_id = hash(start_node) + hash(self.id)
 
     def retarget(self, new_action, distances):
         if not self.time_remaining == 0:
@@ -80,3 +81,6 @@ class Robot(object):
             print("Robot object compared with other object")
             return False
         return self.id == other.id
+
+    def __hash__(self):
+        return self.hash_id
