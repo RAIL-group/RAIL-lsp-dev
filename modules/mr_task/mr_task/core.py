@@ -3,11 +3,20 @@ from enum import Enum
 
 EventOutcome = Enum('EventOutcome', ['CHANCE', 'SUCCESS', 'FAILURE'])
 
+
 class Node(object):
-    def __init__(self, props=[], is_subgoal=False, location=None):
+    def __init__(self, props=[], is_subgoal=False, location=None, frontier=None):
         self.props = props
         self.is_subgoal = is_subgoal
         self.location = location
+        self.frontier = frontier
+        self.hash_id = hash(str(self.location) + str(self.props) + str(self.is_subgoal))
+
+    def __repr__(self):
+        return f'{self.location}'
+
+    def __hash__(self):
+        return self.hash_id
 
 
 class Action(object):
@@ -30,6 +39,13 @@ class Action(object):
             self.PS = 1.0
             self.RS = 0.0
             self.RE = 0.0
+        self.hash_id = hash(self.target_node) + hash(str(self.props))
+
+    def __eq__(self, other):
+        return self.hash_id == other.hash_id
+
+    def __hash__(self):
+        return self.hash_id
 
 
 class History(object):
