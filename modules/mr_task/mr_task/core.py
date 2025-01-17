@@ -203,7 +203,11 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         # FAILURE
         failure_robots = [robot.copy() for robot in robots]
         event_failure_robot = next(robot for robot in failure_robots if robot == event_robot)
+        # find other robots which were pursuing the same action
         event_failure_robot.reset_needs_action()
+        other_robots = [robot for robot in failure_robots if robot.action == event_failure_robot.action]
+        for robot in other_robots + [event_failure_robot]:
+            robot.reset_needs_action()
         failure_history = mrstate.history.copy()
         failure_history.add_event(event_robot.action, EventOutcome.FAILURE)
         failure_mrstate = mrstate.copy(robots=failure_robots,
