@@ -95,6 +95,7 @@ def get_best_action(node):
 
     # get all index with highest action_n
     max_n = np.max(action_n)
+    print(f"The number of visits for each action: {action_n}")
     best_action_idxs = [i for i, n in enumerate(action_n) if n == max_n]
 
     # if there are multiple actions with the same number of visits, choose the one with the lowest cost

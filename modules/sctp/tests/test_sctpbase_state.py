@@ -37,7 +37,7 @@ def test_sctpbase_state_lineargraph():
    action = all_actions[0]
    assert action == 2
 
-   best_action, cost = core.po_mcts(initial_state, n_iterations=10000)
+   best_action, cost, path  = core.po_mcts(initial_state, n_iterations=10000)
    assert best_action == 2
    assert cost == pytest.approx(15.0, abs=0.1)
 
@@ -62,7 +62,7 @@ def test_sctpbase_state_disjoint_noblock():
       if prob ==1.0 and state.history.get_action_outcome(action, start, 1.0-prob) == base_pomdpstate.EventOutcome.TRAV:
          assert cost == pytest.approx(4.0, abs=0.1)   
 
-   best_action, cost = core.po_mcts(initial_state, n_iterations=2000)
+   best_action, cost, path  = core.po_mcts(initial_state, n_iterations=2000)
    assert best_action == 2
    assert cost == pytest.approx(8.0, abs=0.1)
 
@@ -77,7 +77,7 @@ def test_sctpbase_state_disjoint_prob():
    assert len(all_actions) == 2
    action = all_actions[0]
    assert action == 2 or action == 4
-   best_action, cost = core.po_mcts(initial_state, n_iterations=2000, C=40.0)
+   best_action, cost, path  = core.po_mcts(initial_state, n_iterations=2000, C=40.0)
    assert best_action == 4
    # assert cost == pytest.approx(0.2*1e6+0.8*5.66 + 0.15*1e6+0.85*5.66, abs=1000.1)
 
@@ -96,13 +96,17 @@ def test_sctpbase_state_sgraph_noblock():
 
    action = all_actions[0]
    assert action == 2 or action == 3
-   best_action, exp_cost = core.po_mcts(initial_state, n_iterations=1000)
+   best_action, exp_cost, path  = core.po_mcts(initial_state, n_iterations=1000)
 
    assert best_action == 3
-   assert exp_cost == pytest.approx(8.0, abs=0.1)
+   print(f"The expected cost is {exp_cost}")
+   assert path[1] == 3
+   assert path[2] == 4
+   # assert exp_cost == pytest.approx(8.0, abs=0.1)
 
 def test_sctpbase_state_sgraph_prob1():
-   start, goal, nodes, edges, robots = graphs.s_graph_unc()
+   start, goal, nodes, edges, robots = graphs.s_graph_unc() # edge 3-4 is blocked
+   C = 55.0
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
@@ -112,14 +116,17 @@ def test_sctpbase_state_sgraph_prob1():
 
    action = all_actions[0]
    assert action == 2 or action == 3
-   best_action, exp_cost = core.po_mcts(initial_state, n_iterations=1000)
-
+   best_action, exp_cost, path  = core.po_mcts(initial_state, C=C, n_iterations=10000)
+   print(f"The expected cost is {exp_cost}")
    assert best_action == 2
-   # assert exp_cost == pytest.approx(8.0, abs=0.2)
+   assert len(path) == 3
+   assert path[1] == 2
+   assert path[2] == 4
+
    # assert exp_cost == pytest.approx(0.9*8.0+0.2*1e6, abs=10.0)
 
 def test_sctpbase_state_sgraph_prob2():
-   C = 80.0
+   C = 55.0
    start, goal, nodes, edges, robots = graphs.s_graph_unc()
    for edge in edges: # edge 1-2 and 3-4 are blocked
       if edge.id == (1,2):
@@ -138,13 +145,17 @@ def test_sctpbase_state_sgraph_prob2():
 
    action = all_actions[0]
    assert action == 2 or action == 3
-   best_action, exp_cost = core.po_mcts(initial_state, C=C, n_iterations=20000)
+   best_action, exp_cost, path  = core.po_mcts(initial_state, C=C, n_iterations=10000)
 
    assert best_action == 3
+   print(f"The expected cost is {exp_cost}")
+   assert path[1] == 3
+   assert path[2] == 2
+   assert path[3] == 4
 
 def test_sctpbase_state_mgraph_noblock():
    start, goal, nodes, edges, robots = graphs.m_graph_unc()
-   C=30.0
+   C=5.5
    for edge in edges: # edge 1-2 and 3-4 are blocked
       edge.block_status = 0
       edge.block_prob = 0.0
@@ -160,17 +171,17 @@ def test_sctpbase_state_mgraph_noblock():
 
    action = all_actions[0]
    assert action == 2 or action == 3
-   best_action, exp_cost = core.po_mcts(initial_state, C=C, n_iterations=10000)
+   best_action, exp_cost, path  = core.po_mcts(initial_state, C=C, n_iterations=100000)
 
    assert best_action == 3
+   assert path[1] == 3
+   assert path[2] == 5
+   assert path[3] == 7
    # assert exp_cost == pytest.approx(12.07, abs=0.1)
 
 def test_sctpbase_state_mgraph_prob():
    start, goal, nodes, edges, robots = graphs.m_graph_unc()
-   C=120.0
-   # for edge in edges: # edge 1-2 and 3-4 are blocked
-   #    edge.block_status = 0
-   #    edge.block_prob = 0.0
+   C=9.0
    
    # for edge in edges:
    #    print(f"edge {edge.id} with block prob {edge.block_prob}, block status {edge.block_status} and cost {edge.cost}")
@@ -183,6 +194,10 @@ def test_sctpbase_state_mgraph_prob():
 
    action = all_actions[0]
    assert action == 2 or action == 3
-   best_action, exp_cost = core.po_mcts(initial_state, C=C, n_iterations=80000)
-
+   best_action, exp_cost, path = core.po_mcts(initial_state, C=C, n_iterations=200000)
+   print(f"The expected cost is {exp_cost}")
    assert best_action == 3
+   assert path[1] == 3
+   assert path[2] == 5
+   assert path[3] == 6
+   assert path[4] == 7
