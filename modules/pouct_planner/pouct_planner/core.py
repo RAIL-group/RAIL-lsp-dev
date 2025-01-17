@@ -46,7 +46,7 @@ def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
     best_action, cost = get_best_action(root)
     path = get_best_path(leaf)
     print(f'Best path: {path}')
-    return best_action, cost
+    return best_action, cost, path
 
 def traverse(node, C=1.0):
     while node.is_fully_expanded() and not node.is_terminal_node():
@@ -96,6 +96,7 @@ def get_best_action(node):
 
     # get all index with highest action_n
     max_n = np.max(action_n)
+    print(f"The number of visits for each action: {action_n}")
     best_action_idxs = [i for i, n in enumerate(action_n) if n == max_n]
 
     # if there are multiple actions with the same number of visits, choose the one with the lowest cost

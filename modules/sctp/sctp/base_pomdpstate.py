@@ -72,8 +72,8 @@ class SCTPBaseState(object):
 
    def robot_transition(self, action, nav=False):
       belief_state = {}
-      deadend_pen = 1e2
-      blocking_cost = 1e3
+      deadend_pen = 50.0
+      blocking_cost = 1e2
       edge_id = tuple(sorted((self.robots.cur_vertex, action)))
       block_prob = self.edge_probs[edge_id]
       if block_prob == 0.0:
