@@ -4,22 +4,22 @@ from sctp import graphs
 EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 
 class Action(object):
-   def __init__(self, start, end):
-      self.start = start
-      self.end = end
+   def __init__(self, start_node, target_node):
+      self.start = start_node
+      self.end = target_node
 
 class History(object):
    def __init__(self, data=None, actions = None):
       self._data = data if data is not None else dict()
       self.action_list = actions if actions is not None else set()
 
-   def add_history(self, action, start, prob, outcome):
+   def add_history(self, action, outcome):
       assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
-      self._data[(action, start, prob)] = outcome
+      self._data[action] = outcome
 
-   def get_action_outcome(self, action, start, prob):
+   def get_action_outcome(self, action):
       # return the history or, it it doesn't exist, return CHANCE
-      return self._data.get((action, start, prob), EventOutcome.CHANCE)
+      return self._data.get(action, EventOutcome.CHANCE)
 
    def copy(self):
       return History(data=self._data.copy(), actions=self.action_list.copy())
@@ -63,7 +63,9 @@ class SCTPBaseState(object):
          self.edges = last_state.edges
          self.goalID = last_state.goalID
          self.robots = graphs.RobotData(last_robot=last_state.robots)
-      self.actions = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
+      self.neighbors = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
+      self.actions = [Action(start_node=self.robots.cur_vertex, target_node=neighbor)
+                      for neighbor in self.neighbors]
 
    def get_actions(self):
       return self.actions
@@ -164,6 +166,39 @@ class SCTPBaseState(object):
 
    # def __repr__(self):
    #    return f'{self.edge_probs, self.robots.cur_vertex}'
+
+# def advance_state(state, action):
+#    edge_status = state.history.get_action_outcome(action)
+
+#    # if edge_status == blocked, return action blocked (state) with blocked cost
+#    if edge_status == EventOutcome.BLOCK:
+#       # make the blocked state
+#       return {state: {1.0: blocked_cost}}
+
+
+#    # if edge_status == traversable, return action traversable (state) with traversable cost
+#    if edge_status == EventOutcome.TRAV:
+#       # make the traversable state
+#       return {state: {1.0: traversable_cost}}
+
+#    # if edge_status == 'CHANCE', we don't know the outcome.
+#    if edge_status == EventOutcome.CHANCE:
+#       # TRAVERSABLE
+#       trav_history = state.history.copy()
+#       trav_history.add_history(action, EventOutcome.TRAV)
+#       new_state_traversable = SCTPBaseState(last_state=state, history=trav_history)
+#       new_state_traversable.robot_move(action)
+#       new_state_traversable.action_cost = state.edge_costs[edge_id]
+
+#       # BLOCKED
+#       ###. .....
+
+#       return {new_state_traversable: {1- blocked_prob, traversable_cost},
+#               new_state_blocked: {blocked_prob, blocked_cost}}
+
+
+def get_action_traversability_from_history(history, action):
+   return history.get_action_outcome(action)
 
 def sctpbase_rollout(state):
    # not allow the robot to move back to the parent node
