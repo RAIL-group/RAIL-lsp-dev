@@ -3,6 +3,11 @@ from sctp import graphs
 
 EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 
+class Action(object):
+   def __init__(self, start, end):
+      self.start = start
+      self.end = end
+
 class History(object):
    def __init__(self, data=None, actions = None):
       self._data = data if data is not None else dict()
@@ -11,14 +16,11 @@ class History(object):
    def add_history(self, action, start, prob, outcome):
       assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
       self._data[(action, start, prob)] = outcome
-      self.action_list.add(action)
-   
+
    def get_action_outcome(self, action, start, prob):
       # return the history or, it it doesn't exist, return CHANCE
       return self._data.get((action, start, prob), EventOutcome.CHANCE)
-   
-   def get_action_list(self):
-      return self.action_list
+
    def copy(self):
       return History(data=self._data.copy(), actions=self.action_list.copy())
 
@@ -26,49 +28,54 @@ class History(object):
       if not isinstance(other, History):
          return False
       return self._data == other._data
-      
+
    def __str__(self):
       return f'{self._data}'
-   
+
    def __hash__(self):
       return hash(tuple(self._data.items()))
 
+def get_state_from_history(outcome_states, history):
+   for state in outcome_states:
+      if state.history == history:
+         return state
+
 
 class SCTPBaseState(object):
-   def __init__(self, edge_probs, edge_costs, last_state= None, history=None, goal=None,
-                     vertices=None, edges=None, robots=None):
-      self.edge_probs = edge_probs
-      self.edge_costs = edge_costs
+   def __init__(self, graph=None, last_state=None, history=None, goal=None, robots=None):
       self.action_cost = 0.0
       if history is None:
          self.history = History()
       else:
          self.history = history
       if last_state is None:
-         self.vertices = vertices
-         self.edges = edges
-         self.goalID = goal 
+         self.edge_probs = {edge.id: edge.block_prob for edge in graph.edges}
+         self.edge_costs = {edge.id: edge.cost for edge in graph.edges}
+         self.vertices = graph.vertices
+         self.edges = graph.edges
+         self.goalID = goal
          self.robots = robots
          self.history.action_list.add(robots.cur_vertex)
       else:
+         self.edge_probs = last_state.edge_probs
+         self.edge_costs = last_state.edge_costs
          self.vertices = last_state.vertices
          self.edges = last_state.edges
          self.goalID = last_state.goalID
          self.robots = graphs.RobotData(last_robot=last_state.robots)
       self.actions = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
 
-
    def get_actions(self):
       return self.actions
-   
+
    @property
    def is_goal_state(self):
       return self.robots.cur_vertex == self.goalID
 
 
    def transition(self, action, nav=False):
-      return self.robot_transition(action, nav) 
-   
+      return self.robot_transition(action, nav)
+
 
    def robot_transition(self, action, nav=False):
       belief_state = {}
@@ -99,10 +106,10 @@ class SCTPBaseState(object):
             new_state_block.action_cost += deadend_pen
          belief_state[new_state_block] = (1.0, new_state_block.action_cost)
       else:
-         # for blocking 
+         # for blocking
          block_history = self.history.copy()
          block_history.add_history(action, self.robots.cur_vertex, block_prob, EventOutcome.BLOCK)
-         
+
          new_state_block = SCTPBaseState(self.edge_probs, self.edge_costs, last_state=self, history=block_history)
          new_state_block.robot_move(action, nav)
          new_state_block.action_cost = blocking_cost
@@ -122,14 +129,14 @@ class SCTPBaseState(object):
          belief_state[new_state_traversable] = (1.0 - block_prob, new_state_traversable.action_cost)
          assert self.robots.cur_vertex != new_state_traversable.robots.cur_vertex
       return belief_state
-      
+
    def robot_move(self, action, nav=False):
       self.robots.last_vertex = self.robots.cur_vertex
       self.robots.cur_vertex = action
-      actions = [vertex for vertex in self.vertices if vertex.id == self.robots.cur_vertex][0].neighbors      
+      actions = [vertex for vertex in self.vertices if vertex.id == self.robots.cur_vertex][0].neighbors
       if nav:
          self.actions = [act for act in actions]
-      else: 
+      else:
          # self.actions = [act for act in actions if act != self.robots.last_vertex]
          self.actions = [act for act in actions if act not in self.history.get_action_list()]
 
@@ -140,7 +147,7 @@ class SCTPBaseState(object):
 
    def hash_robot(self):
       return hash(self.robots.cur_vertex)
-   
+
    def hash_state(self):
       graph_hash = self.hash_graph()
       robot_hash = self.hash_robot()

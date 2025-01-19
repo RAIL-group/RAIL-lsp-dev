@@ -1,9 +1,9 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-   
+
 class RobotData:
-   def __init__(self, *,robot_id=None, position=None, 
+   def __init__(self, *,robot_id=None, position=None,
                 cur_vertex=None, last_robot=None):
       if last_robot is not None:
          self.robotID = last_robot.robotID
@@ -19,44 +19,78 @@ class RobotData:
    def get_robotID(self) -> int:
       return self.robotID
 
+
+class Graph():
+    def __init__(self, vertices=[], edges=[]):
+        self.vertices = vertices
+        self.edges = edges
+
+    def add_vertex(self, vertex):
+        if isinstance(vertex, list):
+            self.vertices.extend(vertex)
+        else:
+            self.vertices.append(vertex)
+
+    def add_edge(self, vertex1, vertex2, block_prob=0.0):
+        if vertex1 not in self.vertices or vertex2 not in self.vertices:
+            raise ValueError("Vertices not in graph. Add vertices before adding edges.")
+        edge = Edge(vertex1, vertex2, block_prob)
+        self.edges.append(edge)
+        vertex1.neighbors.append(vertex2.id)
+        vertex2.neighbors.append(vertex1.id)
+
+
 class Vertex:
-   def __init__(self, id: int, coord):
-      self.id = id
-      self.parent = None
-      self.coord = coord
-    #   self.y = y
-      self.neighbors = []
-   
-   def get_id(self):
-      return self.id
+    _id_counter = 1
+    def __init__(self, coords):
+        self.id = Vertex._id_counter
+        Vertex._id_counter += 1
+        self.parent = None
+        self.coord = coords
+        self.neighbors = []
+
+    def get_id(self):
+        return self.id
+
+    # def __eq__(self, other):
+    #     return self.id == other.id
+
+    # def __hash__(self):
+    #     return hash(self.id) + hash(str(self.coord))
+
 
 class Edge:
-   def __init__(self, v1, v2, block_prob=0.0):
-      self.id = tuple(sorted((v1.get_id(), v2.get_id())))
-      self.v1 = v1
-      self.v2 = v2
-      
-      self.dist = np.linalg.norm(np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
-      self.cost = self.dist
-      self.poi_coord = None
-      self.block_prob = block_prob
-      self.block_status = 1 if random.random() < block_prob else 0
-   
-   def get_cost(self) -> float:
-    
-      return self.cost
+    def __init__(self, v1, v2, block_prob=0.0):
+        self.id = tuple(sorted((v1.get_id(), v2.get_id())))
+        self.v1 = v1
+        self.v2 = v2
+        self.dist = np.linalg.norm(
+            np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
+        self.cost = self.dist
+        self.poi_coord = None
+        self.block_prob = block_prob
+        self.block_status = 1 if random.random() < block_prob else 0
 
-   def update_cost(self, value):
-      self.cost = value
-   
-   def get_edge_id(self):
-      return self.id
-   
-   def get_poi_coord(self):
-      return self.poi_coord
-   
-   def get_blocked_prob(self):
-      return self.block_prob
+    def get_cost(self) -> float:
+        return self.cost
+
+    def update_cost(self, value):
+        self.cost = value
+
+    def get_edge_id(self):
+        return self.id
+
+    def get_poi_coord(self):
+        return self.poi_coord
+
+    def get_blocked_prob(self):
+        return self.block_prob
+
+    # def __eq__(self, other):
+    #     return self.id == other.id
+
+    # def __hash__(self):
+    #     return hash(str(self.id))
 
 
 def orientation(p, q, r):
@@ -68,10 +102,12 @@ def orientation(p, q, r):
         return 0  # Collinear
     return 1 if val > 0 else 2  # Clockwise or Counterclockwise
 
+
 def on_segment(p, q, r):
     """Check if point q lies on segment pr."""
     return (min(p[0], r[0]) <= q[0] <= max(p[0], r[0]) and
             min(p[1], r[1]) <= q[1] <= max(p[1], r[1]))
+
 
 def do_segments_intersect(nodep1, nodep2, nodeq1, nodeq2):
     """Return True if line segments p1p2 and q1q2 intersect."""
@@ -80,13 +116,12 @@ def do_segments_intersect(nodep1, nodep2, nodeq1, nodeq2):
     p_middle = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2]
     p1[0] = 0.5*(p1[0]+p_middle[0])
     p1[1] = 0.5*(p1[1]+p_middle[1])
-    
-    
+
     p2[0] = 0.5*(p2[0]+p_middle[0])
     p2[1] = 0.5*(p2[1]+p_middle[1])
     q1 = [nodeq1.x, nodeq1.y]
     q2 = [nodeq2.x, nodeq2.y]
-    
+
     q_middle = [(q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2]
     q1[0] = 0.5*(q1[0]+q_middle[0])
     q1[1] = 0.5*(q1[1]+q_middle[1])
@@ -113,6 +148,7 @@ def do_segments_intersect(nodep1, nodep2, nodeq1, nodeq2):
 
     return False
 
+
 def generate_street_graph(grid_rows, grid_cols, edge_probability):
     """Generate a graph resembling a street system."""
     nodes = []
@@ -122,8 +158,10 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
     node_id = 0
     for i in range(grid_rows):
         for j in range(grid_cols):
-            x, y = 5.0*j + random.uniform(-1.0,1.0), 5.0*i + random.uniform(-1.0,1.0)  # Nodes aligned in a grid pattern
-            nodes.append( Vertex(node_id, (x, y)))
+            # Nodes aligned in a grid pattern
+            x, y = 5.0*j + \
+                random.uniform(-1.0, 1.0), 5.0*i + random.uniform(-1.0, 1.0)
+            nodes.append(Vertex(node_id, (x, y)))
             node_id += 1
 
     # Connect nodes with edges (including diagonals)
@@ -138,7 +176,7 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
 
         for neighbor in neighbors:
             if random.random() <= edge_probability:
-                new_edge =  Edge(node, neighbor, random.uniform(0, 1))
+                new_edge = Edge(node, neighbor, random.uniform(0, 1))
                 if all(not do_segments_intersect(new_edge.v1, new_edge.v2, edge.v1, edge.v2) for edge in edges):
                     edges.append(new_edge)
 
@@ -152,11 +190,12 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
         # Add edges while ensuring no intersections
         for neighbor in neighbors:
             if random.random() < 0.55:
-                new_edge =  Edge(node, neighbor, random.uniform(0, 1))
+                new_edge = Edge(node, neighbor, random.uniform(0, 1))
                 if all(not do_segments_intersect(new_edge.v1, new_edge.v2, edge.v1, edge.v2) for edge in edges):
                     edges.append(new_edge)
 
     return nodes, edges
+
 
 def m_graph_unc():
     """Generate a simple graph for testing purposes."""
@@ -190,43 +229,43 @@ def m_graph_unc():
     edges.append(edge2)
     node1.neighbors.append(node3.id)
     node3.neighbors.append(node1.id)
-    
+
     edge3 = Edge(node2, node3, 0.1)
     edge3.block_status = 0
     edges.append(edge3)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
-    
+
     edge4 = Edge(node2, node5, 0.1)
     edge4.block_status = 0
     edges.append(edge4)
     node2.neighbors.append(node5.id)
     node5.neighbors.append(node2.id)
-    
+
     edge5 = Edge(node2, node6, 0.1)
     edge5.block_status = 0
     edges.append(edge5)
     node2.neighbors.append(node6.id)
     node6.neighbors.append(node2.id)
-    
+
     edge6 = Edge(node3, node4, 0.1)
     edge6.block_status = 0
     edges.append(edge6)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
-    
+
     edge7 = Edge(node3, node5, 0.1)
     edge7.block_status = 0
     edges.append(edge7)
     node3.neighbors.append(node5.id)
     node5.neighbors.append(node3.id)
-    
+
     edge8 = Edge(node4, node5, 0.1)
     edge8.block_status = 0
     edges.append(edge8)
     node4.neighbors.append(node5.id)
     node5.neighbors.append(node4.id)
-    
+
     edge9 = Edge(node7, node4, random.uniform(0.85, 0.99))
     edge9.block_status = 1
     edges.append(edge9)
@@ -238,7 +277,7 @@ def m_graph_unc():
     edges.append(edge10)
     node7.neighbors.append(node5.id)
     node5.neighbors.append(node7.id)
-    
+
     edge11 = Edge(node6, node7, 0.1)
     edge11.block_status = 0
     edges.append(edge11)
@@ -250,8 +289,9 @@ def m_graph_unc():
     edges.append(edge12)
     node6.neighbors.append(node5.id)
     node5.neighbors.append(node6.id)
-    robots = RobotData(robot_id = 1, position=(-3.0, 4.0), cur_vertex=start)
+    robots = RobotData(robot_id=1, position=(-3.0, 4.0), cur_vertex=start)
     return start, goal, nodes, edges, robots
+
 
 def s_graph_unc():
     """Generate a simple graph for testing purposes."""
@@ -266,7 +306,6 @@ def s_graph_unc():
     nodes.append(node3)
     node4 = Vertex(4, (8.0, 0.0))
     nodes.append(node4)
-    
 
     edges = []
     edge1 = Edge(node1, node2, random.uniform(0.1, 0.3))
@@ -280,35 +319,35 @@ def s_graph_unc():
     edges.append(edge2)
     node1.neighbors.append(node3.id)
     node3.neighbors.append(node1.id)
-    
+
     edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
     edge3.block_status = 0
     edges.append(edge3)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
-    
+
     edge4 = Edge(node2, node4, random.uniform(0.08, 0.14))
     edge4.block_status = 0
     edges.append(edge4)
     node2.neighbors.append(node4.id)
     node4.neighbors.append(node2.id)
-    
+
     edge5 = Edge(node3, node4, random.uniform(0.85, 0.99))
     edge5.block_status = 1
     edges.append(edge5)
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
-    
-    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+
+    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
     return start, goal, nodes, edges, robots
 
 
-def disjoint_unc(): # edge 34 is blocked
+def disjoint_unc():  # edge 34 is blocked
     start = 1
     goal = 3
     # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
     nodes = []
-    node1 =  Vertex(1, (0.0, 0))
+    node1 = Vertex(1, (0.0, 0))
     nodes.append(node1)
     node2 =  Vertex(2, (4.0, 0.0))
     nodes.append(node2)
@@ -316,10 +355,10 @@ def disjoint_unc(): # edge 34 is blocked
     nodes.append(node3)
     node4 =  Vertex(4, (4.0, 4.0))
     nodes.append(node4)
-    
+
     edges = []
     # edge 1
-    edge1 =  Edge(node1, node2, 0.1)
+    edge1 = Edge(node1, node2, 0.1)
     edge1.block_status = 0
     edges.append(edge1)
     node1.neighbors.append(node2.id)
@@ -331,7 +370,7 @@ def disjoint_unc(): # edge 34 is blocked
     node3.neighbors.append(node4.id)
     node4.neighbors.append(node3.id)
     # edge 3
-    edge3 =  Edge(node1, node4, 0.2) # length = 6.4
+    edge3 = Edge(node1, node4, 0.2)  # length = 6.4
     edge3.block_status = 0
     edges.append(edge3)
     node1.neighbors.append(node4.id)
@@ -342,8 +381,9 @@ def disjoint_unc(): # edge 34 is blocked
     edges.append(edge4)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
-    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
     return start, goal, nodes, edges, robots
+
 
 def linear_graph_unc():
     start = 1
@@ -351,29 +391,31 @@ def linear_graph_unc():
     nodes = []
     node1 = Vertex(1, (0.0, 0.0))
     nodes.append(node1)
-    node2 =  Vertex(2, (5.0, 0.0))
+    node2 = Vertex(2, (5.0, 0.0))
     nodes.append(node2)
-    node3 =  Vertex(3, (15.0, 0.0))
+    node3 = Vertex(3, (15.0, 0.0))
     nodes.append(node3)
-    
+
     edges = []
-    edge1 =  Edge(node1, node2, 0.9)
+    edge1 = Edge(node1, node2, 0.9)
     edge1.block_status = 1
     edges.append(edge1)
     node1.neighbors.append(node2.id)
     node2.neighbors.append(node1.id)
-    edge2 =  Edge(node2, node3, 0.0)
+    edge2 = Edge(node2, node3, 0.0)
     edge2.block_status = 0
     edges.append(edge2)
     node2.neighbors.append(node3.id)
     node3.neighbors.append(node2.id)
-    robots = RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
     return start, goal, nodes, edges, robots
+
+
 # helper functions
 def plot_street_graph(nodes, edges, name="Testing Graph"):
     """Plot graph using matplotlib."""
     plt.figure(figsize=(10, 10))
-    
+
     # Plot edges
     for edge in edges:
         x_values = [edge.v1.coord[0], edge.v2.coord[0]]
@@ -384,18 +426,19 @@ def plot_street_graph(nodes, edges, name="Testing Graph"):
         mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
         probs = f"{edge.block_prob:.2f}/" + f"{edge.block_status}/{edge.cost:.1f}"
         plt.text(mid_x, mid_y, probs, color='red', fontsize=8)
-    
+
     # Plot nodes
     for node in nodes:
         plt.scatter(node.coord[0], node.coord[1], color='black', s=50)
         plt.text(node.coord[0] + 0.1, node.coord[1] + 0.1, f"{node.id}", color='blue', fontsize=8)
-    
+
     plt.title(name)
     plt.xlabel("X-coordinate")
     plt.ylabel("Y-coordinate")
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.axis("equal")
     plt.show()
+
 
 def print_graph(nodes, edges, show_edge=False, show_node=False):
     """Print the graph details."""
@@ -404,7 +447,7 @@ def print_graph(nodes, edges, show_edge=False, show_node=False):
             print(f"Node {node.id}: ({node.coord[0]:.2f}, {node.coord[1]:.2f}) with neighbors: {node.neighbors}")
             print(f"The neighbors features:")
             for n in node.neighbors:
-                edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == n) or (edge.v1.id == n and edge.v2.id == node.id))][0] 
+                edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == n) or (edge.v1.id == n and edge.v2.id == node.id))][0]
                 print(f"edge {edge.id}: block prob {edge.block_prob:.2f}, block status {edge.block_status}, cost {edge.cost}")
     if show_edge:
         for edge in edges:
