@@ -3,6 +3,7 @@ from sctp import base_pomdpstate, base_navigation
 from pouct_planner import core
 from sctp import graphs
 
+
 def test_sctpbase_state_lineargraph():
    start = 1
    node1 = 2
@@ -10,28 +11,28 @@ def test_sctpbase_state_lineargraph():
    nodes = []
    node1 = graphs.Vertex(1, (0.0, 0.0))
    nodes.append(node1)
-   node2 =  graphs.Vertex(2, (5.0, 0.0))
+   node2 = graphs.Vertex(2, (5.0, 0.0))
    nodes.append(node2)
-   node3 =  graphs.Vertex(3, (15.0, 0.0))
+   node3 = graphs.Vertex(3, (15.0, 0.0))
    nodes.append(node3)
-   
+
    edges = []
-   edge1 =  graphs.Edge(node1, node2, 0.0)
+   edge1 = graphs.Edge(node1, node2, 0.0)
    edge1.block_status = 0
    edges.append(edge1)
    node1.neighbors.append(node2.id)
    node2.neighbors.append(node1.id)
-   edge2 =  graphs.Edge(node2, node3, 0.0)
+   edge2 = graphs.Edge(node2, node3, 0.0)
    edge2.block_status = 0
    edges.append(edge2)
    node2.neighbors.append(node3.id)
    node3.neighbors.append(node2.id)
-   robots = graphs.RobotData(robot_id = 1, position=(0.0, 0.0), cur_vertex=start)
+   robots = graphs.RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
 
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
-                     goal=goal, vertices=nodes, edges=edges, robots=robots)
+                                                 goal=goal, vertices=nodes, edges=edges, robots=robots)
    all_actions = initial_state.get_actions()
    assert len(all_actions) == 1
    action = all_actions[0]
@@ -50,7 +51,7 @@ def test_sctpbase_state_disjoint_noblock():
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
-                     goal=goal, vertices=nodes, edges=edges, robots=robots)
+                                                 goal=goal, vertices=nodes, edges=edges, robots=robots)
    all_actions = initial_state.get_actions()
    assert len(all_actions) == 2
    action = all_actions[0]
@@ -60,7 +61,7 @@ def test_sctpbase_state_disjoint_noblock():
    assert len(outcome_states) == 1
    for state, (prob, cost) in outcome_states.items():
       if prob ==1.0 and state.history.get_action_outcome(action, start, 1.0-prob) == base_pomdpstate.EventOutcome.TRAV:
-         assert cost == pytest.approx(4.0, abs=0.1)   
+         assert cost == pytest.approx(4.0, abs=0.1)
 
    best_action, cost, path  = core.po_mcts(initial_state, n_iterations=2000)
    assert best_action == 2
@@ -90,7 +91,7 @@ def test_sctpbase_state_sgraph_noblock():
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
-                     goal=goal, vertices=nodes, edges=edges, robots=robots)
+                                                 goal=goal, vertices=nodes, edges=edges, robots=robots)
    all_actions = initial_state.get_actions()
    assert len(all_actions) == 2
 
@@ -133,7 +134,7 @@ def test_sctpbase_state_sgraph_prob2():
          # print(f"edge {edge.id} is blocked")
          edge.block_status = 1
          edge.block_prob = 0.8
-   
+
    # for edge in edges:
    #    print(f"edge {edge.id} with block prob {edge.block_prob}, block status {edge.block_status} and cost {edge.cost}")
    edge_probs = {edge.id: edge.block_prob for edge in edges}
@@ -159,7 +160,7 @@ def test_sctpbase_state_mgraph_noblock():
    for edge in edges: # edge 1-2 and 3-4 are blocked
       edge.block_status = 0
       edge.block_prob = 0.0
-   
+
    # for edge in edges:
    #    print(f"edge {edge.id} with block prob {edge.block_prob}, block status {edge.block_status} and cost {edge.cost}")
    edge_probs = {edge.id: edge.block_prob for edge in edges}
@@ -182,7 +183,7 @@ def test_sctpbase_state_mgraph_noblock():
 def test_sctpbase_state_mgraph_prob():
    start, goal, nodes, edges, robots = graphs.m_graph_unc()
    C=9.0
-   
+
    # for edge in edges:
    #    print(f"edge {edge.id} with block prob {edge.block_prob}, block status {edge.block_status} and cost {edge.cost}")
    edge_probs = {edge.id: edge.block_prob for edge in edges}
