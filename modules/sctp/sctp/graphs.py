@@ -52,11 +52,11 @@ class Vertex:
     def get_id(self):
         return self.id
 
-    # def __eq__(self, other):
-    #     return self.id == other.id
+    def __eq__(self, other):
+        return self.id == other.id
 
-    # def __hash__(self):
-    #     return hash(self.id) + hash(str(self.coord))
+    def __hash__(self):
+        return hash(self.id) + hash(str(self.coord))
 
 
 class Edge:
@@ -86,11 +86,11 @@ class Edge:
     def get_blocked_prob(self):
         return self.block_prob
 
-    # def __eq__(self, other):
-    #     return self.id == other.id
+    def __eq__(self, other):
+        return self.id == other.id
 
-    # def __hash__(self):
-    #     return hash(str(self.id))
+    def __hash__(self):
+        return hash(str(self.id))
 
 
 def orientation(p, q, r):

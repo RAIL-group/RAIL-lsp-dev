@@ -9,19 +9,23 @@ def test_sctpbase_history():
    history1 = base_pomdpstate.History()
    history2 = base_pomdpstate.History()
    history3 = base_pomdpstate.History()
+   action1 = base_pomdpstate.Action(start_node=start, target_node=im_node1)
+
    EnventOutcome = base_pomdpstate.EventOutcome
 
-   history1.add_history(action=im_node1, start=start, prob=0.5, outcome=EnventOutcome.BLOCK)
-   history2.add_history(action=im_node1, start=start, prob=0.5, outcome=EnventOutcome.BLOCK)
-   history3.add_history(action=im_node1, start=start, prob=0.5, outcome=EnventOutcome.TRAV)
+   history1.add_history(action=action1, outcome=EnventOutcome.BLOCK)
+   history2.add_history(action=action1, outcome=EnventOutcome.BLOCK)
+   history3.add_history(action=action1, outcome=EnventOutcome.TRAV)
    assert history1 == history2
    assert history1 != history3
 
-   history1.add_history(action=goal, start=im_node1, prob=0.5, outcome=EnventOutcome.TRAV)
-   history2.add_history(action=goal, start=im_node1, prob=0.5, outcome=EnventOutcome.TRAV)
+
+   action2 = base_pomdpstate.Action(start_node=im_node1, target_node=goal)
+
+   history1.add_history(action=action2, outcome=EnventOutcome.TRAV)
+   history2.add_history(action=action2, outcome=EnventOutcome.TRAV)
    assert history1 == history2
 
-   history1.add_history(action=goal, start=im_node1, prob=0.5, outcome=EnventOutcome.TRAV)
-   history2.add_history(action=start, start=im_node1, prob=0.5, outcome=EnventOutcome.TRAV)
+   history2.add_history(action=action1, outcome=EnventOutcome.TRAV)
 
    assert history1 != history2
