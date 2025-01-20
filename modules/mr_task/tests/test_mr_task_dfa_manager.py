@@ -1,6 +1,7 @@
 import pytest
 from mr_task import DFAManager
 
+
 @pytest.mark.parametrize('specification', [
     'F objA & F objB', 'F objA | F objB',])
 def test_mrtask_dfa_manager(specification):
