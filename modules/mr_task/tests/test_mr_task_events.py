@@ -6,6 +6,7 @@ from mr_task.core import (Node,
                           get_next_event_and_time)
 from mr_task.robot import Robot
 
+
 def test_mrtask_event_outcome_known():
     # Set up the environment
     robot_node = Node()
@@ -65,5 +66,5 @@ def test_mrtask_event_outcome_subgoal(target_object):
     event_outcome, event_time = get_next_event_and_time(robot, history_fail)
     assert event_outcome == EventOutcome.FAILURE
     assert event_time == distances[(robot_node, subgoal_node)] + \
-            min(subgoal_prop_dict[(subgoal_node, target_object)][1],
-                subgoal_prop_dict[(subgoal_node, target_object)][2])
+        min(subgoal_prop_dict[(subgoal_node, target_object)][1],
+            subgoal_prop_dict[(subgoal_node, target_object)][2])

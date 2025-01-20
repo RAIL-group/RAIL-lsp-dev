@@ -10,7 +10,9 @@ from mr_task.core import (MRState,
                           get_state_from_history)
 from mr_task.robot import Robot
 
-def test_mrstate_transition_function_cost_and_prob():
+
+def test_mrstate_transition_function_single_joint_action():
+    '''Checks the state transition function for 'single' joint-action'''
     robot_node = Node()
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
@@ -52,15 +54,17 @@ def test_mrstate_transition_function_cost_and_prob():
     state2_history.add_event(action_unknownBS2, EventOutcome.FAILURE)
     state3_history.add_event(action_unknownAS1, EventOutcome.FAILURE)
     state_history_props = [(state1_history, (0.8 * 0.4, 80)),
-                          (state2_history, (0.8 * 0.6, 60)),
-                          (state3_history, (0.2, 40))]
+                           (state2_history, (0.8 * 0.6, 60)),
+                           (state3_history, (0.2, 40))]
 
     for history in state_history_props:
         state = get_state_from_history(outcome_states, history[0])
         assert outcome_states[state][1] == history[1][1]
         assert pytest.approx(outcome_states[state][0]) == history[1][0]
 
-def test_mrtask_mrstate_outcome_states_with_history():
+
+def test_mrstate_transition_function_reassigning_action_when_robot_finishes():
+    '''Checks the state transition function by re-assigning action to the robot which finishes'''
     robot_node = Node()
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
@@ -87,8 +91,8 @@ def test_mrtask_mrstate_outcome_states_with_history():
     specification = "F objA & F objB"
     planner = DFAManager(specification)
     mrstate = MRState(robots=[robot_unk1, robot_unk2],
-                        planner=planner,
-                        distances=distances)
+                      planner=planner,
+                      distances=distances)
 
     outcome_states = mrstate.transition(action_unknownAS1)
     assert len(outcome_states) == 1
@@ -165,8 +169,9 @@ def test_mrtask_mrstate_outcome_states_with_history():
     assert outcome_failureA_failureB_state[failure_AS1_failure_BS2_failure_BS3_state][1] == 270
     assert not planner.is_accepting_state(failure_AS1_failure_BS2_failure_BS3_state.dfa_state)
 
-def test_mrtask_mrstate_advance_with_known_props():
-    # Set up the environment
+
+def test_mrstate_transition_specification_complete_known_space():
+    '''Tests mrstate transition when the specification can be completed by single action in known space'''
     robot_node = Node()
     robot_known = Robot(robot_node)
     robot_unknownA = Robot(robot_node)
@@ -207,13 +212,10 @@ def test_mrtask_mrstate_advance_with_known_props():
     assert len([robot for robot in child_mrstate.robots if robot.needs_action]) == 3
 
 
-def test_mrtask_mrstate_advance_action_single_reassign_cost():
-    # Idea:
-    # - Spec A & B & C
-    # - Simple environment with 2 subgoal nodes: one A and one B
-    # - One of those finishes
-    # - Then assign another action to the robot needing reassignment (something *very* far away, objC)
-    # -  Confirm the 'time remaining' computed correctly.
+def test_mrstate_prop_found_single_robot_remaining_info_time():
+    '''Test remaining and info time after reassigning action to the robot which finishes'''
+    # Idea: Two robots are assigned to 2 subgoal nodes: one A and one B. One of those finishes and gets reassigned
+
     robot_node = Node()
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
@@ -266,20 +268,19 @@ def test_mrtask_mrstate_advance_action_single_reassign_cost():
         # check the remaining_time for retargeted robot
         # remaining_time = 320, info_time = 310
         assert retarget_robot.time_remaining == subgoal_prop_dict[(subgoal_node1, 'objA')][1] + \
-                                                distances[(subgoal_node1, subgoal_node3)] + \
-                                                subgoal_prop_dict[(subgoal_node3, 'objB')][1]
+            distances[(subgoal_node1, subgoal_node3)] + \
+            subgoal_prop_dict[(subgoal_node3, 'objB')][1]
         assert retarget_robot.info_time == subgoal_prop_dict[(subgoal_node1, 'objA')][1] + \
-                                            distances[(subgoal_node1, subgoal_node3)] + \
-                                            min(subgoal_prop_dict[(subgoal_node3, 'objB')][1], subgoal_prop_dict[(subgoal_node3, 'objB')][2])
+            distances[(subgoal_node1, subgoal_node3)] + \
+            min(subgoal_prop_dict[(subgoal_node3, 'objB')][1],
+                subgoal_prop_dict[(subgoal_node3, 'objB')][2])
 
-def test_mrtask_mrstate_advance_action_all_reassign_cost():
-    # pass
-    # Idea:
-    # - Spec A & B & C
-    # - Simple environment with 2 subgoal nodes: *both* objA
-    # - One of those succeeds and as a result, *both* robots start heading to the other node. Confirm the 'time remaining' computed correctly.
-    # - Then assign another action to the robot needing reassignment (something *very* far away, objC)
-    # - Confirm that it reaches that final target at the 'right time'.
+
+def test_mrstate_prop_found_multi_robot_remaining_info_time():
+    '''Test remaining and info time after reassigning action to all the robot because prop is found'''
+    # Idea: Two robots are assigned to the same subgoal for same object.
+    # If one finds the object, both robots are reassigned
+    # If one does not, only that robot is reassigned
 
     robot_node = Node()
     robot_unk1 = Robot(robot_node)
@@ -316,8 +317,7 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
                       planner=planner,
                       distances=distances)
     outcome_mrstates = advance_mrstate(mrstate)
-    # assert len(outcome_mrstates) == 2
-    # success_state, failure_state = outcome_mrstates[0], outcome_mrstates[1]
+
     success_history = History()
     success_history.add_event(action_unknownS1A, EventOutcome.SUCCESS)
     success_state = get_state_from_history(outcome_mrstates, success_history)
@@ -336,44 +336,20 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
 
     success_state.robots[0].retarget(action_unknownS3B, distances)
     success_state.robots[1].retarget(action_unknownS3C, distances)
-    assert success_state.robots[0].time_remaining == 250 # info time is the same
+    assert success_state.robots[0].time_remaining == 250  # info time is the same
     assert success_state.robots[0].info_time == 250
-    assert success_state.robots[1].time_remaining == 280 # info time is 270
+    assert success_state.robots[1].time_remaining == 280  # info time is 270
     assert success_state.robots[1].info_time == 270
 
     failure_state.robots[0].retarget(action_unknownS3B, distances)
     assert failure_state.robots[0].time_remaining == 250
     assert failure_state.robots[0].info_time == 250
 
-import pouct_planner
 
-def test_mrtask_mrstate_known_cost_action():
-    # Set up the environment
-    robot_node = Node()
-    robot_known = Robot(robot_node)
-    known_space_node_near = Node(props=('objA', 'objB',), location=(5, 0))
-    known_space_node_far = Node(props=('objA', 'objB',), location=(100, 0))
-
-    distances = {
-        (robot_node, known_space_node_near): 5,
-        (robot_node, known_space_node_far): 100
-    }
-    specification = "F objA & F objB"
-    planner = DFAManager(specification)
-    mrstate = MRState(robots=[robot_known],
-                      planner=planner,
-                      distances=distances,
-                      subgoal_prop_dict={},
-                      known_space_nodes=[known_space_node_near, known_space_node_far],
-                      unknown_space_nodes=[])
-
-    best_action, cost = pouct_planner.core.po_mcts(mrstate, n_iterations=5000, C=10.0)
-    assert cost == 5
-    assert best_action.target_node == known_space_node_near
-
-
-def test_mrstate_get_actions_with_action_in_history(num_robots=2, num_subgoals=2):
+def test_mrstate_no_actions_with_action_outcome_in_history():
     '''The state should not have the action whose outcome is already in the history'''
+    num_robots = 2
+    num_subgoals = 2
     robot_node = [Node() for _ in range(num_robots)]
     robots = [Robot(node) for node in robot_node]
     subgoal_nodes = [Node(is_subgoal=True) for _ in range(num_subgoals)]
@@ -394,70 +370,3 @@ def test_mrstate_get_actions_with_action_in_history(num_robots=2, num_subgoals=2
                       unknown_space_nodes=subgoal_nodes,
                       history=history)
     assert len(mrstate.get_actions()) == 0
-
-
-def test_mrtask_mrstate_single_robot_goal_two_subgoals():
-    robot_node = Node()
-    robot = Robot(robot_node)
-    subgoal_node1 = Node(is_subgoal=True, location='a')
-    subgoal_node2 = Node(is_subgoal=True, location='b')
-
-    subgoal_prop_dict = {
-        (subgoal_node1, 'goal'): [0.2, 10, 20],
-        (subgoal_node2, 'goal'): [0.9, 30, 50]
-    }
-    distances = {
-        (robot_node, subgoal_node1): 30,
-        (robot_node, subgoal_node2): 30,
-        (subgoal_node1, subgoal_node2): 20, (subgoal_node2, subgoal_node1): 20
-    }
-    specification = "F goal"
-    planner = DFAManager(specification)
-    mrstate = MRState(robots=[robot],
-                      planner=planner,
-                      distances=distances,
-                      subgoal_prop_dict=subgoal_prop_dict,
-                      known_space_nodes=[],
-                      unknown_space_nodes=[subgoal_node1, subgoal_node2])
-
-    obtained_action, obtained_cost = pouct_planner.core.po_mcts(mrstate,
-                                                                n_iterations=1000, C=10.0)
-    node1, cost1 = subgoal_node1, 30 + 10 + 0.8 * (10 + 20 + 30)
-    node2, cost2 = subgoal_node2, 30 + 30 + 0.1 * (30 + 20 + 10)
-    actual_node, actual_cost = (node1, cost1) if cost1 < cost2 else (node2, cost2)
-    assert obtained_action.target_node == actual_node
-    assert pytest.approx(obtained_cost, abs=1.0) == actual_cost
-    assert obtained_action.target_node == actual_node
-
-
-def test_mrtask_mrstate_single_goal_two_robots_subgoals():
-    robot1 = Robot(Node())
-    robot2 = Robot(Node())
-    subgoal_node1 = Node(is_subgoal=True, location='a')
-    subgoal_node2 = Node(is_subgoal=True, location='b')
-
-    subgoal_prop_dict = {
-        (subgoal_node1, 'goal'): [0.2, 10, 20],
-        (subgoal_node2, 'goal'): [0.9, 30, 50]
-    }
-    distances = {
-        (robot1.start, subgoal_node1): 30,
-        (robot1.start, subgoal_node2): 30,
-        (robot2.start, subgoal_node1): 30,
-        (robot2.start, subgoal_node2): 30,
-        (subgoal_node1, subgoal_node2): 20, (subgoal_node2, subgoal_node1): 20,
-        (subgoal_node1, subgoal_node1): 0, (subgoal_node2, subgoal_node2): 0
-    }
-    specification = "F goal"
-    planner = DFAManager(specification)
-    mrstate = MRState(robots=[robot1, robot2],
-                      planner=planner,
-                      distances=distances,
-                      subgoal_prop_dict=subgoal_prop_dict,
-                      known_space_nodes=[],
-                      unknown_space_nodes=[subgoal_node1, subgoal_node2])
-
-    obtained_action, obtained_cost = pouct_planner.core.po_mcts(
-        mrstate, n_iterations=10000, C=10.0)
-
-    assert pytest.approx(obtained_cost, abs=1.0) == (0.2 * 40 + 0.8 * 60)

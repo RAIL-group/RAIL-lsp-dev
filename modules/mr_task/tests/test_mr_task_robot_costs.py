@@ -10,11 +10,10 @@ def test_mrtask_robot_action_switch_known(delta_t):
     robot = Robot(robot_node)
     known_space_nodeA = Node(props=('objA',))
     known_space_nodeB = Node(props=('objB',))
-    print(robot_node, known_space_nodeA, known_space_nodeB)
     actionA = Action(known_space_nodeA)
     actionB = Action(known_space_nodeB)
     distances = {(robot_node, known_space_nodeA): 10,
-                (robot_node, known_space_nodeB): 15}
+                 (robot_node, known_space_nodeB): 15}
     robot.retarget(actionA, distances)
     assert robot.time_remaining == 10
     assert robot.info_time == 10
@@ -23,6 +22,7 @@ def test_mrtask_robot_action_switch_known(delta_t):
     robot.reset_needs_action()
     robot.retarget(actionB, distances)
     assert robot.time_remaining == delta_t + distances[(robot_node, actionB.target_node)]
+
 
 @pytest.mark.parametrize('delta_t', [10, 50, 110])
 def test_mrtask_robot_action_switch_unknown(delta_t):
@@ -39,8 +39,8 @@ def test_mrtask_robot_action_switch_unknown(delta_t):
     actionB = Action(subgoal_nodeB, ('objB',), subgoal_prop_dict)
 
     distances = {(robot_node, subgoal_nodeA): 10,
-                (robot_node, subgoal_nodeB): 15,
-                (subgoal_nodeA, subgoal_nodeB): 5}
+                 (robot_node, subgoal_nodeB): 15,
+                 (subgoal_nodeA, subgoal_nodeB): 5}
     robot.retarget(actionA, distances)
     assert robot.time_remaining == 110
     assert robot.info_time == 30
@@ -50,6 +50,7 @@ def test_mrtask_robot_action_switch_unknown(delta_t):
     robot.retarget(actionB, distances)
     progress_on_subgoalA = delta_t - distances[(robot_node, subgoal_nodeA)]
     assert robot.time_remaining == progress_on_subgoalA + distances[(subgoal_nodeA, subgoal_nodeB)] + 10
+
 
 def test_mrstate_robot_action_switch_multiple():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
@@ -71,11 +72,11 @@ def test_mrstate_robot_action_switch_multiple():
     actionD = Action(subgoal_nodeD, ('objD',), subgoal_prop_dict)
 
     distances = {(robot_node, subgoal_nodeA): 10,
-                (subgoal_nodeA, subgoal_nodeA): 0,
-                (subgoal_nodeA, subgoal_nodeB): 5, (subgoal_nodeA, subgoal_nodeC): 10, (subgoal_nodeA, subgoal_nodeD): 15,
-                (subgoal_nodeB, subgoal_nodeA): 5, (subgoal_nodeB, subgoal_nodeC): 5, (subgoal_nodeB, subgoal_nodeD): 10,
-                (subgoal_nodeC, subgoal_nodeA): 10, (subgoal_nodeC, subgoal_nodeB): 5, (subgoal_nodeC, subgoal_nodeD): 5,
-                (subgoal_nodeD, subgoal_nodeA): 15, (subgoal_nodeD, subgoal_nodeB): 10, (subgoal_nodeD, subgoal_nodeC): 5}
+                 (subgoal_nodeA, subgoal_nodeA): 0,
+                 (subgoal_nodeA, subgoal_nodeB): 5, (subgoal_nodeA, subgoal_nodeC): 10, (subgoal_nodeA, subgoal_nodeD): 15,
+                 (subgoal_nodeB, subgoal_nodeA): 5, (subgoal_nodeB, subgoal_nodeC): 5, (subgoal_nodeB, subgoal_nodeD): 10,
+                 (subgoal_nodeC, subgoal_nodeA): 10, (subgoal_nodeC, subgoal_nodeB): 5, (subgoal_nodeC, subgoal_nodeD): 5,
+                 (subgoal_nodeD, subgoal_nodeA): 15, (subgoal_nodeD, subgoal_nodeB): 10, (subgoal_nodeD, subgoal_nodeC): 5}
 
     robot.retarget(actionA, distances)
     delta_t = 30
@@ -97,6 +98,7 @@ def test_mrstate_robot_action_switch_multiple():
     assert robot.time_remaining == 25 + 200
     assert robot.info_time == 25 + 20
 
+
 def test_mrstate_robot_action_switch_same_subgoal_different_object():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
     robot_node = Node()
@@ -115,7 +117,7 @@ def test_mrstate_robot_action_switch_same_subgoal_different_object():
     actionD = Action(subgoal_nodeA, ('objD',), subgoal_prop_dict)
 
     distances = {(robot_node, subgoal_nodeA): 10,
-                (subgoal_nodeA, subgoal_nodeA): 0, (subgoal_nodeA, subgoal_nodeB): 5}
+                 (subgoal_nodeA, subgoal_nodeA): 0, (subgoal_nodeA, subgoal_nodeB): 5}
 
     robot.retarget(actionA, distances)
 

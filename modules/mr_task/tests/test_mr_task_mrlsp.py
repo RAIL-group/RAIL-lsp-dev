@@ -9,12 +9,14 @@ import mr_task
 import pouct_planner
 import pytest
 
+
 class MRLSPRobot():
     def __init__(self, id):
         self.id = id
 
     def __hash__(self):
         return self.id
+
 
 def _generate_random_environment(num_robots, num_frontiers):
     # For MRLSP
@@ -52,8 +54,8 @@ def _generate_random_environment(num_robots, num_frontiers):
     }
     distances_mrtask = {
         (f_node1, f_node2): distances['all'][frozenset([hash(f1), hash(f2)])]
-         for f1, f_node1 in frontier_nodes_dict.items()
-         for f2, f_node2 in frontier_nodes_dict.items()
+        for f1, f_node1 in frontier_nodes_dict.items()
+        for f2, f_node2 in frontier_nodes_dict.items()
     }
     distances_mrtask.update({
         (r_node, f_node): distances['all'][frozenset([hash(r), hash(f)])]
@@ -70,6 +72,7 @@ def _generate_random_environment(num_robots, num_frontiers):
     return mrlsp_environment, mr_task_environment
 
 
+# TODO: This test should be done for multiple robots and frontiers, right now its failing (slight cost mismatch)
 def test_mrtask_mrlsp_cost_matches(num_robots=2, num_frontiers=2):
     mrlsp_environment, mr_task_environment = _generate_random_environment(num_robots, num_frontiers)
     cost_mrlsp, ordering_mrlsp = mrlsp.core.get_mr_lowest_cost_ordering_cpp(mrlsp_environment['robots_hash'],
@@ -84,12 +87,10 @@ def test_mrtask_mrlsp_cost_matches(num_robots=2, num_frontiers=2):
                                    subgoal_prop_dict=mr_task_environment['subgoal_props'],
                                    known_space_nodes=mr_task_environment['known_space_nodes'],
                                    unknown_space_nodes=mr_task_environment['unknown_space_nodes'])
-    print("printing")
-    print(mr_task_environment['unknown_space_nodes'])
-    print([r.start for r in mr_task_environment['robots']])
 
     action, cost = pouct_planner.core.po_mcts(mrstate,
-                                             n_iterations=50000,
-                                             C=10)
+                                              n_iterations=50000,
+                                              C=10)
+
     print(f'cost mrtask={cost},{cost_mrlsp=}')
     assert pytest.approx(cost_mrlsp, abs=1) == cost
