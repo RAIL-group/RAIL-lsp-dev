@@ -64,9 +64,9 @@ def test_mrtask_mrstate_outcome_states_with_history():
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
 
-    subgoal_node1 = Node(is_subgoal=True)
-    subgoal_node2 = Node(is_subgoal=True)
-    subgoal_node3 = Node(is_subgoal=True)
+    subgoal_node1 = Node(is_subgoal=True, location='a')
+    subgoal_node2 = Node(is_subgoal=True, location='b')
+    subgoal_node3 = Node(is_subgoal=True, location='c')
 
     subgoal_prop_dict = {
         (subgoal_node1, 'objA'): [0.8, 10, 20],
@@ -164,7 +164,7 @@ def test_mrtask_mrstate_outcome_states_with_history():
     assert outcome_failureA_failureB_state[failure_AS1_failure_BS2_failure_BS3_state][1] == 270
     assert not planner.is_accepting_state(failure_AS1_failure_BS2_failure_BS3_state.dfa_state)
 
-def test_mrtask_mrstate_advancement_with_known_props():
+def test_mrtask_mrstate_advance_with_known_props():
     # Set up the environment
     robot_node = Node()
     robot_known = Robot(robot_node)
@@ -284,9 +284,9 @@ def test_mrtask_mrstate_advance_action_all_reassign_cost():
     robot_unk1 = Robot(robot_node)
     robot_unk2 = Robot(robot_node)
 
-    subgoal_node1 = Node(is_subgoal=True)
-    subgoal_node2 = Node(is_subgoal=True)
-    subgoal_node3 = Node(is_subgoal=True)
+    subgoal_node1 = Node(is_subgoal=True, location='a')
+    subgoal_node2 = Node(is_subgoal=True, location='b')
+    subgoal_node3 = Node(is_subgoal=True, location='c')
 
     subgoal_prop_dict = {
         (subgoal_node1, 'objA'): [1, 10, 20], # make sure this succeeds so that single child child is returned first
@@ -370,6 +370,31 @@ def test_mrtask_mrstate_known_cost_action():
     assert cost == 5
     assert best_action.target_node == known_space_node_near
 
+
+def test_mrstate_get_actions_with_action_in_history(num_robots=2, num_subgoals=2):
+    '''The state should not have the action whose outcome is already in the history'''
+    robot_node = [Node() for _ in range(num_robots)]
+    robots = [Robot(node) for node in robot_node]
+    subgoal_nodes = [Node(is_subgoal=True) for _ in range(num_subgoals)]
+    subgoal_prop_dict = {(subgoal, 'goal'): [1, 0, 0] for subgoal in subgoal_nodes}
+    distances = {}
+    specification = "F goal"
+    history = History()
+    actions = [
+        Action(subgoal, ('goal',), subgoal_prop_dict) for subgoal in subgoal_nodes
+    ]
+    for action in actions:
+        history.add_event(action, np.random.choice([EventOutcome.SUCCESS,
+                                                    EventOutcome.FAILURE]))
+
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=robots, planner=planner, distances=distances,
+                      subgoal_prop_dict=subgoal_prop_dict,
+                      unknown_space_nodes=subgoal_nodes,
+                      history=history)
+    assert len(mrstate.get_actions()) == 0
+
+
 def test_mrtask_mrstate_single_robot_goal_two_subgoals():
     robot_node = Node()
     robot = Robot(robot_node)
@@ -401,3 +426,37 @@ def test_mrtask_mrstate_single_robot_goal_two_subgoals():
     actual_node, actual_cost = (node1, cost1) if cost1 < cost2 else (node2, cost2)
     assert obtained_action.target_node == actual_node
     assert pytest.approx(obtained_cost, abs=1.0) == actual_cost
+    assert obtained_action.target_node == actual_node
+
+
+def test_mrtask_mrstate_single_goal_two_robots_subgoals():
+    robot1 = Robot(Node())
+    robot2 = Robot(Node())
+    subgoal_node1 = Node(is_subgoal=True, location='a')
+    subgoal_node2 = Node(is_subgoal=True, location='b')
+
+    subgoal_prop_dict = {
+        (subgoal_node1, 'goal'): [0.2, 10, 20],
+        (subgoal_node2, 'goal'): [0.9, 30, 50]
+    }
+    distances = {
+        (robot1.start, subgoal_node1): 30,
+        (robot1.start, subgoal_node2): 30,
+        (robot2.start, subgoal_node1): 30,
+        (robot2.start, subgoal_node2): 30,
+        (subgoal_node1, subgoal_node2): 20, (subgoal_node2, subgoal_node1): 20,
+        (subgoal_node1, subgoal_node1): 0, (subgoal_node2, subgoal_node2): 0
+    }
+    specification = "F goal"
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot1, robot2],
+                      planner=planner,
+                      distances=distances,
+                      subgoal_prop_dict=subgoal_prop_dict,
+                      known_space_nodes=[],
+                      unknown_space_nodes=[subgoal_node1, subgoal_node2])
+
+    obtained_action, obtained_cost = pouct_planner.core.po_mcts(
+        mrstate, n_iterations=10000, C=10.0)
+
+    assert pytest.approx(obtained_cost, abs=1.0) == (0.2 * 40 + 0.8 * 60)
