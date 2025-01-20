@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from mr_task import DFAManager
 from mr_task.core import (MRState,
@@ -420,7 +421,7 @@ def test_mrtask_mrstate_single_robot_goal_two_subgoals():
                       unknown_space_nodes=[subgoal_node1, subgoal_node2])
 
     obtained_action, obtained_cost = pouct_planner.core.po_mcts(mrstate,
-                                                                n_iterations=10, C=10.0)
+                                                                n_iterations=1000, C=10.0)
     node1, cost1 = subgoal_node1, 30 + 10 + 0.8 * (10 + 20 + 30)
     node2, cost2 = subgoal_node2, 30 + 30 + 0.1 * (30 + 20 + 10)
     actual_node, actual_cost = (node1, cost1) if cost1 < cost2 else (node2, cost2)
