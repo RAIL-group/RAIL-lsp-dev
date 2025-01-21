@@ -45,13 +45,13 @@ def train(args, train_path, test_path):
     # Create the datasets and loaders
     train_dataset = CSVPickleDataset(train_path, prep_fn)
     print("Number of training data:", len(train_dataset))
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     train_writer = SummaryWriter(
         log_dir=os.path.join(args.save_dir, train_writer_str))
 
     test_dataset = CSVPickleDataset(test_path, prep_fn)
     print("Number of testing data:", len(test_dataset))
-    test_loader = DataLoader(test_dataset, batch_size=2, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=True)
     test_iter = iter(test_loader)
     test_writer = SummaryWriter(
         log_dir=os.path.join(args.save_dir, test_writer_str))
