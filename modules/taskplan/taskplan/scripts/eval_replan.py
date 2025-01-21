@@ -47,7 +47,6 @@ def evaluate_main(args):
         args=args,
         learned_data=learned_data
     )
-    taskplan.utilities.utils.check_map_validity(partial_map, args)
     taskplan.utilities.utils.check_pddl_validity(pddl, args)
 
     cost_str = taskplan.utilities.utils.get_cost_string(args)
