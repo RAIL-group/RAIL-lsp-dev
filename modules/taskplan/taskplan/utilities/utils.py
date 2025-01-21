@@ -228,7 +228,7 @@ def get_action_costs():
         'toast': 100 * scale,
         'pick': 100 * scale,
         'place': 100 * scale,
-        'find': 0 * scale
+        'find': 20 * scale
     }
     return action_costs
 
