@@ -616,7 +616,7 @@ def get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest):
         if g_name not in chosen:
             chosen[g_name] = goal_obj
     chosen = list(chosen.values())
-    goal_cnt = random.sample(cnt_of_interest, 1)
+    goal_cnt = ['initial_robot_pose']
     goal_obj = chosen[0]
     task1 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
 
