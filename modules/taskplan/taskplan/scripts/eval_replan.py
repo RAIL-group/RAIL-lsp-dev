@@ -11,8 +11,6 @@ import taskplan
 
 
 def evaluate_main(args):
-    args = get_args()
-
     # get the custom coffee related objects
     if 'coffee' in args.goal_type:
         coffee_objects = taskplan.utilities.utils.get_coffee_objects()
