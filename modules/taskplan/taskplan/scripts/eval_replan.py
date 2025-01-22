@@ -175,6 +175,10 @@ if __name__ == "__main__":
     args = get_args()
     # skip experiment if seed in ignore list
     taskplan.utilities.utils.check_skip_protocol(args)
+    if args.cost_type != 'known':
+        c_str = taskplan.utilities.utils.get_cost_string(args)
+        file_name = f"fail_{c_str}.txt"
+        args.fail_log = os.path.join(args.save_dir, file_name)
     random.seed(args.current_seed)
     np.random.seed(args.current_seed)
     torch.manual_seed(args.current_seed)
