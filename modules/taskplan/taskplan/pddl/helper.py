@@ -51,8 +51,11 @@ def generate_pddl_problem(domain_name, problem_name, objects, init_states,
 
 def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # Initialize the environment setting which containers are undiscovered
-    init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
-        whole_graph['cnt_node_idx'], args.current_seed)
+    if args.cost_type == 'known':
+        init_subgoals_idx = []
+    else:
+        init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
+            whole_graph['cnt_node_idx'], args.current_seed)
     subgoal_IDs = taskplan.utilities.utils.get_container_ID(
         whole_graph['nodes'], init_subgoals_idx)
     if learned_data:
