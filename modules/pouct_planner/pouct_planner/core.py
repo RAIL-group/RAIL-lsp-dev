@@ -45,7 +45,7 @@ def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
         backpropagate(leaf, simulation_result)
     best_action, cost = get_best_action(root)
     path = get_best_path(leaf)
-    print(f'Best path: {path}')
+    # print(f'Best path: {path}')
     return best_action, cost, path
 
 def traverse(node, C=1.0):
@@ -129,5 +129,5 @@ def get_best_path(node):
     while node.parent is not None:
         path.append(node.prev_action)
         node = node.parent
-    path.append(node.state.robots.cur_vertex)
+    # path.append(node.state.robots.cur_vertex)
     return path[::-1]
