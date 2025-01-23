@@ -92,5 +92,5 @@ if __name__ == "__main__":
         merged_df = pd.merge(merged_df, df, on='seed', how='outer')
 
     # Fill missing values with 5000
-    merged_df.fillna(5000, inplace=True)
+    merged_df.fillna(8000, inplace=True)
     print(merged_df.describe())
