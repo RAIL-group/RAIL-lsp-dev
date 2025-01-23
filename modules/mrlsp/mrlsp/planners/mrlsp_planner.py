@@ -60,7 +60,7 @@ class MRKnownSubgoalPlanner(BaseMRLSPPlanner):
 class MRLearnedSubgoalPlanner(BaseMRLSPPlanner):
     '''Multi-robot Learned Subgoal Planner'''
 
-    def __init__(self, robots, goal, args, device=None):
+    def __init__(self, robots, goal, args, device=None, verbose=False):
         super(MRLearnedSubgoalPlanner, self).__init__(robots, goal, args)
 
         if device is not None:
@@ -71,6 +71,7 @@ class MRLearnedSubgoalPlanner(BaseMRLSPPlanner):
 
         self.subgoal_property_net = lsp.learning.models.VisLSPOriented.get_net_eval_fn(
             args.network_file, device=self.device)
+        self.verbose = verbose
 
     def compute_selected_subgoal(self):
         # If goal in range, return None as action
@@ -83,9 +84,9 @@ class MRLearnedSubgoalPlanner(BaseMRLSPPlanner):
                                                                          self.robots,
                                                                          self.goal,
                                                                          self.subgoals,
-                                                                         num_frontiers_max=NUM_MAX_FRONTIERS)
+                                                                         num_frontiers_max=NUM_MAX_FRONTIERS,
+                                                                         verbose=self.verbose)
         return joint_action
-
 
     def _update_subgoal_properties(self, robot_poses, goal_pose):
 

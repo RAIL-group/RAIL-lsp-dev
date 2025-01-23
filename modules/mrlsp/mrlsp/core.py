@@ -158,9 +158,9 @@ def get_mr_lowest_cost_ordering_py(robots_hash, frontiers, distances):
 def get_mr_lowest_cost_ordering_cpp(robots_hash, subgoals, distances):
     subgoals_cpp = [
         mrlsp_accel.SubgoalData(s.prob_feasible,
-                                          s.delta_success_cost,
-                                          s.exploration_cost,
-                                          hash(s)) for s in subgoals
+                                s.delta_success_cost,
+                                s.exploration_cost,
+                                hash(s)) for s in subgoals
     ]
     gd_cpp = {hash(s): distances['goal'][hash(s)] for s in subgoals}
     inter_distances_cpp = {
@@ -179,16 +179,19 @@ def get_best_expected_ordering_and_cost(inflated_grid,
                                         goal,
                                         subgoals,
                                         num_frontiers_max,
-                                        use_py=False):
-        # for cpp
-        num_robots = len(robots)
-        distances_mr = get_multirobot_distances(inflated_grid, robots, [goal], subgoals)
-        subgoals = get_top_n_frontiers_multirobot(num_robots,
-                                                  subgoals,
-                                                  distances_mr,
-                                                  n=num_frontiers_max)
-        unexplored_frontiers = list(subgoals)
+                                        use_py=False,
+                                        verbose=True):
+    # for cpp
+    num_robots = len(robots)
+    distances_mr = get_multirobot_distances(
+         inflated_grid, robots, [goal], subgoals)
+    subgoals = get_top_n_frontiers_multirobot(num_robots,
+                                              subgoals,
+                                              distances_mr,
+                                              n=num_frontiers_max)
+    unexplored_frontiers = list(subgoals)
 
+    if verbose:
         print("Top n subgoals")
         for subgoal in unexplored_frontiers:
             if subgoal.prob_feasible > 0.0:
@@ -197,19 +200,20 @@ def get_best_expected_ordering_and_cost(inflated_grid,
                        subgoal.prob_feasible, subgoal.delta_success_cost,
                        subgoal.exploration_cost))
 
-        s_dict = {hash(s): s for s in unexplored_frontiers}
-        robots_hash_dict = {r: hash(r) for r in robots}
-        robots_hash = [hash(r) for r in robots]
-        distances_py = get_distances_for_mrfstate(unexplored_frontiers, robots_hash_dict, distances_mr)
-        if not use_py:
-            cost, ordering = get_mr_lowest_cost_ordering_cpp(robots_hash,
-                                                             unexplored_frontiers,
-                                                             distances_py)
-        else:
-            cost, ordering = get_mr_lowest_cost_ordering_py(robots_hash,
-                                                            unexplored_frontiers,
-                                                            distances_py)
+    s_dict = {hash(s): s for s in unexplored_frontiers}
+    robots_hash_dict = {r: hash(r) for r in robots}
+    robots_hash = [hash(r) for r in robots]
+    distances_py = get_distances_for_mrfstate(
+            unexplored_frontiers, robots_hash_dict, distances_mr)
+    if not use_py:
+        cost, ordering = get_mr_lowest_cost_ordering_cpp(robots_hash,
+                                                         unexplored_frontiers,
+                                                         distances_py)
+    else:
+        cost, ordering = get_mr_lowest_cost_ordering_py(robots_hash,
+                                                        unexplored_frontiers,
+                                                        distances_py)
 
-        ordering = [s_dict[s] for s in ordering]
-        joint_action = ordering[:num_robots]
-        return cost, joint_action
+    ordering = [s_dict[s] for s in ordering]
+    joint_action = ordering[:num_robots]
+    return cost, joint_action
