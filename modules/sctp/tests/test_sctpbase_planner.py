@@ -30,29 +30,35 @@ def test_sctpbase_planner_lineargraph():
 
 
 
-def test_sctpbase_state_disjoint_noblock():
-   start, goal, nodes, edges, robots = graphs.disjoint_unc()
-   for edge in edges:
-      edge.block_status = 0
-      edge.block_prob = 0.0
-   edge_probs = {edge.id: edge.block_prob for edge in edges}
-   edge_costs = {edge.id: edge.cost for edge in edges}
-   initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs,
-                                                 goal=goal, vertices=nodes, edges=edges, robots=robots)
-   all_actions = initial_state.get_actions()
-   assert len(all_actions) == 2
-   action = all_actions[0]
-   assert action == 2 or action == 4
+def test_sctpbase_planner_disjoint():
+    start, goal, graph, robots = graphs.disjoint_unc()
+    for edge in graph.edges:
+        edge.block_prob = 0.0
+    init_state1 = base_pomdpstate.SCTPBaseState(graph=graph,goal=goal.id, robots=robots)
+    all_actions = init_state1.get_actions()
+    assert len(all_actions) == 2
+    
+    action2 = base_pomdpstate.Action(start_node=start.id, target_node=graph.vertices[1].id)
+    action4 = base_pomdpstate.Action(start_node=start.id, target_node=graph.vertices[3].id)
+    for action in all_actions:
+        assert action in [action2, action4]
+    action = all_actions[0] # action 2
+    outcome_states = init_state1.transition(action)
+    assert len(outcome_states) == 1
 
-   outcome_states = initial_state.transition(action)
-   assert len(outcome_states) == 1
-   for state, (prob, cost) in outcome_states.items():
-      if prob ==1.0 and state.history.get_action_outcome(action, start, 1.0-prob) == base_pomdpstate.EventOutcome.TRAV:
-         assert cost == pytest.approx(4.0, abs=0.1)
-
-   best_action, cost, path  = core.po_mcts(initial_state, n_iterations=2000)
-   assert best_action == 2
-   assert cost == pytest.approx(8.0, abs=0.1)
+    for state, (prob, cost) in outcome_states.items():
+        assert state.history.get_action_outcome(action) == base_pomdpstate.EventOutcome.TRAV
+        assert prob == 1.0
+        assert cost == pytest.approx(4.0, abs=0.1)
+    
+    assert init_state1.history.get_data_length()==0
+    best_action, cost, path  = core.po_mcts(init_state1, n_iterations=2000)
+    print(best_action)
+    assert best_action == action2
+    assert cost == pytest.approx(8.0, abs=0.1)
+    for p in path:
+        print(p)
+    # assert path[1] == 2 and path[2] == 3
 
 def test_sctpbase_state_disjoint_prob():
    start, goal, nodes, edges, robots = graphs.disjoint_unc()
