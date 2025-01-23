@@ -4,7 +4,7 @@ from sctp import base_pomdpstate
 def test_sctpbase_history():
    start = 1
    im_node1 = 2
-   im_node2 = 3
+   # im_node2 = 3
    goal = 4
    history1 = base_pomdpstate.History()
    history2 = base_pomdpstate.History()

@@ -1,24 +1,34 @@
 import numpy as np
-import random
+import random, copy
 import matplotlib.pyplot as plt
 
 class RobotData:
-   def __init__(self, *,robot_id=None, position=None,
-                cur_vertex=None, last_robot=None):
-      if last_robot is not None:
-         self.robotID = last_robot.robotID
-         self.position = last_robot.position
-         self.cur_vertex = last_robot.cur_vertex
-         self.last_vertex = self.cur_vertex
-      else:
-         self.robotID = robot_id
-         self.position = position
-         self.cur_vertex = cur_vertex
-         self.last_vertex = None
+    def __init__(self, *,robot_id=None, position=None,
+                    cur_node=None, last_robot=None):
+        if last_robot is not None:
+            self.robotID = last_robot.robotID
+            if position is not None:
+                self.position = position
+            else:
+                self.position = last_robot.position
+            self.cur_vertex = last_robot.cur_vertex
+            self.last_vertex = self.cur_vertex
+        else:
+            self.robotID = robot_id
+            if position is not None:
+                self.position = position
+            else:
+                self.position = [cur_node.coord[0], cur_node.coord[1]] 
+            self.cur_vertex = cur_node.id
+            self.last_vertex = None
 
-   def get_robotID(self) -> int:
-      return self.robotID
-
+   # def __eq__(self, other):
+   #    return self == other.__hash__()
+   
+   # def __hash_(self):
+   #    return hash(self.robotID
+    def getID(self):
+        return self.robotID
 
 class Graph():
     def __init__(self, vertices=[], edges=[]):
@@ -42,11 +52,11 @@ class Graph():
 
 class Vertex:
     _id_counter = 1
-    def __init__(self, coords):
+    def __init__(self, coord):
         self.id = Vertex._id_counter
         Vertex._id_counter += 1
         self.parent = None
-        self.coord = coords
+        self.coord = coord
         self.neighbors = []
 
     def get_id(self):
@@ -61,9 +71,9 @@ class Vertex:
 
 class Edge:
     def __init__(self, v1, v2, block_prob=0.0):
-        self.id = tuple(sorted((v1.get_id(), v2.get_id())))
         self.v1 = v1
         self.v2 = v2
+        self.hash_id = self.__hash__()
         self.dist = np.linalg.norm(
             np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
         self.cost = self.dist
@@ -77,9 +87,6 @@ class Edge:
     def update_cost(self, value):
         self.cost = value
 
-    def get_edge_id(self):
-        return self.id
-
     def get_poi_coord(self):
         return self.poi_coord
 
@@ -87,10 +94,10 @@ class Edge:
         return self.block_prob
 
     def __eq__(self, other):
-        return self.id == other.id
+        return self.hash_id == other.hash_id
 
     def __hash__(self):
-        return hash(str(self.id))
+        return hash(self.v1) + hash(self.v2)
 
 
 def orientation(p, q, r):
@@ -198,217 +205,103 @@ def generate_street_graph(grid_rows, grid_cols, edge_probability):
 
 
 def m_graph_unc():
-    """Generate a simple graph for testing purposes."""
-    start = 1
-    goal = 7
-    nodes = []
-    node1 = Vertex(1, (-3.0, 4.0))
-    nodes.append(node1)
-    node2 = Vertex(2, (-15.0, 7.5))
-    nodes.append(node2)
-    node3 = Vertex(3, (0.0, 2.0))
-    nodes.append(node3)
-    node4 = Vertex(4, (4.0, 0.0))
-    nodes.append(node4)
-    node5 = Vertex(5, (4.0, 4.0))
-    nodes.append(node5)
-    node6 = Vertex(6, (4.0, 8.0))
-    nodes.append(node6)
-    node7 = Vertex(7, (8.0, 4.0))
-    nodes.append(node7)
+   """Generate a simple graph for testing purposes."""
+   nodes = []
+   node1 = Vertex(coord=(-3.0, 4.0)) # start node
+   nodes.append(node1)
+   node2 = Vertex(coord=(-15.0, 7.5))
+   nodes.append(node2)
+   node3 = Vertex(coord=(0.0, 2.0))
+   nodes.append(node3)
+   node4 = Vertex(coord=(4.0, 0.0))
+   nodes.append(node4)
+   node5 = Vertex(coord=(4.0, 4.0))
+   nodes.append(node5)
+   node6 = Vertex(coord=(4.0, 8.0))
+   nodes.append(node6)
+   node7 = Vertex(coord=(8.0, 4.0)) # goal node
+   nodes.append(node7)
+   
+   graph = Graph(nodes)
+   
+   # add edges
+   graph.add_edge(node1, node2, 0.1)
+   graph.add_edge(node1, node3, 0.1)
+   graph.add_edge(node2, node3, 0.1)
+   graph.add_edge(node2, node5, 0.1)
+   graph.add_edge(node2, node6, 0.1)
+   graph.add_edge(node3, node4, 0.1)
+   graph.add_edge(node3, node5, 0.1)
+   graph.add_edge(node4, node5, 0.1)
+   graph.add_edge(node4, node7, 0.1)
+   graph.add_edge(node5, node7, 0.1)
+   graph.add_edge(node6, node7, 0.1)
+   graph.add_edge(node6, node5, 0.1)
 
-    edges = []
-    edge1 = Edge(node1, node2, 0.1)
-    edge1.block_status = 0
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
-
-    edge2 = Edge(node1, node3, 0.1)
-    edge2.block_status = 0
-    edges.append(edge2)
-    node1.neighbors.append(node3.id)
-    node3.neighbors.append(node1.id)
-
-    edge3 = Edge(node2, node3, 0.1)
-    edge3.block_status = 0
-    edges.append(edge3)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-
-    edge4 = Edge(node2, node5, 0.1)
-    edge4.block_status = 0
-    edges.append(edge4)
-    node2.neighbors.append(node5.id)
-    node5.neighbors.append(node2.id)
-
-    edge5 = Edge(node2, node6, 0.1)
-    edge5.block_status = 0
-    edges.append(edge5)
-    node2.neighbors.append(node6.id)
-    node6.neighbors.append(node2.id)
-
-    edge6 = Edge(node3, node4, 0.1)
-    edge6.block_status = 0
-    edges.append(edge6)
-    node3.neighbors.append(node4.id)
-    node4.neighbors.append(node3.id)
-
-    edge7 = Edge(node3, node5, 0.1)
-    edge7.block_status = 0
-    edges.append(edge7)
-    node3.neighbors.append(node5.id)
-    node5.neighbors.append(node3.id)
-
-    edge8 = Edge(node4, node5, 0.1)
-    edge8.block_status = 0
-    edges.append(edge8)
-    node4.neighbors.append(node5.id)
-    node5.neighbors.append(node4.id)
-
-    edge9 = Edge(node7, node4, random.uniform(0.85, 0.99))
-    edge9.block_status = 1
-    edges.append(edge9)
-    node7.neighbors.append(node4.id)
-    node4.neighbors.append(node7.id)
-
-    edge10 = Edge(node7, node5, random.uniform(0.9, 1.0))
-    edge10.block_status = 1
-    edges.append(edge10)
-    node7.neighbors.append(node5.id)
-    node5.neighbors.append(node7.id)
-
-    edge11 = Edge(node6, node7, 0.1)
-    edge11.block_status = 0
-    edges.append(edge11)
-    node6.neighbors.append(node7.id)
-    node7.neighbors.append(node6.id)
-
-    edge12 = Edge(node6, node5, 0.1)
-    edge12.block_status = 0
-    edges.append(edge12)
-    node6.neighbors.append(node5.id)
-    node5.neighbors.append(node6.id)
-    robots = RobotData(robot_id=1, position=(-3.0, 4.0), cur_vertex=start)
-    return start, goal, nodes, edges, robots
+   robots = RobotData(robot_id=1, position=[-3.0, 4.0], cur_node=node1)
+   return node1, node7, graph, robots
 
 
 def s_graph_unc():
-    """Generate a simple graph for testing purposes."""
-    start = 1
-    goal = 4
-    nodes = []
-    node1 = Vertex(1, (0.0, 0.0))
-    nodes.append(node1)
-    node2 = Vertex(2, (4.0, 4.0))
-    nodes.append(node2)
-    node3 = Vertex(3, (4.0, 0.0))
-    nodes.append(node3)
-    node4 = Vertex(4, (8.0, 0.0))
-    nodes.append(node4)
+   """Generate a simple graph for testing purposes."""
+   nodes = []
+   node1 = Vertex(coord=(0.0, 0.0)) # start node
+   nodes.append(node1)
+   node2 = Vertex(coord=(4.0, 4.0))
+   nodes.append(node2)
+   node3 = Vertex(coord=(4.0, 0.0))
+   nodes.append(node3)
+   node4 = Vertex(coord=(8.0, 0.0)) # goal node
+   nodes.append(node4)
+   graph = Graph(nodes)
 
-    edges = []
-    edge1 = Edge(node1, node2, random.uniform(0.1, 0.3))
-    edge1.block_status = 0
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
+   # adding edges
+   graph.add_edge(node1, node2, 0.1)
+   graph.add_edge(node1, node3, 0.1)
+   graph.add_edge(node2, node3, 0.1)
+   graph.add_edge(node2, node4, 0.1)
+   graph.add_edge(node3, node4, 0.95)
 
-    edge2 = Edge(node1, node3, random.uniform(0.2, 0.4))
-    edge2.block_status = 0
-    edges.append(edge2)
-    node1.neighbors.append(node3.id)
-    node3.neighbors.append(node1.id)
-
-    edge3 = Edge(node2, node3, random.uniform(0.15, 0.3))
-    edge3.block_status = 0
-    edges.append(edge3)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-
-    edge4 = Edge(node2, node4, random.uniform(0.08, 0.14))
-    edge4.block_status = 0
-    edges.append(edge4)
-    node2.neighbors.append(node4.id)
-    node4.neighbors.append(node2.id)
-
-    edge5 = Edge(node3, node4, random.uniform(0.85, 0.99))
-    edge5.block_status = 1
-    edges.append(edge5)
-    node3.neighbors.append(node4.id)
-    node4.neighbors.append(node3.id)
-
-    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
-    return start, goal, nodes, edges, robots
+   robots = RobotData(robot_id=1, position=[0.0, 0.0], cur_node=node1)
+   return node1, node4, graph, robots
 
 
 def disjoint_unc():  # edge 34 is blocked
-    start = 1
-    goal = 3
-    # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
-    nodes = []
-    node1 = Vertex(1, (0.0, 0))
-    nodes.append(node1)
-    node2 =  Vertex(2, (4.0, 0.0))
-    nodes.append(node2)
-    node3 =  Vertex(3, (8.0, 0.0))
-    nodes.append(node3)
-    node4 =  Vertex(4, (4.0, 4.0))
-    nodes.append(node4)
 
-    edges = []
-    # edge 1
-    edge1 = Edge(node1, node2, 0.1)
-    edge1.block_status = 0
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
-    # edge 2
-    edge2 =  Edge(node3, node4, 0.15)
-    edge2.block_status = 0
-    edges.append(edge2)
-    node3.neighbors.append(node4.id)
-    node4.neighbors.append(node3.id)
-    # edge 3
-    edge3 = Edge(node1, node4, 0.2)  # length = 6.4
-    edge3.block_status = 0
-    edges.append(edge3)
-    node1.neighbors.append(node4.id)
-    node4.neighbors.append(node1.id)
-    # edge 4
-    edge4 =  Edge(node2, node3, 0.9)
-    edge4.block_status = 1
-    edges.append(edge4)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
-    return start, goal, nodes, edges, robots
+   # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
+   nodes = []
+   node1 = Vertex(coord=(0.0, 0.0))
+   nodes.append(node1)
+   node2 =  Vertex(coord=(4.0, 0.0))
+   nodes.append(node2)
+   node3 =  Vertex(coord=(8.0, 0.0))
+   nodes.append(node3)
+   node4 =  Vertex(coord=(4.0, 4.0))
+   nodes.append(node4)
+
+   graph = Graph(nodes)
+   graph.add_edge(node1, node2, 0.1)
+   graph.add_edge(node3, node4, 0.1)
+   graph.add_edge(node2, node3, 0.9)
+   graph.add_edge(node1, node4, 0.2)
+   node_new = copy.copy(node1)
+   robots = RobotData(robot_id=1, position=[0.0, 0.0], cur_node=node_new)
+   return node1, node3, graph, robots
 
 
 def linear_graph_unc():
-    start = 1
-    goal = 3
-    nodes = []
-    node1 = Vertex(1, (0.0, 0.0))
-    nodes.append(node1)
-    node2 = Vertex(2, (5.0, 0.0))
-    nodes.append(node2)
-    node3 = Vertex(3, (15.0, 0.0))
-    nodes.append(node3)
-
-    edges = []
-    edge1 = Edge(node1, node2, 0.9)
-    edge1.block_status = 1
-    edges.append(edge1)
-    node1.neighbors.append(node2.id)
-    node2.neighbors.append(node1.id)
-    edge2 = Edge(node2, node3, 0.0)
-    edge2.block_status = 0
-    edges.append(edge2)
-    node2.neighbors.append(node3.id)
-    node3.neighbors.append(node2.id)
-    robots = RobotData(robot_id=1, position=(0.0, 0.0), cur_vertex=start)
-    return start, goal, nodes, edges, robots
+   nodes = []
+   node1 = Vertex(coord=(0.0, 0.0))
+   nodes.append(node1)
+   node2 = Vertex(coord=(5.0, 0.0))
+   nodes.append(node2)
+   node3 = Vertex(coord=(15.0, 0.0))
+   nodes.append(node3)
+   graph = Graph(nodes)
+   graph.add_edge(node1, node2, 0.9)
+   graph.add_edge(node2, node3, 0.0)
+   robots = RobotData(robot_id=1, position=[0.0, 0.0], cur_node=node1)
+   return node1, node3, graph, robots
 
 
 # helper functions
