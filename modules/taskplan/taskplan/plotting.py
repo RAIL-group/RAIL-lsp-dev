@@ -29,19 +29,19 @@ def gjs_scatter_plot(ax, cost_x, cost_y, max_val, fail_val):
     y_fail_cost = [cost_x[seed] for seed in y_fail_seed]
     x_fail_fill_cost = [fail_val for _ in y_fail_seed]
     if y_fail_cost:
-        print(y_fail_cost)
-        ax.plot([fail_val, fail_val], [min(y_fail_cost) - 30, max(y_fail_cost) + 30], color='black', linestyle='--',
-                linewidth=0.5, alpha=0.2)
-        ax.scatter(x_fail_fill_cost, y_fail_cost, color='red', marker='x')
+        # print(y_fail_cost)
+        # ax.plot([fail_val, fail_val], [min(y_fail_cost) - 30, max(y_fail_cost) + 30], color='black', linestyle='--',
+        #         linewidth=0.5, alpha=0.2)
+        ax.scatter(y_fail_cost, x_fail_fill_cost, color='red', marker='x')
 
     x_fail_seed = set.difference(set(cost_y.keys()), set(cost_x.keys()))
     x_fail_cost = [cost_y[seed] for seed in x_fail_seed]
     y_fail_fill_cost = [fail_val for _ in x_fail_seed]
     if x_fail_cost:
-        print(x_fail_cost)
-        ax.plot([min(x_fail_cost) - 30, max(x_fail_cost) + 30], [fail_val, fail_val], color='black', linestyle='--',
-                linewidth=0.5, alpha=0.2)
-        ax.scatter(x_fail_cost, y_fail_fill_cost, color='red', marker='x')
+        # print(x_fail_cost)
+        # ax.plot([min(x_fail_cost) - 30, max(x_fail_cost) + 30], [fail_val, fail_val], color='black', linestyle='--',
+        #         linewidth=0.5, alpha=0.2)
+        ax.scatter(y_fail_fill_cost, x_fail_cost, color='red', marker='x')
 
 
 def make_scatter_with_box(data_x, data_y, max_val=None):
