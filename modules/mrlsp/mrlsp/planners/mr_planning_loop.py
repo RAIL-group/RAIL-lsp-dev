@@ -15,7 +15,7 @@ class MRPlanningLoop():
         # instead of robot, we have robots
         self.robots = robots
         self.args = args
-        self.is_stuck= [False for _ in range(self.num_robots)]
+        self.is_stuck = [False for _ in range(self.num_robots)]
         self.verbose = verbose
         # instead of one chosen_subgoal, we have multiple chosen_subgoals
         self.chosen_subgoals = [None for _ in range(self.num_robots)]
