@@ -56,10 +56,8 @@ def traverse(node, C=1.0):
             return child_node
         else:
             node = child_node
-
     if node.is_terminal_node():
         return node
-
     # 1. pick a new action
     action = node.unexplored_actions.pop()
     # 2. create a new node
@@ -68,7 +66,6 @@ def traverse(node, C=1.0):
     node.children.add(new_child)
     return new_child
 
-
 def rollout(node, rollout_fn=None):
     if rollout_fn is not None:
         return node.cost + rollout_fn(node.state)
@@ -76,7 +73,6 @@ def rollout(node, rollout_fn=None):
         # do a random rollout
         rollout_cost = 0.0
         while not node.is_terminal_node():
-            # print(f"Count the number of rollout--------------- start at {node.state.robots.cur_vertex}")
             action = np.random.choice(node.unexplored_actions)
             node = get_chance_node(node, action)
         return node.cost + rollout_cost
