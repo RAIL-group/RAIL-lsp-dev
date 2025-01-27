@@ -531,10 +531,8 @@ def get_goals_for_coffee(seed, cnt_of_interest, objects):
     compatible_receptacles = []
     for object in receptacles:
         if object in objects:
-            compatible_receptacles += objects[object]
-
-    if len(compatible_receptacles) > 3:
-        compatible_receptacles = random.sample(compatible_receptacles, 3)
+            compatible_receptacles.append(object)
+            break
 
     preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
     compatible_containers = [cnt for cnt in cnt_of_interest
@@ -575,10 +573,8 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
     compatible_receptacles = []
     for object in receptacles:
         if object in objects:
-            compatible_receptacles += objects[object]
-
-    if len(compatible_receptacles) > 3:
-        compatible_receptacles = random.sample(compatible_receptacles, 3)
+            compatible_receptacles.append(object)
+            break
 
     preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
     compatible_containers = [cnt for cnt in cnt_of_interest
