@@ -44,8 +44,8 @@ def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
         simulation_result = rollout(leaf, rollout_fn=rollout_fn)
         backpropagate(leaf, simulation_result)
     best_action, cost = get_best_action(root)
-    path = get_best_path(leaf)
-    return best_action, cost
+    path_ordering, cost_ordering = get_best_path(root)
+    return best_action, cost, [path_ordering, cost_ordering]
 
 def traverse(node, C=1.0):
     while node.is_fully_expanded() and not node.is_terminal_node():
@@ -121,9 +121,16 @@ def get_chance_node(node, action):
     chance_node = np.random.choice(list(node_action_transition.keys()), p=prob)
     return chance_node
 
-def get_best_path(node):
-    path = []
-    while node.parent is not None:
-        path.append(node.prev_action)
-        node = node.parent
-    return path[::-1]
+def get_best_path(root):
+    paths = []
+    costs = []
+    node = root
+    while not node.is_terminal_node():
+        if node.total_n == 0:
+            break
+        best_action, cost = get_best_action(node)
+        paths.append(best_action)
+        costs.append(cost)
+        children = list(node.action_outcomes[best_action].keys())
+        node = max(children, key=lambda x: x.total_n)
+    return paths, costs
