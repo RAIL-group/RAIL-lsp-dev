@@ -1,6 +1,7 @@
 import spot
 import networkx as nx
 
+
 def _get_single_prop_transtion_dict(aut):
     bdict = aut.get_dict()
     FALSE_BDD = spot.formula_to_bdd(spot.formula("False"), bdict, None)
@@ -22,6 +23,7 @@ def _get_single_prop_transtion_dict(aut):
                     transition_dict[(state, prop)] = edge.dst
 
     return transition_dict
+
 
 def _get_downstream_features(transition_dict):
     all_states = set([state for state, _ in transition_dict.keys()])

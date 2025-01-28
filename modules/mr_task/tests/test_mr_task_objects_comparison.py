@@ -1,6 +1,6 @@
 import copy
 from mr_task.core import History, Node, Action, EventOutcome
-from mr_task.robot import Robot
+from mr_task.core import RobotNode
 
 
 def test_history_comparison():
@@ -57,8 +57,8 @@ def test_action_comparison():
 
 def test_robot_comparison():
     robot_node = Node()
-    robot1 = Robot(robot_node)
-    robot2 = Robot(robot_node)
+    robot1 = RobotNode(robot_node)
+    robot2 = RobotNode(robot_node)
 
     assert robot1 != robot2
     assert hash(robot1) != hash(robot2)

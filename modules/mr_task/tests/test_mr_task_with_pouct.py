@@ -2,13 +2,13 @@ import pytest
 import pouct_planner
 from mr_task import DFAManager
 from mr_task.core import MRState, Node
-from mr_task.robot import Robot
+from mr_task.core import RobotNode
 
 
 def test_mrtask_pouct_known_cost_action():
     # Set up the environment
     robot_node = Node()
-    robot_known = Robot(robot_node)
+    robot_known = RobotNode(robot_node)
     known_space_node_near = Node(props=('objA', 'objB',), location=(5, 0))
     known_space_node_far = Node(props=('objA', 'objB',), location=(100, 0))
 
@@ -32,7 +32,7 @@ def test_mrtask_pouct_known_cost_action():
 
 def test_mrtask_pouct_single_robot_goal_two_subgoals():
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     subgoal_node1 = Node(is_subgoal=True, location='a')
     subgoal_node2 = Node(is_subgoal=True, location='b')
 
@@ -65,8 +65,8 @@ def test_mrtask_pouct_single_robot_goal_two_subgoals():
 
 
 def test_mrtask_pouct_single_goal_two_robots_subgoals():
-    robot1 = Robot(Node())
-    robot2 = Robot(Node())
+    robot1 = RobotNode(Node())
+    robot2 = RobotNode(Node())
     subgoal_node1 = Node(is_subgoal=True, location='a')
     subgoal_node2 = Node(is_subgoal=True, location='b')
 

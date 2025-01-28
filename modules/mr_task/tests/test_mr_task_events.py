@@ -4,7 +4,7 @@ from mr_task.core import (Node,
                           History,
                           EventOutcome,
                           get_next_event_and_time)
-from mr_task.robot import Robot
+from mr_task.core import RobotNode
 
 
 def test_mrtask_event_outcome_known():
@@ -12,7 +12,7 @@ def test_mrtask_event_outcome_known():
     robot_node = Node()
     known_space_node = Node(props=('objA', 'objB',))
     action = Action(known_space_node)
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     distances = {(robot_node, known_space_node): 18}
     robot.retarget(action, distances)
 
@@ -30,7 +30,7 @@ def test_mrtask_event_outcome_known():
 def test_mrtask_event_outcome_subgoal(target_object):
     # Set up the environment
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     subgoal_node = Node(is_subgoal=True)
     subgoal_prop_dict = {
         (subgoal_node, 'objA'): [0.6, 100, 20],

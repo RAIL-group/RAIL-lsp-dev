@@ -28,3 +28,18 @@ def test_mrtask_dfa_manager(specification):
     dfa.advance(('objB',))
     assert not 'objB' in dfa.get_useful_props()
     assert dfa.is_accepting_state(dfa.state)
+
+
+def test_mrtask_dfa_advance():
+    specification = 'F Knife & F Pillow'
+    dfa = DFAManager(specification)
+    objects_found = ()
+    dfa.advance(objects_found)
+    assert 'Knife' in dfa.get_useful_props()
+    assert 'Pillow' in dfa.get_useful_props()
+
+    objects_found = ('Knife', 'Pillow',)
+    print(f'{objects_found=}')
+    dfa.advance(objects_found)
+    assert not 'Knife' in dfa.get_useful_props()
+    assert not 'Pillow' in dfa.get_useful_props()
