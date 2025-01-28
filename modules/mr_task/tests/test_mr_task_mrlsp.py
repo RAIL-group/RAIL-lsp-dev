@@ -96,10 +96,10 @@ def test_mrtask_mrlsp_cost_matches(num_robots, num_frontiers):
 
     def _rollout_fn(state):
         return 0
-    action, cost = pouct_planner.core.po_mcts(mrstate,
-                                              n_iterations=1000,
-                                              C=100,
-                                              rollout_fn=_rollout_fn)
+    action, cost, _ = pouct_planner.core.po_mcts(mrstate,
+                                                 n_iterations=1000,
+                                                 C=100,
+                                                 rollout_fn=_rollout_fn)
 
     print(action.target_node.location)
     print(f'cost mrtask={cost:.2f},{cost_mrlsp=}')
