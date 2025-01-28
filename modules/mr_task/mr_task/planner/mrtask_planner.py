@@ -29,6 +29,6 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
                                        subgoal_prop_dict=self.node_prop_dict,
                                        known_space_nodes=[],
                                        unknown_space_nodes=self.container_nodes)
-        action, cost = pouct_planner.core.get_best_joint_action(
-            mrstate, num_robots=len(self.robot_poses), n_iterations=50000, C=100)
-        return action, cost
+        action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
+            mrstate, n_iterations=50000, C=100)
+        return ordering[:len(self.robot_poses)], cost
