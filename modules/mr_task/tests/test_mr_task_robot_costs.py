@@ -1,13 +1,13 @@
 import pytest
 from mr_task.core import Node, Action
-from mr_task.robot import Robot
+from mr_task.core import RobotNode
 
 
 @pytest.mark.parametrize('delta_t', [9, 5, 0])
 def test_mrtask_robot_action_switch_known(delta_t):
     '''Robot goes to KSN_A. In mid-way, it has to switch action. Now it has to go KSN_B'''
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     known_space_nodeA = Node(props=('objA',))
     known_space_nodeB = Node(props=('objB',))
     actionA = Action(known_space_nodeA)
@@ -28,7 +28,7 @@ def test_mrtask_robot_action_switch_known(delta_t):
 def test_mrtask_robot_action_switch_unknown(delta_t):
     '''Robot goes to SN_A. In mid-way, it has to switch action. Now it has to go SN_B'''
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     subgoal_nodeA = Node(is_subgoal=True)
     subgoal_nodeB = Node(is_subgoal=True)
     subgoal_prop_dict = {
@@ -55,7 +55,7 @@ def test_mrtask_robot_action_switch_unknown(delta_t):
 def test_mrstate_robot_action_switch_multiple():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     subgoal_nodeA = Node(is_subgoal=True)
     subgoal_nodeB = Node(is_subgoal=True)
     subgoal_nodeC = Node(is_subgoal=True)
@@ -102,7 +102,7 @@ def test_mrstate_robot_action_switch_multiple():
 def test_mrstate_robot_action_switch_same_subgoal_different_object():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
     robot_node = Node()
-    robot = Robot(robot_node)
+    robot = RobotNode(robot_node)
     subgoal_nodeA = Node(is_subgoal=True)
     subgoal_nodeB = Node(is_subgoal=True)
     subgoal_prop_dict = {

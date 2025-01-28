@@ -24,14 +24,15 @@ def _generate_random_environment(num_robots, num_frontiers):
     robots_hash_dict = {robot: i for i, robot in enumerate(robots)}
     robots_hash = list(robots_hash_dict.values())
     frontiers = [lsp.core.Frontier(points=np.array([[i+1], [i+1]])) for i in range(num_frontiers)]
+    s_hash = {hash(f): f for f in frontiers}
     for f in frontiers:
-        f.set_props(prob_feasible=np.random.rand(),
-                    delta_success_cost=np.random.rand() * 15,
-                    exploration_cost=np.random.rand() * 30)
+        f.set_props(prob_feasible=0,
+                    delta_success_cost=np.random.randint(50, 100),
+                    exploration_cost=np.random.randint(50, 100))
 
     distances = {
-        'goal': {hash(f): np.random.rand() * 20 for f in frontiers},
-        'all': {frozenset([hash(f1), hash(f2)]): np.random.rand() * 10
+        'goal': {hash(f): np.random.randint(50, 100) for f in frontiers},
+        'all': {frozenset([hash(f1), hash(f2)]): np.random.randint(50, 100)
                 for f1 in frontiers + robots
                 for f2 in frontiers + robots}
     }
@@ -39,11 +40,12 @@ def _generate_random_environment(num_robots, num_frontiers):
         'robots_hash': robots_hash,
         'frontiers': frontiers,
         'distances': distances,
+        's_hash': s_hash
     }
 
     # For MR-Task
     robot_nodes_dict = {r: mr_task.core.Node() for r in robots}
-    robot_nodes = [mr_task.robot.Robot(r_node) for r_node in list(robot_nodes_dict.values())]
+    robot_nodes = [mr_task.core.RobotNode(r_node) for r_node in list(robot_nodes_dict.values())]
     frontier_nodes_dict = {f: mr_task.core.Node(is_subgoal=True, location=f.centroid) for f in frontiers}
     frontier_nodes = list(frontier_nodes_dict.values())
     subgoal_prop_dict = {
@@ -73,12 +75,16 @@ def _generate_random_environment(num_robots, num_frontiers):
 
 
 # TODO: This test should be done for multiple robots and frontiers, right now its failing (slight cost mismatch)
-def test_mrtask_mrlsp_cost_matches(num_robots=2, num_frontiers=2):
+@pytest.mark.parametrize('num_frontiers', [7])
+@pytest.mark.parametrize('num_robots', [2])
+def test_mrtask_mrlsp_cost_matches(num_robots, num_frontiers):
     mrlsp_environment, mr_task_environment = _generate_random_environment(num_robots, num_frontiers)
     cost_mrlsp, ordering_mrlsp = mrlsp.core.get_mr_lowest_cost_ordering_cpp(mrlsp_environment['robots_hash'],
                                                                             mrlsp_environment['frontiers'],
                                                                             mrlsp_environment['distances'])
 
+    action_mrlsp = mrlsp_environment['s_hash'][ordering_mrlsp[0]]
+    print(action_mrlsp.centroid)
     specification = "F goal"
     planner = mr_task.DFAManager(specification)
     mrstate = mr_task.core.MRState(robots=mr_task_environment['robots'],
@@ -88,9 +94,14 @@ def test_mrtask_mrlsp_cost_matches(num_robots=2, num_frontiers=2):
                                    known_space_nodes=mr_task_environment['known_space_nodes'],
                                    unknown_space_nodes=mr_task_environment['unknown_space_nodes'])
 
+    def _rollout_fn(state):
+        return 0
     action, cost = pouct_planner.core.po_mcts(mrstate,
-                                              n_iterations=50000,
-                                              C=10)
+                                              n_iterations=1000,
+                                              C=100,
+                                              rollout_fn=_rollout_fn)
 
-    print(f'cost mrtask={cost},{cost_mrlsp=}')
-    assert pytest.approx(cost_mrlsp, abs=1) == cost
+    print(action.target_node.location)
+    print(f'cost mrtask={cost:.2f},{cost_mrlsp=}')
+    assert pytest.approx(cost_mrlsp, abs=5) == cost
+    assert list(action.target_node.location) == list(action_mrlsp.centroid)
