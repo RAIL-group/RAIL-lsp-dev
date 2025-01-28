@@ -188,3 +188,30 @@ def test_chance_node_probabilities():
             count[node.state] += 1
         for s, prob in actual_transition.items():
             assert pytest.approx(count[s] / iterations, abs=0.2) == prob
+
+
+################################################################
+# Tests for get_best_path function
+################################################################
+def test_get_best_path():
+    root = core.POUCTNode(mdp())
+    root.total_n = 10
+    child1 = core.POUCTNode(mdp('S1'), parent=root, action='A', cost=20)
+    child2 = core.POUCTNode(mdp('S2'), parent=root, action='A', cost=80)
+    root.action_outcomes = {'A': {child1: 0.3, child2: 0.7}}
+    root.action_n = {'A': 10}
+    root.action_values = {'A': 0} # Cost doesn't matter
+    root.children = {child1, child2}
+    child1.total_n = 2
+    child2.total_n = 8 # child 2 is explored more
+
+    child21 = core.POUCTNode(mdp('S21'), parent=child1, action='B', cost=10)
+    child22 = core.POUCTNode(mdp('S22'), parent=child1, action='B', cost=30)
+    child2.action_outcomes = {'B': {child21: 0.8, child22: 0.2}}
+    child2.action_n = {'B': 8}
+    child2.action_values = {'B': 0}
+    child2.children = {child21, child22}
+
+    path, cost = core.get_best_path(root)
+    actual_path = ['A', 'B']
+    assert path == actual_path

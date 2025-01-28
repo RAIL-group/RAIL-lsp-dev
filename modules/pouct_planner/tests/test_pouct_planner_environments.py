@@ -11,7 +11,7 @@ def test_deterministic_linear_mdp():
                 'S2': {}
     }
     state = MDP('S', deterministic_mdp_transitions)
-    best_action, cost  = core.po_mcts(state, n_iterations=1000)
+    best_action, cost, _  = core.po_mcts(state, n_iterations=1000)
     assert best_action == 'A'
     assert cost == 15
 
@@ -22,7 +22,7 @@ def test_deterministic_tree_mdp():
         'S2': {}
     }
     state = MDP('S', deterministic_tree_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=1000)
+    best_action, cost, _ = core.po_mcts(state, n_iterations=1000)
     assert best_action == 'A'
     assert cost == 10
 
@@ -32,7 +32,7 @@ def test_stochastic_mdp_cost():
         'S1': {'C': [('S3', 1.0, 3)]}, 'S2': {}, 'S3': {}
     }
     state = MDP('S', stochastic_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=10000)
+    best_action, cost, _ = core.po_mcts(state, n_iterations=10000)
     assert best_action == 'A'
     assert pytest.approx(cost, abs=1.0) == (0.8 * (5 + 3) + 0.2 * 50)
 
@@ -40,7 +40,7 @@ def test_mdp_large_state_space():
     large_state_mdp = {f'S{i}':{f'A': [(f'S{i+1}', 1.0, i)]} for i in range(100)}
     large_state_mdp[f'S100'] = {} # terminal state
     state = MDP('S0', large_state_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=1000)
+    best_action, cost, _ = core.po_mcts(state, n_iterations=1000)
     assert best_action == 'A'
     assert cost == sum(range(100))
 
@@ -50,7 +50,7 @@ def test_mdp_large_action_space():
         'S1': {}
     }
     state = MDP('S', large_action_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=1000)
+    best_action, cost, _ = core.po_mcts(state, n_iterations=1000)
     assert best_action == 'A0'
     assert cost == 1
 
@@ -72,7 +72,7 @@ def test_mdp_large_state_action_space(branchings):
     dense_mdp = {f'S{i}': {f'A{j}': [(f'S{i+1}', 1.0, (i + j))] for j in range(branchings)} for i in range(branchings)}
     dense_mdp[f'S{branchings}'] = {} # terminal state
     state = MDP('S0', dense_mdp)
-    best_action, cost = core.po_mcts(state,
+    best_action, cost, _ = core.po_mcts(state,
                                      n_iterations=50000,
                                      rollout_fn=lower_bound_cost_rollout_fn,
                                      C=1.0)
@@ -87,6 +87,6 @@ def test_single_action_more_states():
         'S1': {}, 'S2': {}, 'S3': {}
     }
     state = MDP('S', single_action_mdp)
-    best_action, cost = core.po_mcts(state, n_iterations=10000)
+    best_action, cost, _ = core.po_mcts(state, n_iterations=10000)
     assert best_action == 'A'
     assert pytest.approx(cost, abs=1.0) == (0.5 * 10 + 0.3 * 20 + 0.2 * 30)
