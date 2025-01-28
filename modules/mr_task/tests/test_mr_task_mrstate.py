@@ -8,14 +8,14 @@ from mr_task.core import (MRState,
                           EventOutcome,
                           advance_mrstate,
                           get_state_from_history)
-from mr_task.robot import Robot
+from mr_task.core import RobotNode
 
 
 def test_mrstate_transition_function_single_joint_action():
     '''Checks the state transition function for 'single' joint-action'''
     robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
+    robot_unk1 = RobotNode(robot_node)
+    robot_unk2 = RobotNode(robot_node)
 
     subgoal_node1 = Node(is_subgoal=True)
     subgoal_node2 = Node(is_subgoal=True)
@@ -66,8 +66,8 @@ def test_mrstate_transition_function_single_joint_action():
 def test_mrstate_transition_function_reassigning_action_when_robot_finishes():
     '''Checks the state transition function by re-assigning action to the robot which finishes'''
     robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
+    robot_unk1 = RobotNode(robot_node)
+    robot_unk2 = RobotNode(robot_node)
 
     subgoal_node1 = Node(is_subgoal=True, location='a')
     subgoal_node2 = Node(is_subgoal=True, location='b')
@@ -173,9 +173,9 @@ def test_mrstate_transition_function_reassigning_action_when_robot_finishes():
 def test_mrstate_transition_specification_complete_known_space():
     '''Tests mrstate transition when the specification can be completed by single action in known space'''
     robot_node = Node()
-    robot_known = Robot(robot_node)
-    robot_unknownA = Robot(robot_node)
-    robot_unknownB = Robot(robot_node)
+    robot_known = RobotNode(robot_node)
+    robot_unknownA = RobotNode(robot_node)
+    robot_unknownB = RobotNode(robot_node)
     subgoal_node = Node(is_subgoal=True)
     known_space_node = Node(props=('objA', 'objB',))
     subgoal_prop_dict = {
@@ -217,8 +217,8 @@ def test_mrstate_prop_found_single_robot_remaining_info_time():
     # Idea: Two robots are assigned to 2 subgoal nodes: one A and one B. One of those finishes and gets reassigned
 
     robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
+    robot_unk1 = RobotNode(robot_node)
+    robot_unk2 = RobotNode(robot_node)
 
     subgoal_node1 = Node(is_subgoal=True)
     subgoal_node2 = Node(is_subgoal=True)
@@ -283,8 +283,8 @@ def test_mrstate_prop_found_multi_robot_remaining_info_time():
     # If one does not, only that robot is reassigned
 
     robot_node = Node()
-    robot_unk1 = Robot(robot_node)
-    robot_unk2 = Robot(robot_node)
+    robot_unk1 = RobotNode(robot_node)
+    robot_unk2 = RobotNode(robot_node)
 
     subgoal_node1 = Node(is_subgoal=True, location='a')
     subgoal_node2 = Node(is_subgoal=True, location='b')
@@ -351,7 +351,7 @@ def test_mrstate_no_actions_with_action_outcome_in_history():
     num_robots = 2
     num_subgoals = 2
     robot_node = [Node() for _ in range(num_robots)]
-    robots = [Robot(node) for node in robot_node]
+    robots = [RobotNode(node) for node in robot_node]
     subgoal_nodes = [Node(is_subgoal=True) for _ in range(num_subgoals)]
     subgoal_prop_dict = {(subgoal, 'goal'): [1, 0, 0] for subgoal in subgoal_nodes}
     distances = {}
