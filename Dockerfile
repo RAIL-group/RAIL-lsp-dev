@@ -80,6 +80,9 @@ RUN cp -r /usr/local/lib/python3.8/dist-packages/environments* /temp
 COPY modules/procthor modules/procthor
 RUN pip3 install modules/procthor
 RUN cp -r /usr/local/lib/python3.8/dist-packages/procthor* /temp
+COPY modules/pouct_planner modules/pouct_planner
+RUN pip3 install modules/pouct_planner
+RUN cp -r /usr/local/lib/python3.8/dist-packages/pouct_planner* /temp
 
 
 # Build the final image
