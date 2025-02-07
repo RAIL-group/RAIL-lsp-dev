@@ -21,10 +21,12 @@ class MRTaskPlanningLoop(object):
             container_nodes = [mr_task.core.Node(is_subgoal=True, name=loc, location=coords)
                                for coords, loc in self.unexplored_containers.items()]
             objects_found = self.objects_found
+            self.known_space_nodes = [mr_task.core.Node(props=self.object_locations[location], name=location, location=coords)
+                                      for coords, location in self.unexplored_containers.items()]
 
             yield {
                 "robot_poses": [robot.pose for robot in self.robots],
-                "container_nodes": container_nodes,
+                "container_nodes": self.known_space_nodes,
                 "object_found": objects_found,
             }
 

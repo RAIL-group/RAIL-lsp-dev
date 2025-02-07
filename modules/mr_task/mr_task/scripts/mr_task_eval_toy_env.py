@@ -1,3 +1,4 @@
+import pdb
 from pathlib import Path
 import argparse
 import numpy as np
@@ -11,6 +12,8 @@ from common import Pose
 def _setup(args):
     map = env.ToyMap(seed=args.seed)
     coords_locations, location_object = map.coords_locations, map.location_objects
+    print(f'{coords_locations=}')
+    print(f'{location_object=}')
     start_pose = Pose(0, 0)
     robot_team = [mr_task.robot.Robot(start_pose) for _ in range(args.num_robots)]
     print(f'{location_object=}')
@@ -19,9 +22,9 @@ def _setup(args):
     specification = mr_task.specification.get_random_specification(objects=objects, seed=args.seed)
 
     if args.planner == 'learned':
-        mrtask_planner = mr_task.planner.LearnedMRTaskPlanner(specification)
+        mrtask_planner = mr_task.planner.LearnedMRTaskPlanner(args, specification)
     elif args.planner == 'optimistic':
-        mrtask_planner = mr_task.planner.OptimisticMRTaskPlanner(specification)
+        mrtask_planner = mr_task.planner.OptimisticMRTaskPlanner(args, specification)
 
     planning_loop = mr_task.planner.MRTaskPlanningLoop(robot_team,
                                                        coords_locations,
@@ -41,9 +44,10 @@ def _setup(args):
 
         joint_action, cost = mrtask_planner.compute_joint_action()
         planning_loop.update_joint_action(joint_action)
+        # pdb.set_trace()
 
-    fig = plt.figure()
-    ax = plt.gca()
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={'width_ratios': [3, 1]})
+    ax = axes[0]
     ax.set_xlim([0, env.GRID_SIZE])
     ax.set_ylim([0, env.GRID_SIZE])
     for robot in robot_team:
@@ -51,9 +55,15 @@ def _setup(args):
     for coords, loc in coords_locations.items():
         ax.scatter(coords[0], coords[1], color='black', marker='o')
         ax.text(coords[0]+0.5, coords[1]+0.5, loc)
-    plt.title(f'{args.planner} | cost={robot_team[0].net_motion:.2f} | spec={specification}')
+    ax.set_title(f'{args.planner} | cost={robot_team[0].net_motion:.2f} | spec={specification}')
 
-    imagename = Path(args.save_dir) / f'mtask_eval_planner_{args.planner}_seed_{args.seed}.png'
+    ax_data = axes[1]
+    ax_data.axis('off')
+    text = "\n".join(f"{loc}: {', '.join(items) if items else ''}" for loc, items in location_object.items())
+    ax_data.text(0, 1, text, fontsize=12, verticalalignment="top")
+    plt.tight_layout()
+
+    imagename = Path(args.save_dir) / f'mtask_eval_planner_{args.planner}_seed_{args.seed}_.png'
     plt.savefig(imagename)
     print(f"Cost = {robot_team[0].net_motion}")
 
@@ -73,5 +83,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1024)
     parser.add_argument('--planner', type=str, default='learned')
     parser.add_argument('--num_robots', type=int, default=2)
+    parser.add_argument('--num_iterations', type=int, default=50000)
+    parser.add_argument('--C', type=int, default=100)
     args = parser.parse_args()
     _setup(args)

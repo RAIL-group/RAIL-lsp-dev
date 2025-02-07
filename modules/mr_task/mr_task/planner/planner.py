@@ -6,8 +6,9 @@ from mrlsp.utils.utility import find_action_list_from_cost_matrix_using_lsa
 
 
 class BaseMRTaskPlanner(object):
-    def __init__(self, specification, verbose=True):
+    def __init__(self, args, specification, verbose=True):
         self.specification = specification
+        self.args = args
         self.verbose = verbose
         self.dfa_planner = mr_task.DFAManager(specification)
         self.robot_poses = None
@@ -35,8 +36,8 @@ class BaseMRTaskPlanner(object):
 
 
 class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
-    def __init__(self, specification, verbose=True):
-        super(OptimisticMRTaskPlanner, self).__init__(specification, verbose)
+    def __init__(self, args, specification, verbose=True):
+        super(OptimisticMRTaskPlanner, self).__init__(args, specification, verbose)
 
     def compute_joint_action(self):
         robot_nodes = [mr_task.core.RobotNode(mr_task.core.Node(
