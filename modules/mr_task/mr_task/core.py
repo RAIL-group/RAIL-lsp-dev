@@ -126,7 +126,7 @@ class MRState(object):
 
     def get_actions(self):
         useful_props = self.planner.get_useful_props()
-        ks_actions = [Action(node) for node in self.known_space_nodes]
+        ks_actions = [Action(node) for node in self.known_space_nodes if self.planner.does_transition_state(node.props)]
         unk_actions = [Action(node, (props,), self.subgoal_prop_dict)
                        for node in self.unknown_space_nodes
                        for props in useful_props]
@@ -166,7 +166,7 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         event_robot.reset_needs_action()
 
         # 2). Check for 'waiting' agents & see if they can advance the state as well.
-        _advance_dfa_if_robots_waiting(event_robot, robots, dfa_planner)
+        # _advance_dfa_if_robots_waiting(event_robot, robots, dfa_planner)
 
         # 3). Some robots' actions will not be 'useful' anymore and also need retargeting.
         useful_props = dfa_planner.get_useful_props()
