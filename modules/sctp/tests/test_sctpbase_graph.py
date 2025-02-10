@@ -3,7 +3,7 @@ import pytest
 from sctp import graphs
 
 
-def test_graph_vertex_edge_check():
+def test_sctpbase_graph_vertex_edge_check():
     start_node = graphs.Vertex(coord=(0.0, 0.0))
     goal_node = graphs.Vertex(coord=(15.0, 0.0))
     node1 = graphs.Vertex(coord=(5.0, 0.0))
@@ -32,7 +32,7 @@ def test_graph_vertex_edge_check():
     out_edge = graphs.Edge(node1, start_node, 0.0)
     assert out_edge == edge
 
-def test_linear_graph_check():
+def test_sctpbase_linear_graph_check():
     start, goal, ln_graph, robots = graphs.linear_graph_unc()
     
     assert start in ln_graph.vertices
@@ -49,8 +49,15 @@ def test_linear_graph_check():
     assert robots.position != start.coord
     assert robots.position[0] != start.coord[0]
     assert robots.position[1] != start.coord[1]
+    for vertex in ln_graph.vertices:
+        if vertex.id == 1:
+            assert vertex.heur2goal == 15.0
+        elif vertex.id == 2:
+            assert vertex.heur2goal == 10.0
+        elif vertex.id == 3:
+            assert vertex.heur2goal == 0.0
     
-def test_disjoint_graph_check():
+def test_sctpbase_disjoint_graph_check():
     start, goal, dj_graph, robots = graphs.disjoint_unc()
     
     assert start in dj_graph.vertices
@@ -63,8 +70,17 @@ def test_disjoint_graph_check():
     assert robots.position != start.coord
     assert robots.position[0] == start.coord[0]
     assert robots.position[1] == start.coord[1]
+    for vertex in dj_graph.vertices:
+        if vertex.id == 1:
+            assert vertex.heur2goal == 8.0
+        elif vertex.id == 2:
+            assert vertex.heur2goal == 4.0
+        elif vertex.id == 3:
+            assert vertex.heur2goal == 0.0
+        elif vertex.id == 4:
+            assert vertex.heur2goal == pytest.approx(5.56, 0.1)
 
-def test_sgraph_check():
+def test_sctpbase_sgraph_check():
     start, goal, s_graph, robot = graphs.s_graph_unc()
     
     assert start in s_graph.vertices
@@ -77,18 +93,49 @@ def test_sgraph_check():
     assert robot.position != start.coord
     assert robot.position[0] == start.coord[0]
     assert robot.position[1] == start.coord[1]
+    for vertex in s_graph.vertices:
+        if vertex.id == 1:
+            assert vertex.heur2goal == 8.0
+        elif vertex.id == 2:
+            assert vertex.heur2goal == pytest.approx(5.56, 0.1)
+        elif vertex.id == 4:
+            assert vertex.heur2goal == 0.0
+        elif vertex.id == 3:
+            assert vertex.heur2goal == 4.0
     
-def test_mgraph_check():
-    start, goal, s_graph, robot = graphs.m_graph_unc()
+def test_sctpbase_mgraph_check():
+    start, goal, m_graph, robot = graphs.m_graph_unc()
     
-    assert start in s_graph.vertices
-    assert goal in s_graph.vertices
+    assert start in m_graph.vertices
+    assert goal in m_graph.vertices
 
-    assert len(s_graph.vertices) == 7
-    assert len(s_graph.edges) == 12
+    assert len(m_graph.vertices) == 7
+    assert len(m_graph.edges) == 12
 
     assert robot.cur_vertex == start.id
     assert robot.position != start.coord
     assert robot.position[0] == start.coord[0]
     assert robot.position[1] == start.coord[1]
+    for vertex in m_graph.vertices:
+        if vertex.id == 1:
+            assert vertex.heur2goal == pytest.approx(4.0+4.5+3.6, 0.2)
+        elif vertex.id == 2:
+            assert vertex.heur2goal == pytest.approx(23.3, 0.2)
+        elif vertex.id == 3:
+            assert vertex.heur2goal == pytest.approx(8.5, 0.1)
+        elif vertex.id == 4:
+            assert vertex.heur2goal == pytest.approx(5.7, 0.05)
+        elif vertex.id == 5:
+            assert vertex.heur2goal == pytest.approx(4.0, 0.05)
+        elif vertex.id == 6:
+            assert vertex.heur2goal == pytest.approx(5.7, 0.05)
+        elif vertex.id == 7:
+            assert vertex.heur2goal == 0.0
+
     
+def test_sctpbase_rangraph_check():
+    start, goal, ran_graph, robot = graphs.random_graph(n_vertex=15)
+    graphs.plot_graph(nodes=ran_graph.vertices, edges=ran_graph.edges, startID=start.id, goalID=goal.id)
+    
+
+   

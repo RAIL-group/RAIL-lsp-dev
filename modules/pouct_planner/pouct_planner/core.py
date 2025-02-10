@@ -59,7 +59,7 @@ def traverse(node, C=1.0):
     if node.is_terminal_node():
         return node
     # 1. pick a new action
-    action = node.unexplored_actions.pop()
+    action = node.unexplored_actions.pop()    
     # 2. create a new node
     new_child = get_chance_node(node, action)
     # 3. add to the children

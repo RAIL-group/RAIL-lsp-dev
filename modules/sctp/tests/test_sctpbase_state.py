@@ -14,6 +14,7 @@ def test_sctpbase_state_lineargraph_outcome_states():
 
     # Make graph and add connectivity
     graph = graphs.Graph(vertices=nodes)
+    graph.edges.clear()
     graph.add_edge(start, node1, 0.0)
     graph.add_edge(node1, goal, 0.0)
 
@@ -31,7 +32,7 @@ def test_sctpbase_state_lineargraph_outcome_states():
     assert len(outcome_states) == 1
     new_state = list(outcome_states.keys())[0]
     assert outcome_states[new_state] == (1.0, 5.0)
-    assert len(new_state.get_actions()) == 2
+    assert len(new_state.get_actions()) == 1 # moving back action is not allow
     # the robot current vertex should be updated
     assert new_state.robots.cur_vertex != initial_state.robots.cur_vertex
     assert new_state.history.get_action_outcome(action) == base_pomdpstate.EventOutcome.TRAV
@@ -65,6 +66,7 @@ def test_sctpbase_state_lineargraph_with_history():
 
     # Make graph and add connectivity
     graph = graphs.Graph(vertices=nodes)
+    graph.edges.clear()
     graph.add_edge(start, node1, 0.8)
     graph.add_edge(node1, goal, 0.5)
 
@@ -80,9 +82,9 @@ def test_sctpbase_state_lineargraph_with_history():
     action1 = all_actions[0]
     # Since node1 is blocked and is in history, we should get only one state in transition where the probability is 1.0
     # and the cost is 10e5
+    # WITH HISTORY
     outcome_states = initial_state.transition(action1)
     assert len(outcome_states) == 1
-    # WITH HISTORY
     new_state = list(outcome_states.keys())[0]
     assert new_state.robots.cur_vertex != initial_state.robots.cur_vertex
     assert outcome_states[new_state] == (1.0, base_pomdpstate.BLOCK_COST)
@@ -119,6 +121,7 @@ def test_sctpbase_state_disjointgraph_outcome_states():
     nodes = [node1, node2, node3, node4]
 
     graph = graphs.Graph(vertices=nodes)
+    graph.edges.clear()
     graph.add_edge(node1, node2, 0.1)
     graph.add_edge(node3, node4, 0.0)
     graph.add_edge(node1, node4, 0.0)
