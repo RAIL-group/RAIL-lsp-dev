@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from skimage.morphology import erosion
+import networkx as nx
+from .utils import get_object_color_from_type
 
 
 COLLISION_VAL = 1
@@ -48,28 +50,28 @@ def plot_graph_on_grid(grid, graph):
     plt.imshow(plotting_grid)
 
     # find the room nodes
-    room_node_idx = [idx for idx in range(1, graph['cnt_node_idx'][0])]
+    room_node_idx = graph.room_indices
 
-    rc_idx = room_node_idx + graph['cnt_node_idx']
+    rc_idx = room_node_idx + graph.container_indices
 
     # plot the edge connectivity between rooms and their containers only
     filtered_edges = [
         edge
-        for edge in graph['edge_index']
+        for edge in graph.edges
         if edge[1] in rc_idx and edge[0] != 0
     ]
 
     for (start, end) in filtered_edges:
-        p1 = graph['nodes'][start]['pos']
-        p2 = graph['nodes'][end]['pos']
+        p1 = graph.nodes[start]['position']
+        p2 = graph.nodes[end]['position']
         x_values = [p1[0], p2[0]]
         y_values = [p1[1], p2[1]]
         plt.plot(x_values, y_values, 'c', linestyle="--", linewidth=0.3)
 
     # plot room nodes
     for room in rc_idx:
-        room_pos = graph['nodes'][room]['pos']
-        room_name = graph['nodes'][room]['name']
+        room_pos = graph.nodes[room]['position']
+        room_name = graph.nodes[room]['name']
         plt.text(room_pos[0], room_pos[1], room_name, color='brown',
                  size=6, rotation=40)
 
@@ -118,3 +120,17 @@ def plot_plan(plan):
 
     # Add labels and title
     plt.title('Plan progression', fontsize=6)
+
+
+def plot_graph(ax, nodes, edges, highlight_node=None):
+    G = nx.Graph()
+    node_colors = []
+    for k, v in nodes.items():
+        G.add_node(k, label=f"{k}: {v['name']}")
+        color = get_object_color_from_type(v['type']) if k != highlight_node else 'cyan'
+        node_colors.append(color)
+    G.add_edges_from(edges)
+    node_labels = nx.get_node_attributes(G, 'label')
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, ax, with_labels=True, labels=node_labels, node_color=node_colors, node_size=20,
+            font_size=4, font_weight='regular', edge_color='black', width=0.5)
