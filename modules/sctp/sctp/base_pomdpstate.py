@@ -2,9 +2,6 @@ from enum import Enum
 from sctp import graphs, param
 import numpy as np
 
-EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
-# BLOCK_COST = 3e1
-
 
 class Action(object):
     def __init__(self, start_node, target_node):
@@ -21,7 +18,7 @@ class History(object):
         self._data = data if data is not None else dict()
 
     def add_history(self, action, outcome):
-        assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
+        assert outcome == param.EventOutcome.TRAV or outcome == param.EventOutcome.BLOCK
         self._data[action] = outcome
         # the outcome is the same for the inverse action
         invert_action = Action(start_node=action.end, target_node=action.start)
@@ -30,17 +27,10 @@ class History(object):
 
     def get_action_outcome(self, action):
         # return the history or, it it doesn't exist, return CHANCE
-        return self._data.get(action, EventOutcome.CHANCE)
+        return self._data.get(action, param.EventOutcome.CHANCE)
 
     def copy(self):
         return History(data=self._data.copy())
-
-    def get_visited_vertices_id(self):
-        visited_vertices = set()
-        for action, _ in self._data.items():
-            visited_vertices.add(action.start)
-            visited_vertices.add(action.end)
-        return visited_vertices
     
     def get_data_length(self):
         return len(self._data)
@@ -149,40 +139,40 @@ def advance_state(state, action):
     edge = get_edge_from_action(state, action)
     block_prob = state.edge_probs[edge]
     # if edge_status is blocked, return action blocked (state) with blocked cost
-    if edge_status == EventOutcome.BLOCK or block_prob == 1.0:
-        if edge_status == EventOutcome.BLOCK:
+    if edge_status == param.EventOutcome.BLOCK or block_prob == 1.0:
+        if edge_status == param.EventOutcome.BLOCK:
             new_state_block = SCTPBaseState(last_state=state, history=state.history)
         else:
             block_history = state.history.copy()
-            block_history.add_history(action, EventOutcome.BLOCK)
+            block_history.add_history(action, param.EventOutcome.BLOCK)
             new_state_block = SCTPBaseState(last_state=state, history=block_history)
         new_state_block.robot_move(action)
         new_state_block.action_cost = param.BLOCK_COST
         return {new_state_block: (1.0, param.BLOCK_COST)}
 
     # if edge_status is traversable, return action traversable (state) with traversable cost
-    elif edge_status == EventOutcome.TRAV or block_prob == 0.0:
-        if edge_status == EventOutcome.TRAV:            
+    elif edge_status == param.EventOutcome.TRAV or block_prob == 0.0:
+        if edge_status == param.EventOutcome.TRAV:            
             new_state_trav = SCTPBaseState(last_state=state, history=state.history)
         else:
             trav_history = state.history.copy()
-            trav_history.add_history(action, EventOutcome.TRAV)
+            trav_history.add_history(action, param.EventOutcome.TRAV)
             new_state_trav = SCTPBaseState(last_state=state, history=trav_history)
         new_state_trav.robot_move(action)
         new_state_trav.action_cost = state.edge_costs[edge]
         return {new_state_trav: (1.0, new_state_trav.action_cost)}
 
     # if edge_status is 'CHANCE', we don't know the outcome.
-    elif edge_status == EventOutcome.CHANCE:        
+    elif edge_status == param.EventOutcome.CHANCE:        
         # TRAVERSABLE
         trav_history = state.history.copy()
-        trav_history.add_history(action, EventOutcome.TRAV)
+        trav_history.add_history(action, param.EventOutcome.TRAV)
         new_state_trav = SCTPBaseState(last_state=state, history=trav_history)
         new_state_trav.robot_move(action)
         new_state_trav.action_cost = state.edge_costs[edge]
         # BLOCKED
         block_history = state.history.copy()
-        block_history.add_history(action, EventOutcome.BLOCK)
+        block_history.add_history(action, param.EventOutcome.BLOCK)
         new_state_block = SCTPBaseState(last_state=state, history=block_history)
         new_state_block.robot_move(action)
         new_state_block.action_cost = param.BLOCK_COST

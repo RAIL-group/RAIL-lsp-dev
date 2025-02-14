@@ -1,60 +1,49 @@
 from enum import Enum
-from sctp import graphs
+from sctp import sctp_graphs, robot
 import numpy as np
-
-# EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
-# BLOCK_COST = 3e1
-# STUCK_COST = 3e1
-
-# class Action(object):
-#     def __init__(self, start_node, target_node):
-#         self.start = start_node
-#         self.end = target_node
-#     def __eq__(self, other):
-#         return self.start == other.start and self.end == other.end
-#     def __hash__(self):
-#         return hash((self.start, self.end))
-#     def __str__(self):
-#         return f'Action({self.start} -> {self.end})'
-# class History(object):
-#     def __init__(self, data=None):
-#         self._data = data if data is not None else dict()
-
-#     def add_history(self, action, outcome):
-#         assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
-#         self._data[action] = outcome
-#         # the outcome is the same for the inverse action
-#         invert_action = Action(start_node=action.end, target_node=action.start)
-#         self._data[invert_action] = outcome
+from sctp.param import EventOutcome, BLOCK_COST, STUCK_COST
 
 
-#     def get_action_outcome(self, action):
-#         # return the history or, it it doesn't exist, return CHANCE
-#         return self._data.get(action, EventOutcome.CHANCE)
+class TeamAction(object):
+    def __init__(self, start, end):
+        self.start = start # position
+        self.end = end # position
+    def __eq__(self, other):
+        return self.start == other.start and self.end == other.end
+    def __hash__(self):
+        return hash(self.end)
+    def __str__(self):
+        return f'Action: ({self.start} -> {self.end})'
 
-#     def copy(self):
-#         return History(data=self._data.copy())
+class TeamHistory(object):
+    def __init__(self, data=None):
+        self._data = data if data is not None else dict()
 
-#     def get_visited_vertices_id(self):
-#         visited_vertices = set()
-#         for action, _ in self._data.items():
-#             visited_vertices.add(action.start)
-#             visited_vertices.add(action.end)
-#         return visited_vertices
+    def add_history(self, action, outcome):
+        assert outcome == EventOutcome.TRAV or outcome == EventOutcome.BLOCK
+        self._data[action] = outcome
+
+
+    def get_action_outcome(self, action):
+        # return the history or, it it doesn't exist, return CHANCE
+        return self._data.get(action, EventOutcome.CHANCE)
+
+    def copy(self):
+        return TeamHistory(data=self._data.copy())
     
-#     def get_data_length(self):
-#         return len(self._data)
+    def get_data_length(self):
+        return len(self._data)
 
-#     def __eq__(self, other):
-#         if not isinstance(other, History):
-#             return False
-#         return self._data == other._data
+    def __eq__(self, other):
+        if not isinstance(other, TeamHistory):
+            return False
+        return self._data == other._data
 
-#     def __str__(self):
-#         return f'{self._data}'
+    def __str__(self):
+        return f'{self._data}'
 
-#     def __hash__(self):
-#         return hash(tuple(self._data.items()))
+    def __hash__(self):
+        return hash(tuple(self._data.items()))
 
 # def get_state_from_history(outcome_states, history):
 #     for state in outcome_states:
@@ -62,35 +51,35 @@ import numpy as np
 #             return state
 
 
-# class SCTPBaseState(object):
-#     def __init__(self, graph=None, last_state=None, history=None, 
-#                 goal=None, robots=None):
-#         self.action_cost = 0.0
-#         if history is None:
-#             self.history = History()
-#         else:
-#             self.history = history
-#         if last_state is None:
-#             self.edge_probs = {edge: edge.block_prob for edge in graph.edges}
-#             self.edge_costs = {edge: edge.cost for edge in graph.edges}
-#             self.vertices = graph.vertices
-#             self.edges = graph.edges
-#             self.goalID = goal
-#             self.robots = robots
-#         else:
-#             self.edge_probs = last_state.edge_probs
-#             self.edge_costs = last_state.edge_costs
-#             self.vertices = last_state.vertices
-#             self.edges = last_state.edges
-#             self.goalID = last_state.goalID
-#             self.robots = graphs.RobotData(last_robot=last_state.robots)
-#         self.heuristic = 0.0
-#         self.update_heuristic()
-#         neighbors = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
-#         self.actions = [Action(start_node=self.robots.cur_vertex, target_node=neighbor)
-#                         for neighbor in neighbors]
-#     def get_actions(self):
-#         return self.actions
+class SCTPState(object):
+    def __init__(self, graph=None, last_state=None, history=None, 
+                goal=None, robots=None):
+        self.action_cost = 0.0
+        if history is None:
+            self.history = TeamHistory()
+        else:
+            self.history = history
+        if last_state is None:
+            self.edge_probs = {edge: edge.block_prob for edge in graph.edges}
+            self.edge_costs = {edge: edge.cost for edge in graph.edges}
+            self.vertices = graph.vertices
+            self.edges = graph.edges
+            self.goalID = goal
+            self.robots = robots
+        else:
+            self.edge_probs = last_state.edge_probs
+            self.edge_costs = last_state.edge_costs
+            self.vertices = last_state.vertices
+            self.edges = last_state.edges
+            self.goalID = last_state.goalID
+            self.robots = graphs.RobotData(last_robot=last_state.robots)
+    #     self.heuristic = 0.0
+    #     self.update_heuristic()
+    #     neighbors = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
+    #     self.actions = [Action(start_node=self.robots.cur_vertex, target_node=neighbor)
+    #                     for neighbor in neighbors]
+    # def get_actions(self):
+    #     return self.actions
     
 #     def update_heuristic(self):
 #         for node in self.vertices:
