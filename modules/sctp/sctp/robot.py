@@ -10,7 +10,7 @@ class Robot:
         self.robot_type = robot_type
         self.start = copy.copy(position)
         self.cur_pose = copy.copy(position)
-        self.cur_node = cur_node
+        self.cur_node = cur_node # node id
         if robot_type == RobotType.Ground:
             self.vel = 1.0
         elif robot_type == RobotType.Drone:
@@ -27,7 +27,9 @@ class Robot:
 
     def advance_time(self, delta_time):
         advance_distance = self.vel * delta_time
+        self._cost_to_target -= advance_distance
         self.remaining_time -= delta_time
+        assert self.remaining_time >= 0, 'Remaining time cannot be negative'
         self._get_coordinates_after_distance(advance_distance)
 
 
@@ -55,11 +57,14 @@ class Robot:
 
         # Store the new action
         self.action = new_action
-        self.needs_action = False
+        self.need_action = False
 
     def _update_time_to_target(self, distance):
         self._cost_to_target = distance
         self.time_remaining = self._cost_to_target / self.vel
         self.info_time = self.time_remaining
+    
+    def __hash__(self):
+        return hash(self.id) + hash(self.cur_pose) + hash(self.need_action)
 
     

@@ -167,7 +167,9 @@ def linear_graph_unc():
     graph.edges.clear()
     graph.add_edge(start_node, node1, 0.9)
     graph.add_edge(node1, goal_node, 0.0)
-    robots = Robot(position=[0.0, 0.0], cur_node=start_node.id)
+    G_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id)
+    D_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id, robot_type=RobotType.Drone)
+    robots = [G_robot, D_robot]
     vertices = graph.vertices + graph.pois
     dijkstra(vertices=vertices, edges=graph.edges, goal=goal_node)
     return start_node, goal_node, graph, robots

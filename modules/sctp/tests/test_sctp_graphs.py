@@ -52,7 +52,7 @@ def test_sctp_graph_vertex_edge_check():
             assert poi.heur2goal == 12.5
         elif poi.id == 5:
             assert poi.heur2goal == 5.0
-    graphs.plot_sctpgraph(vertices, graph.edges, startID=start_node.id, goalID=goal_node.id)
+    # graphs.plot_sctpgraph(vertices, graph.edges, startID=start_node.id, goalID=goal_node.id)
 
 def test_sctp_graph_linear_check():
     start, goal, ln_graph, robots = graphs.linear_graph_unc()
@@ -78,10 +78,13 @@ def test_sctp_graph_linear_check():
             assert vertex.heur2goal == 0.0
 
     for poi in ln_graph.pois:
+        assert len(poi.neighbors) == 2
         if poi.id == 4:
             assert poi.heur2goal == 12.5
         elif poi.id == 5:
             assert poi.heur2goal == 5.0
+    for edge in ln_graph.edges:
+        assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
 def test_sctp_graph_disjoint_check():
     start, goal, dj_graph, robots = graphs.disjoint_unc()
@@ -113,6 +116,7 @@ def test_sctp_graph_disjoint_check():
         elif vertex.id == 4:
             assert vertex.heur2goal == pytest.approx(5.56, 0.1)
     for poi in dj_graph.pois:
+        assert len(poi.neighbors) == 2
         if poi.id == 5:
             assert poi.block_prob == 0.1
             assert poi.heur2goal == pytest.approx(6.0, 0.1)
@@ -125,6 +129,8 @@ def test_sctp_graph_disjoint_check():
         elif poi.id == 8:
             assert poi.block_prob == 0.2
             assert poi.heur2goal == pytest.approx(2.78+5.56, 0.1)
+    for edge in dj_graph.edges:
+        assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
 def test_sctp_graph_simple_check():
     start, goal, s_graph, robots = graphs.s_graph_unc()
@@ -145,6 +151,7 @@ def test_sctp_graph_simple_check():
         elif vertex.id == 4:
             assert vertex.heur2goal == 0.0
     for poi in s_graph.pois:
+        assert len(poi.neighbors) == 2
         if poi.id == 5:
             assert poi.block_prob == 0.1
             assert poi.heur2goal == pytest.approx(5.56+2.78, 0.1)
@@ -160,6 +167,8 @@ def test_sctp_graph_simple_check():
         elif poi.id == 9:
             assert poi.block_prob == 0.9
             assert poi.heur2goal == pytest.approx(2.0, 0.1)
+    for edge in s_graph.edges:
+        assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
     
 
 def test_sctp_graph_medium_check():
@@ -192,6 +201,7 @@ def test_sctp_graph_medium_check():
             assert vertex.heur2goal == 0.0
         
     for poi in m_graph.pois:
+        assert len(poi.neighbors) == 2
         if poi.id == 8:
             assert poi.block_prob == 0.1
             assert poi.heur2goal == pytest.approx(0.5*12.5+3.6+4.5+4.0, 0.1)
@@ -228,7 +238,10 @@ def test_sctp_graph_medium_check():
         elif poi.id == 19:
             assert poi.block_prob == 0.1
             assert poi.heur2goal == pytest.approx(0.5*4.0+4.0, 0.1)
-    
+
+    for edge in m_graph.edges:
+        assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
+
 # def test_sctpbase_rangraph_check():
 #     start, goal, ran_graph, robot = graphs.random_graph(n_vertex=14)
 #     graphs.plot_graph(nodes=ran_graph.vertices, edges=ran_graph.edges, startID=start.id, goalID=goal.id)
