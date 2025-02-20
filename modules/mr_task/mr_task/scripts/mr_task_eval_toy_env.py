@@ -44,6 +44,7 @@ def _setup(args):
 
         joint_action, cost = mrtask_planner.compute_joint_action()
         planning_loop.update_joint_action(joint_action)
+        print(f'Cost = {robot_team[0].net_motion}')
         # pdb.set_trace()
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={'width_ratios': [3, 1]})

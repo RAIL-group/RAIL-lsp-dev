@@ -1,7 +1,7 @@
 MRTASK_BASENAME = mr_task
 MRTASK_SEED_START = 2000
 MRTASK_NUM_EXPERIMENTS = 200
-MRTASK_EXPERIMENT_NAME = feb7_known
+MRTASK_EXPERIMENT_NAME = feb18_prob1_500K_withH
 define mrlsp_get_seeds
 	$(shell seq $(MRTASK_SEED_START) $$(($(MRTASK_SEED_START)+$(MRTASK_NUM_EXPERIMENTS) - 1)))
 endef
@@ -22,8 +22,8 @@ $(all-targets-mrtask-eval):
 		--seed $(seed) \
 		--num_robots 2 \
 		--planner $(planner) \
-		--num_iterations 100000 \
-		--C 100
+		--num_iterations 500000 \
+		--C 10
 
 .PHONY: mr-task-results
 mr-task-results: mr-task-eval

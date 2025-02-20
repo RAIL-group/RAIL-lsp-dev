@@ -13,12 +13,12 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
     def __init__(self, args, specification, verbose=True):
         super(LearnedMRTaskPlanner, self).__init__(args, specification, verbose)
 
-    # def _get_node_properties(self):
-    #     self.node_prop_dict = {
-    #         (node, obj): [likelihoods[node.name][obj], 0, 0]
-    #         for node in self.container_nodes
-    #         for obj in self.objects_to_find
-    #     }
+    def _get_node_properties(self):
+        self.node_prop_dict = {
+            (node, obj): [likelihoods[node.name][obj], 0, 0]
+            for node in self.container_nodes
+            for obj in self.objects_to_find
+        }
 
     def compute_joint_action(self):
         robot_nodes = [mr_task.core.RobotNode(Node(location=(r_pose.x, r_pose.y))) for r_pose in self.robot_poses]
@@ -26,9 +26,9 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
         mrstate = mr_task.core.MRState(robots=robot_nodes,
                                        planner=copy.copy(self.dfa_planner),
                                        distances=distances,
-                                       subgoal_prop_dict={},
-                                       known_space_nodes=self.container_nodes,
-                                       unknown_space_nodes=[])
+                                       subgoal_prop_dict=self.node_prop_dict,
+                                       known_space_nodes=[],
+                                       unknown_space_nodes=self.container_nodes)
         def rollout_fn(state):
             return 0
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(

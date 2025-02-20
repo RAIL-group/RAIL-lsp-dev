@@ -26,7 +26,7 @@ class MRTaskPlanningLoop(object):
 
             yield {
                 "robot_poses": [robot.pose for robot in self.robots],
-                "container_nodes": self.known_space_nodes,
+                "container_nodes": container_nodes,
                 "object_found": objects_found,
             }
 

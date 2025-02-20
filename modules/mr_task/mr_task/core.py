@@ -1,6 +1,7 @@
 import copy
 from enum import Enum
 
+ACTION_PRIORITY = 5
 EventOutcome = Enum('EventOutcome', ['CHANCE', 'SUCCESS', 'FAILURE'])
 
 
@@ -111,6 +112,8 @@ class MRState(object):
         else:
             self.is_goal_state = False
 
+        self.actions = self.get_all_actions()
+
     def transition(self, action):
         temp_state = self.copy(robots=[robot.copy() for robot in self.robots],
                                planner=copy.copy(self.planner),
@@ -125,6 +128,9 @@ class MRState(object):
         return normalized_outcome
 
     def get_actions(self):
+        return self.actions
+
+    def get_all_actions(self):
         useful_props = self.planner.get_useful_props()
         ks_actions = [Action(node) for node in self.known_space_nodes if self.planner.does_transition_state(node.props)]
         unk_actions = [Action(node, (props,), self.subgoal_prop_dict)
@@ -142,6 +148,13 @@ class MRState(object):
                        known_space_nodes=self.known_space_nodes,
                        unknown_space_nodes=self.unknown_space_nodes,
                        subgoal_prop_dict=self.subgoal_prop_dict)
+
+    def get_action_priority_heuristic(self):
+        useful_props = self.planner.get_useful_props()
+        action_priority = {a:  ACTION_PRIORITY * sum([self.subgoal_prop_dict[(a.target_node, props)][0]
+                                for props in useful_props])
+                                for a in self.actions}
+        return action_priority
 
 
 def advance_mrstate(mrstate, prob=1.0, cost=0.0):
