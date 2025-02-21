@@ -29,7 +29,7 @@ def test_thorinterface():
     assert len(known_graph.nodes) > 0
     assert len(known_graph.edges) > 0
     assert known_grid.size > 0
-    assert len(robot_pose) == 2
+    assert hasattr(robot_pose, 'x') and hasattr(robot_pose, 'y')
     unique_vals = np.unique(known_grid)
     assert 1 in unique_vals and 0 in unique_vals
     assert 'name' in target_objs_info[0]
@@ -44,8 +44,7 @@ def test_thorinterface():
 
     plt.subplot(121)
     plotting.plot_graph_on_grid(known_grid, known_graph)
-    x, y = robot_pose
-    plt.text(x, y, '+', color='red', size=6, rotation=45)
+    plt.text(robot_pose.x, robot_pose.y, '+', color='red', size=6, rotation=45)
 
     plt.subplot(122)
     plt.imshow(top_down_image)
@@ -78,8 +77,7 @@ def test_simulator():
 
     plt.subplot(121)
     plotting.plot_graph_on_grid(simulator.known_grid, observed_graph)
-    x, y = robot_pose
-    plt.text(x, y, '+', color='red', size=6, rotation=45)
+    plt.text(robot_pose.x, robot_pose.y, '+', color='red', size=6, rotation=45)
 
     plt.subplot(122)
     plt.imshow(top_down_image)
