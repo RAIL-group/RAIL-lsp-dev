@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import procthor
+from procthor.simulators import SceneGraphSimulator
 from procthor import plotting
 import pytest
 from pathlib import Path
@@ -23,7 +24,7 @@ def test_thorinterface():
     save_file = save_dir / f'grid-scene-{args.current_seed}.png'
 
     thor_interface = procthor.ThorInterface(args=args)
-    known_graph, known_grid, robot_pose, target_obj_info = thor_interface.gen_map_and_poses()
+    known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses()
 
     assert len(known_graph.nodes) > 0
     assert len(known_graph.edges) > 0
@@ -31,10 +32,10 @@ def test_thorinterface():
     assert len(robot_pose) == 2
     unique_vals = np.unique(known_grid)
     assert 1 in unique_vals and 0 in unique_vals
-    assert 'name' in target_obj_info
-    assert 'idx' in target_obj_info
-    assert 'type' in target_obj_info
-    assert 'container_idx' in target_obj_info
+    assert 'name' in target_objs_info[0]
+    assert 'idx' in target_objs_info[0]
+    assert 'type' in target_objs_info[0]
+    assert 'container_idx' in target_objs_info[0]
 
     top_down_image = thor_interface.get_top_down_image(orthographic=False)
     assert top_down_image.size > 0
@@ -60,8 +61,8 @@ def test_simulator():
     save_dir.mkdir(parents=True, exist_ok=True)
     save_file = save_dir / f'simulator-scene-{args.current_seed}.png'
     thor_interface = procthor.ThorInterface(args=args)
-    known_graph, known_grid, robot_pose, target_obj_info = thor_interface.gen_map_and_poses()
-    simulator = procthor.simulators.SceneGraphSimulator(known_graph, args, target_obj_info, known_grid, thor_interface)
+    known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses()
+    simulator = SceneGraphSimulator(known_graph, args, target_objs_info, known_grid, thor_interface)
     observed_graph, containers = simulator.initialize_graph_and_containers()
 
     assert len(observed_graph.nodes) > 0

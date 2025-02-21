@@ -16,11 +16,12 @@ IGNORE_CONTAINERS = [
 
 
 class ThorInterface:
-    def __init__(self, args, preprocess=True):
+    def __init__(self, args, numb_objects=1, preprocess=True):
         self.args = args
         self.seed = args.current_seed
-        self.grid_resolution = args.resolution
+        random.seed(self.seed)
 
+        self.grid_resolution = args.resolution
         self.scene = self.load_scene()
 
         self.rooms = self.scene['rooms']
@@ -53,15 +54,15 @@ class ThorInterface:
         self.occupancy_grid = self.get_occupancy_grid()
         self.scene_graph = self.get_scene_graph()
         self.robot_pose = self.get_robot_pose()
-        self.target_obj_info = self.get_target_obj_info(self.scene_graph, distinct=False)
         self.known_cost = self.get_known_costs()
 
-    def gen_map_and_poses(self):
+    def gen_map_and_poses(self, num_objects=1):
         """Generate a map and initial robot poses."""
+        self.target_objs_info = self.get_target_objs_info(self.scene_graph, num_objects)
         return (self.scene_graph,
                 self.occupancy_grid,
                 self.robot_pose,
-                self.target_obj_info)
+                self.target_objs_info)
 
     def load_scene(self, path='/resources/procthor-10k'):
         with open(
@@ -84,39 +85,22 @@ class ThorInterface:
         position = np.array([position['x'], position['z']])
         return self.scale_to_grid(position)
 
-    def get_target_obj_info(self, scene_graph, distinct=False):
-        random.seed(self.args.current_seed)
-        # Get the index of the target object and its name
-        target_obj_idx = random.sample(scene_graph.object_indices, 1)[0]
-        target_obj_name = scene_graph.nodes[target_obj_idx]['name']
-        target_object_type = scene_graph.nodes[target_obj_idx]['type']
-
-        if distinct:
-            target_container_idx = scene_graph.get_adjacent_nodes_idx(target_obj_idx, filter_by_type=2)
-            return {
-                'name': target_obj_name,
-                'idx': [target_obj_idx],
-                'type': target_object_type,
-                'container_idx': target_container_idx
-            }
-
-        # Get the indices of all objects with the same name
-        all_target_obj_idx = []
-        for idx in scene_graph.nodes:
-            if scene_graph.nodes[idx]['name'] == target_obj_name:
-                all_target_obj_idx.append(idx)
-        # Get the indices of the containers containing the target object
-        all_target_container_idx = []
-        for u, v in scene_graph.edges:
-            if v in all_target_obj_idx:
-                all_target_container_idx.append(u)
-        target_obj_info = {
-            'name': target_obj_name,
-            'idx': all_target_obj_idx,
-            'type': target_object_type,
-            'container_idx': all_target_container_idx
-        }
-        return target_obj_info
+    def get_target_objs_info(self, scene_graph, num_objects=1):
+        unique_obj_idxs = {}
+        for idx in scene_graph.object_indices:
+            name = scene_graph.get_node_name_by_idx(idx)
+            if name not in unique_obj_idxs.values():
+                unique_obj_idxs[idx] = name
+        target_obj_idxs = random.sample(list(unique_obj_idxs.keys()), num_objects)
+        target_obj_names = [unique_obj_idxs[idx] for idx in target_obj_idxs]
+        target_object_types = [scene_graph.nodes[idx]['type'] for idx in target_obj_idxs]
+        target_container_idxs = [scene_graph.get_parent_node_idx(idx) for idx in target_obj_idxs]
+        return [{
+            'name': target_obj_names[i],
+            'idx': target_obj_idxs[i],
+            'type': target_object_types[i],
+            'container_idx': target_container_idxs[i]
+        } for i in range(num_objects)]
 
     def get_occupancy_grid(self):
         event = self.controller.step(action="GetReachablePositions")
