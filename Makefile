@@ -7,7 +7,7 @@ APP_NAME ?= rail-plan-uncertain
 NUM_BUILD_CORES ?= $(shell grep -c ^processor /proc/cpuinfo)
 
 # Handle Optional GPU
-USE_GPU ?= true
+USE_GPU ?= false
 ifeq ($(USE_GPU),true)
 	DOCKER_GPU_ARG = --gpus all
 endif
@@ -33,7 +33,7 @@ DOCKER_CORE_VOLUMES = \
 	--volume="$(RAIL_SIM_DIR)/v$(RAIL_SIM_VERSION):/unity/:ro" \
 	--volume="$(DATA_BASE_DIR):/data/:rw" \
 	--volume="$(RESOURCES_BASE_DIR):/resources/:rw" \
-	--volume="$(RESOURCES_BASE_DIR)/notebooks:/notebooks/:rw" \
+	--volume="./resources/notebooks:/notebooks/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/ai2thor:/root/.ai2thor/:rw" \
 	--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"
 DOCKER_BASE = docker run --init --ipc=host --rm \
@@ -131,3 +131,4 @@ notebook: build
 include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
 include modules/taskplan/Makefile.mk
+include modules/taskplan_select/Makefile.mk
