@@ -1,4 +1,3 @@
-import copy
 import random
 
 
@@ -20,32 +19,8 @@ class SceneGraphSimulator:
     def get_top_down_image(self, orthographic=True):
         if self.thor_interface is None:
             raise ValueError("Thor Interface is not set")
-        # Setup top down camera
-        event = self.thor_interface.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
-        pose = copy.deepcopy(event.metadata["actionReturn"])
 
-        bounds = event.metadata["sceneBounds"]["size"]
-        max_bound = max(bounds["x"], bounds["z"])
-
-        pose["fieldOfView"] = 50
-        pose["position"]["y"] += 1.1 * max_bound
-        pose["orthographic"] = False
-        pose["farClippingPlane"] = 50
-        if orthographic:
-            pose["orthographicSize"] = 0.5 * max_bound
-        else:
-            del pose["orthographicSize"]
-
-        # Add the camera to the scene
-        event = self.thor_interface.controller.step(
-            action="AddThirdPartyCamera",
-            **pose,
-            skyboxColor="white",
-            raise_for_failure=True,
-        )
-        top_down_image = event.third_party_camera_frames[-1]
-        top_down_image = top_down_image[::-1, ...]
-        return top_down_image
+        return self.thor_interface.get_top_down_image(orthographic=orthographic)
 
     def initialize_graph_map_and_subgoals(self):
         random.seed(self.args.current_seed)
