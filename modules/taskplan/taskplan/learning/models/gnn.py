@@ -46,8 +46,8 @@ class Gnn(nn.Module):
         self.neg = 1
 
     def forward(self, data, device):
-        lf = data['latent_features'].type(torch.float).to(device)
-        edge_data = data['edge_data']
+        lf = data['node_feats'].type(torch.float).to(device)
+        edge_data = data['edge_index']
         x = torch.cat((edge_data[0], edge_data[1]), 0)
         y = torch.cat((edge_data[1], edge_data[0]), 0)
         edge_data = torch.reshape(torch.cat((x, y), 0), (2, -1))
@@ -120,7 +120,7 @@ class Gnn(nn.Module):
                 out = out.detach().cpu().numpy()
                 for subgoal in subgoals:
                     # Extract subgoal properties for a subgoal
-                    subgoal_props = out[subgoal.value]
+                    subgoal_props = out[subgoal.id]
                     prob_feasible_dict[subgoal] = subgoal_props[0]
                 return prob_feasible_dict
         return frontier_net

@@ -12,8 +12,9 @@ IS_FROM_LAST_CHOSEN_REWARD = 0 * 10.0
 
 
 class Subgoal:
-    def __init__(self, value) -> None:
-        self.value = value
+    def __init__(self, id, pose=None) -> None:
+        self.id = id
+        self.pose = pose
         self.props_set = False
         self.is_from_last_chosen = False
         self.is_obstructed = False
@@ -25,13 +26,16 @@ class Subgoal:
 
         self.counter = 0
         # Compute and cache the hash
-        self.hash = hash(self.value)
+        self.hash = hash(self.id)
 
     def __hash__(self):
         return self.hash
 
     def __eq__(self, other):
         return hash(self) == hash(other)
+
+    def __repr__(self):
+        return f"<Subgoal {self.id} at {self.pose}>"
 
     def set_props(self,
                   prob_feasible,
@@ -68,11 +72,19 @@ class PartialMap:
         self.cnt_node_idx = graph['cnt_node_idx']
         self.obj_node_idx = graph['obj_node_idx']
         self.node_coords = graph['node_coords']
+        self.all_nodes = graph['nodes']
         self.idx_map = graph['idx_map']
+        self.whole_graph = graph
+        # self.whole_graph['edge_index'] = self.org_edge_index
+        # print(graph['graph_edge_index'])
+        # print(graph['edge_index'])
+        # exit()
         # self.distances = graph['distances']
         self.distinct = distinct  # when true looks for specific object instance
 
         self.target_obj = random.sample(self.obj_node_idx, 1)[0]
+        print(f"{self.target_obj=}")
+        # self.whole_graph['target_obj'] = self.whole_graph['node_names'][self.target_obj]
         self.container_poses = self._get_container_poses()
 
         if grid is not None:
@@ -90,9 +102,17 @@ class PartialMap:
         temp[0] = temp[0][:-obj_count:]
         temp[1] = temp[1][:-obj_count:]
 
+        # print(self.nodes)
+        # print(self.org_node_names[:-obj_count:])
+        # exit()
+        node_idx = np.unique(temp)
         return {
             'node_feats': self.org_node_feats[:-obj_count:],
-            'edge_index': temp
+            'graph_edge_index': temp,
+            'nodes': {idx: self.all_nodes[idx] for idx in node_idx},
+            'edge_index': [(x, y) for x, y in zip(*temp)],
+            'node_names': {idx: self.org_node_names[idx] for idx in node_idx},
+            'cnt_node_idx': [idx for idx in self.cnt_node_idx if idx in node_idx]
         }
 
     def initialize_graph_and_subgoals(self, seed=0):
@@ -132,6 +152,13 @@ class PartialMap:
         # they were connected to
         graph = self._get_object_free_graph().copy()
 
+        # Add target object node info to the graph
+        graph['nodes'][self.target_obj] = self.all_nodes[self.target_obj]
+        graph['node_names'][self.target_obj] = self.org_node_names[self.target_obj]
+        # print(self.target_obj)
+        # print(graph['node_names'][self.target_obj])
+        # print(target_obj_container_idx)
+        # exit()
         for node_idx in cnt_to_reveal_idx:
             # if the node has connections in original
             # update graph: add edge to object node
@@ -141,11 +168,16 @@ class PartialMap:
                 for idx, node in enumerate(self.org_edge_index[0])
                 if node == node_idx
             ]
-
+            graph['nodes'][node_idx] = self.all_nodes[node_idx]
+            graph['node_names'][node_idx] = self.org_node_names[node_idx]
             for obj_idx in connected_obj_idx:
-                graph['edge_index'][0].append(node_idx)
-                graph['edge_index'][1].append(len(graph['node_feats']))
+                graph['graph_edge_index'][0].append(node_idx)
+                graph['graph_edge_index'][1].append(len(graph['node_feats']))
                 graph['node_feats'].append(self.org_node_feats[obj_idx])
+                graph['nodes'][obj_idx] = self.all_nodes[obj_idx]
+                graph['nodes'][len(graph['node_feats'])] = self.all_nodes[len(graph['node_feats'])]
+                graph['edge_index'].append((node_idx, len(graph['node_feats'])))
+                graph['node_names'][obj_idx] = self.org_node_names[obj_idx]
 
         return graph, subgoal_idx
 
@@ -159,6 +191,9 @@ class PartialMap:
                              if xx not in subgoal_idx]
 
         graph = self._get_object_free_graph()
+        # Add target object node info to the graph
+        graph['nodes'][self.target_obj] = self.all_nodes[self.target_obj]
+        graph['node_names'][self.target_obj] = self.org_node_names[self.target_obj]
 
         for node_idx in cnt_to_reveal_idx:
             # if the node has connections in original
@@ -169,11 +204,15 @@ class PartialMap:
                 for idx, node in enumerate(self.org_edge_index[0])
                 if node == node_idx
             ]
-
+            graph['nodes'][node_idx] = self.all_nodes[node_idx]
             for obj_idx in connected_obj_idx:
-                graph['edge_index'][0].append(node_idx)
-                graph['edge_index'][1].append(len(graph['node_feats']))
+                graph['graph_edge_index'][0].append(node_idx)
+                graph['graph_edge_index'][1].append(len(graph['node_feats']))
                 graph['node_feats'].append(self.org_node_feats[obj_idx])
+                graph['nodes'][obj_idx] = self.all_nodes[obj_idx]
+                graph['nodes'][len(graph['node_feats'])] = self.all_nodes[len(graph['node_feats'])]
+                graph['edge_index'].append((node_idx, len(graph['node_feats'])))
+                graph['node_names'][obj_idx] = self.org_node_names[obj_idx]
 
         return graph, subgoal_idx
 
@@ -183,8 +222,8 @@ class PartialMap:
         graph = curr_graph.copy()
 
         for subgoal in subgoals:
-            graph['edge_index'][0].append(subgoal)
-            graph['edge_index'][1].append(len(graph['node_feats']))
+            graph['graph_edge_index'][0].append(subgoal)
+            graph['graph_edge_index'][1].append(len(graph['node_feats']))
         graph['node_feats'].append(self.org_node_feats[self.target_obj])
         is_subgoal = [0] * len(graph['node_feats'])
         is_target = [0] * len(graph['node_feats'])
@@ -193,6 +232,7 @@ class PartialMap:
             is_subgoal[subgoal_idx] = 1
         graph['is_subgoal'] = is_subgoal
         graph['is_target'] = is_target
+        graph['target_obj'] = self.org_node_names[self.target_obj]
         return graph
 
     def get_training_data(self):
@@ -378,7 +418,7 @@ def get_best_expected_cost_and_frontier_list(
 
     # Get robot distances
     robot_distances = get_robot_distances(
-        partial_map.grid, robot_pose, subgoals)
+        partial_map, robot_pose, subgoals)
 
     # Get goal distances
     if destination is None:
@@ -386,14 +426,14 @@ def get_best_expected_cost_and_frontier_list(
                           for subgoal in subgoals}
     else:
         goal_distances = get_robot_distances(
-            partial_map.grid, destination, subgoals)
+            partial_map, destination, subgoals)
 
     # Calculate top n subgoals
     subgoals = get_top_n_frontiers(
         subgoals, goal_distances, robot_distances, num_frontiers_max)
 
     # Get subgoal pair distances
-    subgoal_distances = get_subgoal_distances(partial_map.grid, subgoals)
+    subgoal_distances = get_subgoal_distances(partial_map, subgoals)
 
     distances = {
         'frontier': subgoal_distances,
@@ -414,7 +454,7 @@ def get_robot_distances(grid, robot_pose, subgoals):
     occ_grid[int(robot_pose[0])][int(robot_pose[1])] = 0
 
     for subgoal in subgoals:
-        occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
+        occ_grid[int(subgoal.pose[0]), int(subgoal.pose[1])] = 0
 
     cost_grid = gridmap.planning.compute_cost_grid_from_position(
         occ_grid,
@@ -427,7 +467,7 @@ def get_robot_distances(grid, robot_pose, subgoals):
 
     # Compute the cost for each frontier
     for subgoal in subgoals:
-        f_pt = subgoal.pos
+        f_pt = subgoal.pose
         cost = cost_grid[int(f_pt[0]), int(f_pt[1])]
 
         if math.isinf(cost):
@@ -446,9 +486,9 @@ def get_subgoal_distances(grid, subgoals):
     subgoal_distances = {}
     occ_grid = np.copy(grid)
     for subgoal in subgoals:
-        occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
+        occ_grid[int(subgoal.pose[0]), int(subgoal.pose[1])] = 0
     for idx, sg_1 in enumerate(subgoals[:-1]):
-        start = sg_1.pos
+        start = sg_1.pose
         cost_grid = gridmap.planning.compute_cost_grid_from_position(
             occ_grid,
             start=start,
@@ -456,7 +496,7 @@ def get_subgoal_distances(grid, subgoals):
             only_return_cost_grid=True)
         for sg_2 in subgoals[idx + 1:]:
             fsg_set = frozenset([sg_1, sg_2])
-            fpoints = sg_2.pos
+            fpoints = sg_2.pose
             cost = cost_grid[int(fpoints[0]), int(fpoints[1])]
             subgoal_distances[fsg_set] = cost
 

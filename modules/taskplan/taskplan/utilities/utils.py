@@ -7,6 +7,8 @@ from torch_geometric.data import Data
 
 import learning
 
+SBERT_PATH = '/resources/sentence_transformers/'
+
 
 def write_datum_to_file(args, datum, counter):
     data_filename = os.path.join('pickles', f'dat_{args.current_seed}_{counter}.pgz')
@@ -47,20 +49,77 @@ def preprocess_training_data(args=None):
 
 def preprocess_gcn_data(datum):
     data = datum.copy()
-    data['edge_data'] = torch.tensor(data['edge_index'], dtype=torch.long)
-    data['latent_features'] = torch.tensor(np.array(
+    data['edge_index'] = torch.tensor(data['edge_index'], dtype=torch.long)
+    data['node_feats'] = torch.tensor(np.array(
         data['node_feats']), dtype=torch.float)
     data['is_subgoal'] = torch.tensor(data['is_subgoal'], dtype=torch.long)
     data['is_target'] = torch.tensor(data['is_target'], dtype=torch.long)
     return data
 
 
-def get_pose_from_coord(coords, whole_graph):
+def prepare_gcn_input(graph, subgoals, target_obj_info):
+    # add the target node and connect it to all the subgoal nodes
+    # with edges
+    graph = graph.copy()
+    target_idx = graph.add_node({
+        'name': target_obj_info['name'],
+        'type': target_obj_info['type'],
+    })
+    for subgoal in subgoals:
+        graph.add_edge(subgoal, target_idx)
+
+    node_features = compute_node_features(graph.nodes)
+    gcn_input = {
+        'node_feats': node_features,
+        'edge_index': np.array(graph.edges).T,
+        'is_subgoal': [1 if idx in subgoals else 0 for idx in graph.nodes],
+        'is_target': [1 if idx == target_idx else 0 for idx in graph.nodes],
+        'target_obj': target_obj_info['name']
+    }
+    return gcn_input
+
+
+def compute_node_features(nodes):
+    """Get node features for all nodes."""
+    features = []
+    for node in nodes.values():
+        node_feature = np.concatenate((
+            get_sentence_embedding(node['name']), node['type']
+        ))
+        features.append(node_feature)
+    return features
+
+
+def load_sentence_embedding(target_file_name):
+    target_dir = os.path.join(SBERT_PATH, 'cache')
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    # Walk through all directories and files in target_dir
+    for root, dirs, files in os.walk(target_dir):
+        if target_file_name in files:
+            file_path = os.path.join(root, target_file_name)
+            if os.path.exists(file_path):
+                return np.load(file_path)
+    return None
+
+
+def get_sentence_embedding(sentence):
+    loaded_embedding = load_sentence_embedding(sentence + '.npy')
+    if loaded_embedding is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer(SBERT_PATH)
+        sentence_embedding = model.encode([sentence])[0]
+        file_name = os.path.join(SBERT_PATH, 'cache', sentence + '.npy')
+        np.save(file_name, sentence_embedding)
+        return sentence_embedding
+    else:
+        return loaded_embedding
+
+
+def get_pose_from_coord(coords, nodes):
     coords_list = []
-    for node in whole_graph['node_coords']:
-        coords_list.append(tuple(
-            [whole_graph['node_coords'][node][0],
-             whole_graph['node_coords'][node][1]]))
+    for k, v in nodes.items():
+        coords_list.append((v['position'][0], v['position'][1]))
     if coords in coords_list:
         pos = coords_list.index(coords)
         return pos
