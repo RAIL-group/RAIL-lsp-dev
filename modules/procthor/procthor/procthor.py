@@ -3,6 +3,7 @@ import numpy as np
 import random
 import copy
 from shapely import geometry
+from common import Pose
 from ai2thor.controller import Controller
 from . import utils
 from .scenegraph import SceneGraph
@@ -57,7 +58,7 @@ class ThorInterface:
         self.known_cost = self.get_known_costs()
 
     def gen_map_and_poses(self, num_objects=1):
-        """Generate a map and initial robot poses."""
+        """Returns scene graph, grid, initial robot pose and target object info."""
         self.target_objs_info = self.get_target_objs_info(self.scene_graph, num_objects)
         return (self.scene_graph,
                 self.occupancy_grid,
@@ -83,7 +84,8 @@ class ThorInterface:
     def get_robot_pose(self):
         position = self.agent['position']
         position = np.array([position['x'], position['z']])
-        return self.scale_to_grid(position)
+        pose = self.scale_to_grid(position)
+        return Pose(*pose)
 
     def get_target_objs_info(self, scene_graph, num_objects=1):
         unique_obj_idxs = {}
@@ -236,7 +238,7 @@ class ThorInterface:
 
     def get_known_costs(self):
         known_cost = {'initial_robot_pose': {}}
-        init_r = self.get_robot_pose()
+        init_r = [self.robot_pose.x, self.robot_pose.y]
         cnt_ids = ['initial_robot_pose'] + [cnt['id'] for cnt in self.containers]
         cnt_positions = [init_r] + [cnt['position'] for cnt in self.containers]
 
