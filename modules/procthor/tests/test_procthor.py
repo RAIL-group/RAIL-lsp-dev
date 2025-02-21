@@ -62,14 +62,13 @@ def test_simulator():
     thor_interface = procthor.ThorInterface(args=args)
     known_graph, known_grid, robot_pose, target_obj_info = thor_interface.gen_map_and_poses()
     simulator = procthor.simulators.SceneGraphSimulator(known_graph, args, target_obj_info, known_grid, thor_interface)
-    observed_graph, observed_grid, subgoals = simulator.initialize_graph_map_and_subgoals()
+    observed_graph, containers = simulator.initialize_graph_and_containers()
 
     assert len(observed_graph.nodes) > 0
     assert len(observed_graph.edges) > 0
-    assert observed_grid.size > 0
-    assert len(subgoals) > 0
-    assert all([isinstance(s, int) for s in subgoals])
-    assert all([s in observed_graph.container_indices for s in subgoals])
+    assert len(containers) > 0
+    assert all([isinstance(s, int) for s in containers])
+    assert all([s in observed_graph.container_indices for s in containers])
     assert len(observed_graph.object_indices) == 0
     top_down_image = simulator.get_top_down_image(orthographic=True)
     assert top_down_image.size > 0
@@ -77,7 +76,7 @@ def test_simulator():
     assert np.mean(top_down_image) > 0
 
     plt.subplot(121)
-    plotting.plot_graph_on_grid(observed_grid, observed_graph)
+    plotting.plot_graph_on_grid(simulator.known_grid, observed_graph)
     x, y = robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
 
