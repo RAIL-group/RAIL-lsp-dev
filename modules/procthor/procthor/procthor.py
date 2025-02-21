@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import random
+import copy
 from shapely import geometry
 from ai2thor.controller import Controller
 from . import utils
@@ -273,3 +274,31 @@ class ThorInterface:
                 known_cost[cnt2_id][cnt1_id] = round(cost, 4)
 
         return known_cost
+
+    def get_top_down_image(self, orthographic=True):
+        # Setup top down camera
+        event = self.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
+        pose = copy.deepcopy(event.metadata["actionReturn"])
+
+        bounds = event.metadata["sceneBounds"]["size"]
+        max_bound = max(bounds["x"], bounds["z"])
+
+        pose["fieldOfView"] = 50
+        pose["position"]["y"] += 1.1 * max_bound
+        pose["orthographic"] = orthographic
+        pose["farClippingPlane"] = 50
+        if orthographic:
+            pose["orthographicSize"] = 0.5 * max_bound
+        else:
+            del pose["orthographicSize"]
+
+        # Add the camera to the scene
+        event = self.controller.step(
+            action="AddThirdPartyCamera",
+            **pose,
+            skyboxColor="white",
+            raise_for_failure=True,
+        )
+        top_down_image = event.third_party_camera_frames[-1]
+        top_down_image = top_down_image[::-1, ...]
+        return top_down_image
