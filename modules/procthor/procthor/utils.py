@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import gridmap
 
-SBERT_PATH = '/resources/sentence_transformers/'
-
 
 def get_nearest_free_point(point, free_points):
     _min = 1000000000
@@ -83,8 +81,8 @@ def get_edges_for_connected_graph(grid, graph):
             merged_set |= s
         for comp in comps:
             for idx, target in enumerate(merged_set):
-                cost = get_cost(grid, graph['nodes'][comp]['pos'],
-                                graph['nodes'][target]['pos'])
+                cost = get_cost(grid, graph['nodes'][comp]['position'],
+                                graph['nodes'][target]['position'])
                 if cost < min_cost:
                     min_cost = cost
                     min_index = list(merged_set)[idx]
@@ -109,32 +107,6 @@ def get_dc_comps(room_idxs, edges):
     sorted_dc = sorted(disconnected_components, key=lambda x: len(x))
 
     return sorted_dc
-
-
-def load_sentence_embedding(target_file_name):
-    target_dir = os.path.join(SBERT_PATH, 'cache')
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    # Walk through all directories and files in target_dir
-    for root, dirs, files in os.walk(target_dir):
-        if target_file_name in files:
-            file_path = os.path.join(root, target_file_name)
-            if os.path.exists(file_path):
-                return np.load(file_path)
-    return None
-
-
-def get_sentence_embedding(sentence):
-    loaded_embedding = load_sentence_embedding(sentence + '.npy')
-    if loaded_embedding is None:
-        from sentence_transformers import SentenceTransformer
-        model = SentenceTransformer(SBERT_PATH)
-        sentence_embedding = model.encode([sentence])[0]
-        file_name = os.path.join(SBERT_PATH, 'cache', sentence + '.npy')
-        np.save(file_name, sentence_embedding)
-        return sentence_embedding
-    else:
-        return loaded_embedding
 
 
 def get_object_color_from_type(encoding):
