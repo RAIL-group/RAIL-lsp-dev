@@ -2,7 +2,7 @@
 numpy
 scipy
 scikit-image
-sknw
+# sknw
 # shapely==1.6.4
 shapely
 # opencv-python
@@ -13,6 +13,9 @@ setuptools
 # pybullet
 prior
 ai2thor
+
+python-dotenv
+openai>=0.28
 
 # Plotting & Data Handling
 matplotlib
