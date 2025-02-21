@@ -5,13 +5,13 @@ class SceneGraphSimulator:
     def __init__(self,
                  known_graph,
                  args,
-                 target_obj_info,
+                 target_objs_info,
                  known_grid=None,
                  thor_interface=None,
                  verbose=True):
         self.known_graph = known_graph
         self.args = args
-        self.target_obj_info = target_obj_info
+        self.target_objs_info = target_objs_info
         self.known_grid = known_grid
         self.thor_interface = thor_interface
         self.verbose = verbose
@@ -30,7 +30,8 @@ class SceneGraphSimulator:
         num_of_val_to_choose = max(lb_sample, random.sample(list(range(
             cnt_count // 2, cnt_count)), 1)[0])
         unexplored_containers = random.sample(self.known_graph.container_indices, num_of_val_to_choose)
-        for cnt_idx in self.target_obj_info['container_idx']:
+        for target_obj in self.target_objs_info:
+            cnt_idx = target_obj['container_idx']
             if cnt_idx not in unexplored_containers:
                 unexplored_containers.append(cnt_idx)
         unexplored_containers = sorted(unexplored_containers)
