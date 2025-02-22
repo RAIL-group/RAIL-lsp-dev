@@ -29,7 +29,8 @@ def _setup(args):
     planning_loop = mr_task.planner.MRTaskPlanningLoop(robot_team,
                                                        coords_locations,
                                                        location_object,
-                                                       get_distance_to_node)
+                                                       get_distance_to_node,
+                                                       mrtask_planner.dfa_planner.has_reached_accepting_state)
     # Planning Loop
     for step_data in planning_loop:
         mrtask_planner.update(
@@ -38,9 +39,9 @@ def _setup(args):
             step_data['container_nodes']
         )
 
-        if mrtask_planner.dfa_planner.is_accepting_state(mrtask_planner.dfa_planner.state):
-            print("Task Completed !!!")
-            break
+        # if mrtask_planner.dfa_planner.is_accepting_state(mrtask_planner.dfa_planner.state):
+        #     print("Task Completed !!!")
+        #     break
 
         joint_action, cost = mrtask_planner.compute_joint_action()
         planning_loop.update_joint_action(joint_action)

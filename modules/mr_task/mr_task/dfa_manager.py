@@ -76,6 +76,9 @@ class DFAManager(object):
     def is_accepting_state(self, state):
         return state in self.accepting_states
 
+    def has_reached_accepting_state(self):
+        return self.is_accepting_state(self.state)
+
     def get_useful_props(self):
         return self._useful_props_dict.get(self.state, set())
 

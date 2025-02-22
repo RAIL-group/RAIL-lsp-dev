@@ -2,6 +2,7 @@ import copy
 import numpy as np
 
 import mr_task
+from mr_task.core import Node, RobotNode
 from mrlsp.utils.utility import find_action_list_from_cost_matrix_using_lsa
 
 
@@ -11,27 +12,34 @@ class BaseMRTaskPlanner(object):
         self.args = args
         self.verbose = verbose
         self.dfa_planner = mr_task.DFAManager(specification)
+        self.objects_to_find = self.dfa_planner.get_useful_props()
+        self.observed_graph = None
         self.robot_poses = None
-        self.container_nodes = None
+        self.explored_container_nodes = None
+        self.unexplored_container_nodes = None
         self.node_prop_dict = None
 
-    def update(self, robot_poses, objects_found, container_nodes):
+    def update(self, observations, robot_poses, explored_container_nodes, unexplored_container_nodes, objects_found):
+        self.observed_graph = observations['observed_graph']
         self.robot_poses = robot_poses
-        self.container_nodes = container_nodes
+        self.explored_container_nodes = explored_container_nodes
+        self.unexplored_container_nodes = unexplored_container_nodes
 
         # update the dfa planner
         self.dfa_planner.advance(objects_found)
         self.objects_to_find = self.dfa_planner.get_useful_props()
 
         # compute the node properties
-        self._get_node_properties()
+        self._update_node_properties()
 
         if self.verbose:
             print('---------------------------')
             print(f'Task: {self.specification}')
+            print(f'Objects found: {objects_found}')
             print(f'Objects to find: {self.objects_to_find}, DFA state: {self.dfa_planner.state}')
 
-    def _get_node_properties(self):
+
+    def _update_node_properties(self):
         return
 
 
@@ -40,10 +48,15 @@ class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
         super(OptimisticMRTaskPlanner, self).__init__(args, specification, verbose)
 
     def compute_joint_action(self):
-        robot_nodes = [mr_task.core.RobotNode(mr_task.core.Node(
-            location=(r_pose.x, r_pose.y))) for r_pose in self.robot_poses]
+        if self.dfa_planner.has_reached_accepting_state():
+            return [], None
+
+        robot_nodes = [RobotNode(Node(location=(r_pose.x, r_pose.y)))
+                       for r_pose in self.robot_poses]
         # For optimistic planner, we assume that the objects are present in the containers.
-        containers = [mr_task.core.Node(location=node.location, name=node.name, is_subgoal=False) for node in self.container_nodes]
+
+        containers = [Node(location=node.location, name=node.name, is_subgoal=False)
+                       for node in self.unexplored_container_nodes]
         distances = mr_task.utils.get_inter_distances_nodes(
             containers, robot_nodes)
         # To make sure that this function returns action object

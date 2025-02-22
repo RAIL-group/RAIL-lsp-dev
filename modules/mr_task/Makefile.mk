@@ -10,8 +10,8 @@ MRTASK_PLANNERS = learned optimistic
 all-targets-mrtask-eval = $(foreach planner, $(MRTASK_PLANNERS), \
 							$(foreach seed, $(call mrlsp_get_seeds), \
 								$(DATA_BASE_DIR)/$(MRTASK_BASENAME)/$(MRTASK_EXPERIMENT_NAME)/mtask_eval_planner_$(planner)_seed_$(seed)_.png))
-.PHONY: mr-task-eval
-mr-task-eval: $(all-targets-mrtask-eval)
+.PHONY: mr-task-eval-toy
+mr-task-eval-toy: $(all-targets-mrtask-eval)
 $(all-targets-mrtask-eval): seed = $(shell echo $@ | grep -oE '_seed_[0-9]+' | cut -d'_' -f3)
 $(all-targets-mrtask-eval): planner = $(shell echo $@ | grep -oE '_planner_[a-z]+' | cut -d'_' -f3)
 $(all-targets-mrtask-eval):
@@ -24,6 +24,19 @@ $(all-targets-mrtask-eval):
 		--planner $(planner) \
 		--num_iterations 500000 \
 		--C 10
+
+.PHONY: mr-task-eval-procthor
+mr-task-eval-procthor: DOCKER_ARGS ?= -it
+mr-task-eval-procthor:
+	@$(DOCKER_PYTHON) -m mr_task.scripts.mr_task_eval_procthor \
+	 	--save_dir data/$(MRTASK_BASENAME)/ \
+		--num_robots 1 \
+		--planner learned \
+		--seed 1000 \
+		--num_iterations 50000 \
+		--C 10 \
+		--resolution 0.05 \
+		--network_file data/$(MRTASK_BASENAME)/raihan_nn/fcnn.pt
 
 .PHONY: mr-task-results
 mr-task-results: mr-task-eval
