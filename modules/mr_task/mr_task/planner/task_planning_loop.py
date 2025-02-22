@@ -1,51 +1,65 @@
 import numpy as np
 import mr_task
-
+from mr_task.core import Node
+import gridmap
+from common import compute_path_length
 
 class MRTaskPlanningLoop(object):
-    def __init__(self, robots, container_locations, object_locations, distance_fn, verbose=True):
+    def __init__(self, robots, simulator, goal_reached_fn, verbose=True):
         self.robots = robots
-        self.container_locations = container_locations
-        self.object_locations = object_locations
-        self.objects_found = ()
-        self.unexplored_containers = {coords: loc for coords, loc in container_locations.items()}
+        self.simulator = simulator
+        self.graph, self.containers_idx = self.simulator.initialize_graph_and_containers()
+        self.found_objects_name = ()
         self.joint_action = None
-        self.distance_fn = distance_fn
         self.counter = 0
         self.verbose = verbose
+        self.goal_reached_fn = goal_reached_fn
 
     def __iter__(self):
         counter = 0
-        while True:
-            # make container nodes from unexplored containers
-            container_nodes = [mr_task.core.Node(is_subgoal=True, name=loc, location=coords)
-                               for coords, loc in self.unexplored_containers.items()]
-            objects_found = self.objects_found
-            self.known_space_nodes = [mr_task.core.Node(props=self.object_locations[location], name=location, location=coords)
-                                      for coords, location in self.unexplored_containers.items()]
+        while not self.goal_reached_fn():
+            self.unexplored_container_nodes = [Node(is_subgoal=True,
+                                                    name=idx,
+                                                    location=self.simulator.known_graph.get_node_position_by_idx(idx))
+                                               for idx in self.containers_idx]
+            self.explored_container_nodes = []
 
             yield {
                 "robot_poses": [robot.pose for robot in self.robots],
-                "container_nodes": container_nodes,
-                "object_found": objects_found,
+                "explored_container_nodes": self.explored_container_nodes,
+                "unexplored_container_nodes": self.unexplored_container_nodes,
+                "object_found": self.found_objects_name,
+                "observed_graph": self.graph,
             }
 
             self.counter += 1
-            distances = [self.distance_fn(robot, action.target_node)
-                         for robot, action in zip(self.robots, self.joint_action)]
+            # Compute the trajectory from robot's pose to the target node for each robot
+            paths = []
+            distances = []
+            cost_grids = []
+            for i, robot in enumerate(self.robots):
+                cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
+                    self.simulator.known_grid, [robot.pose.x, robot.pose.y], use_soft_cost=True)
+                _, path = get_path(self.joint_action[i].target_node.location,
+                                   do_sparsify=True)
+                cost_grids.append(cost_grid)
+                paths.append(path)
+                distances.append(compute_path_length(path))
+            min_travel_distance = np.min(distances)
+            robots_path = [mr_task.utils.get_partial_path_upto_distance(cost_grid, path, min_travel_distance)
+                           for cost_grid, path in zip(cost_grids, paths)]
+            for robot, path in zip(self.robots, robots_path):
+                robot.move(path)
+
             first_revealed_action = self.joint_action[np.argmin(distances)]
 
-            for robot, act in zip(self.robots, self.joint_action):
-                robot.move(act.target_node.location, min(distances))
-
-            # remove the object from the container
-            location = self.unexplored_containers.pop(first_revealed_action.target_node.location)
-            self.objects_found = tuple(self.object_locations[location])
-
-            if self.verbose:
-                for i, action in enumerate(self.joint_action):
-                    print(f'R{i}->{(action.target_node.name, action.props)}', end=' ')
-                print(f'\n{counter=}, {location=}, {self.objects_found=}')
+            self.graph, self.containers_idx = self.simulator.update_graph_and_containers(
+                observed_graph=self.graph,
+                containers=self.containers_idx,
+                chosen_container_idx=first_revealed_action.target_node.name
+            )
+            self.found_objects_idx = self.graph.get_adjacent_nodes_idx(first_revealed_action.target_node.name, filter_by_type=3)
+            self.found_objects_name = tuple(self.graph.get_node_name_by_idx(idx) for idx in self.found_objects_idx)
 
             counter += 1
 
