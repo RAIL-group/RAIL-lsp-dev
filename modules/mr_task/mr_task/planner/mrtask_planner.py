@@ -37,7 +37,7 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
 
     def compute_joint_action(self):
         if self.dfa_planner.has_reached_accepting_state():
-            return [], None
+            return None, None
 
         robot_nodes = [mr_task.core.RobotNode(Node(location=(r_pose.x, r_pose.y))) for r_pose in self.robot_poses]
         distances = get_inter_distances_nodes(self.explored_container_nodes + self.unexplored_container_nodes,

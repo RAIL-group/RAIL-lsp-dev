@@ -39,19 +39,26 @@ def _setup(args):
         )
         joint_action, cost = mrtask_planner.compute_joint_action()
         planning_loop.update_joint_action(joint_action)
+
     cost = min([robot.net_motion for robot in robot_team])
-    fig = plt.figure(figsize=(10, 10))
-    # plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(known_grid))
-    # plt.imshow(plotting_grid)
+
+    fig = plt.figure(figsize=(10, 10), dpi=300)
+    ax1 = plt.subplot(121)
     procthor.plotting.plot_graph_on_grid(known_grid, known_graph)
     for robot in robot_team:
         path = np.array(robot.all_paths)
         plt.plot(path[0], path[1])
-    plt.title(f'Seed: {args.seed} - Cost: {cost}')
-    plt.savefig(f'{args.save_dir}/scene_graph_{args.seed}.png')
-    plt.clf()
-    plt.imshow(simulator.get_top_down_image())
-    plt.savefig(f'{args.save_dir}/scene_graph_apt{args.seed}.png')
+        x = [pose.x for pose in robot.all_poses]
+        y = [pose.y for pose in robot.all_poses]
+        ax1.scatter(x, y, marker='x', alpha=0.5)
+    plt.title(f'Seed: {args.seed} | Planner: {args.planner} | Cost: {cost:.2f}')
+    ax2 = plt.subplot(122)
+    procthor.plotting.plot_graph(ax2, known_graph.nodes, known_graph.edges)
+    plt.suptitle(f'Specification: {specification}', fontweight="bold")
+    ordering = str(', '.join([str(node) for node in planning_loop.ordering]))
+    fig.supxlabel(f'Visit order: {ordering}', wrap=True)
+    plt.savefig(f'{args.save_dir}/eval_{args.seed}_r_{args.num_robots}_{args.planner}.png')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

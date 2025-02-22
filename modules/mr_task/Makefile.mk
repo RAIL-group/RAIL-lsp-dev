@@ -30,13 +30,25 @@ mr-task-eval-procthor: DOCKER_ARGS ?= -it
 mr-task-eval-procthor:
 	@$(DOCKER_PYTHON) -m mr_task.scripts.mr_task_eval_procthor \
 	 	--save_dir data/$(MRTASK_BASENAME)/ \
-		--num_robots 1 \
-		--planner learned \
-		--seed 1000 \
+		--num_robots 2 \
+		--planner optimistic \
+		--seed 1024 \
 		--num_iterations 50000 \
 		--C 10 \
 		--resolution 0.05 \
 		--network_file data/$(MRTASK_BASENAME)/raihan_nn/fcnn.pt
+
+.PHONY: mr-task-vis-net-predictions
+mr-task-vis-net-predictions: DOCKER_ARGS ?= -it
+mr-task-vis-net-predictions:
+	@rm -f data/$(MRTASK_BASENAME)/raihan_nn/network_output.txt
+	@touch $(DATA_BASE_DIR)/$(MRTASK_BASENAME)/raihan_nn/network_output.txt
+	@$(DOCKER_PYTHON) -m mr_task.scripts.vis_net_predictions \
+	 	--save_dir data/$(MRTASK_BASENAME)/raihan_nn \
+		--network_file data/$(MRTASK_BASENAME)/raihan_nn/fcnn.pt \
+		--seed 1000 \
+		--resolution 0.05
+
 
 .PHONY: mr-task-results
 mr-task-results: mr-task-eval

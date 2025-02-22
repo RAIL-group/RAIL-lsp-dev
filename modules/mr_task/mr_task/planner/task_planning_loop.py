@@ -13,11 +13,12 @@ class MRTaskPlanningLoop(object):
         self.joint_action = None
         self.counter = 0
         self.verbose = verbose
+        self.ordering = []
         self.goal_reached_fn = goal_reached_fn
 
     def __iter__(self):
         counter = 0
-        while not self.goal_reached_fn():
+        while True:
             self.unexplored_container_nodes = [Node(is_subgoal=True,
                                                     name=idx,
                                                     location=self.simulator.known_graph.get_node_position_by_idx(idx))
@@ -32,7 +33,9 @@ class MRTaskPlanningLoop(object):
                 "observed_graph": self.graph,
             }
 
-            self.counter += 1
+            if self.goal_reached_fn():
+                break
+
             # Compute the trajectory from robot's pose to the target node for each robot
             paths = []
             distances = []
@@ -61,7 +64,9 @@ class MRTaskPlanningLoop(object):
             self.found_objects_idx = self.graph.get_adjacent_nodes_idx(first_revealed_action.target_node.name, filter_by_type=3)
             self.found_objects_name = tuple(self.graph.get_node_name_by_idx(idx) for idx in self.found_objects_idx)
 
+            self.ordering.append(self.graph.get_node_name_by_idx(first_revealed_action.target_node.name))
             counter += 1
+
 
     def update_joint_action(self, joint_action):
         self.joint_action = joint_action
