@@ -2,7 +2,7 @@ import copy
 import numpy as np
 
 import mr_task
-from mr_task.core import Node, RobotNode
+from mr_task.core import Node, RobotNode, Action
 from mrlsp.utils.utility import find_action_list_from_cost_matrix_using_lsa
 
 
@@ -49,7 +49,7 @@ class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
 
     def compute_joint_action(self):
         if self.dfa_planner.has_reached_accepting_state():
-            return [], None
+            return None, None
 
         robot_nodes = [RobotNode(Node(location=(r_pose.x, r_pose.y)))
                        for r_pose in self.robot_poses]
@@ -70,5 +70,5 @@ class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
         cost_matrix = np.array([list(cd.values()) for cd in cost_dictionary])
         # from the cost matrix, return the list of subgoals that has the least cost.
         nodes = find_action_list_from_cost_matrix_using_lsa(cost_matrix, node_matrix)
-        joint_action = [mr_task.core.Action(node) for node in nodes]
+        joint_action = [Action(node) for node in nodes]
         return joint_action, None
