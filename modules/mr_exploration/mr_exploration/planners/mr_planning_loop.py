@@ -2,13 +2,13 @@ import time
 import numpy as np
 import gridmap
 import lsp
-from mrlsp.utils.utility import find_robots_within_range, robot_team_communicate_data
+from mr_exploration.utils.utility import find_robots_within_range, robot_team_communicate_data
 
 
 class MRPlanningLoop():
-    def __init__(self, goals, known_map, simulator, unity_bridge, robots, args, verbose=True):
+    def __init__(self, known_map, simulator, unity_bridge, robots, args, verbose=True):
         self.num_robots = len(robots)
-        self.goals = goals
+        #self.goals = goals, not necessary here?
         self.known_map = known_map
         self.simulator = simulator
         self.unity_bridge = unity_bridge
@@ -25,11 +25,11 @@ class MRPlanningLoop():
         self.paths = [None for _ in range(self.num_robots)]
         self.timestamp = 0  # This keeps track of timestamp of data
 
-    def _goal_reached(self):
-        self.goal_reached = [not (np.abs(robot.pose.x - goal.x) >= 3 *
-                             self.args.step_size or np.abs(robot.pose.y - goal.y)
-                             >= 3 * self.args.step_size) for robot, goal in zip(self.robots, self.goals)]
-        return any(self.goal_reached)
+    # def _goal_reached(self):
+    #     self.goal_reached = [not (np.abs(robot.pose.x - goal.x) >= 3 *
+    #                          self.args.step_size or np.abs(robot.pose.y - goal.y)
+    #                          >= 3 * self.args.step_size) for robot, goal in zip(self.robots, self.goals)]
+    #     return any(self.goal_reached)
 
     def __iter__(self):
         counter = 0

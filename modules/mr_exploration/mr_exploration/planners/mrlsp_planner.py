@@ -2,7 +2,7 @@ import gridmap
 from .planner import BaseMRLSPPlanner
 import lsp
 import torch
-from mrlsp.utils.utility import (get_top_n_frontiers_multirobot,
+from mr_exploration.utils.utility import (get_top_n_frontiers_multirobot,
                                  get_multirobot_distances,
                                  find_action_list_from_cost_matrix_using_lsa)
 import mrlsp

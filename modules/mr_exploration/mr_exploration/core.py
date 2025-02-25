@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import itertools
 import mrlsp_accel
-from mrlsp.utils.utility import (get_top_n_frontiers_multirobot,
+from mr_exploration.utils.utility import (get_top_n_frontiers_multirobot,
                                  get_multirobot_distances)
 
 

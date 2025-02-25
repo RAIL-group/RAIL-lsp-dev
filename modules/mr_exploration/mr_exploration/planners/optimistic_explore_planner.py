@@ -4,7 +4,7 @@
 
 import numpy as np
 from .planner import MRPlanner
-from mrlsp.utils.utility import get_multirobot_distances, find_action_list_from_cost_matrix_using_lsa
+from mr_exploration.utils.utility import get_multirobot_distances, find_action_list_from_cost_matrix_using_lsa
 
 
 class MROptimisticExplorePlanner(MRPlanner):
