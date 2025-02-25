@@ -8,10 +8,10 @@ from mr_exploration.utils.utility import find_robots_within_range, robot_team_co
 class MRPlanningLoop():
     def __init__(self, known_map, simulator, unity_bridge, robots, args, verbose=True):
         self.num_robots = len(robots)
-        #self.goals = goals, not necessary here?
+        # self.goals = goals, not necessary here?
         self.known_map = known_map
         self.simulator = simulator
-        self.unity_bridge = unity_bridge
+        self.unity_bridge = unity_bridge    # do I need this w/o GPU?
         # instead of robot, we have robots
         self.robots = robots
         self.args = args
@@ -21,7 +21,7 @@ class MRPlanningLoop():
         self.chosen_subgoals = [None for _ in range(self.num_robots)]
 
         ''' Other variables'''
-        self.goal_reached = None
+        #self.goal_reached = None
         self.paths = [None for _ in range(self.num_robots)]
         self.timestamp = 0  # This keeps track of timestamp of data
 
@@ -39,10 +39,9 @@ class MRPlanningLoop():
         robot_grids = [lsp.constants.UNOBSERVED_VAL * np.ones_like(self.known_map) for _ in range(self.num_robots)]
 
         # Main planning loop (We can stop if any of the robot reaches the goal)
-        while not self._goal_reached():
+        while counter < 200:
 
             if self.verbose:
-                print(f"Goal: {self.goals[0].x}, {self.goals[0].y}")
                 for i, robot in enumerate(self.robots):
                     print(f"Robot {i}: ({robot.pose.x:.2f}, {robot.pose.y:.2f}) [motion: {robot.net_motion:.2f}]")
                     print(f"Counter: {counter} | Count since last turnaround: "
@@ -104,7 +103,7 @@ class MRPlanningLoop():
             paths = []
             for i in range(self.num_robots):
                 cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                    planning_grids[i], [self.goals[i].x, self.goals[i].y], use_soft_cost=True)
+                    planning_grids[i], [self.chosen_subgoals[i].x, self.chosen_subgoals[i].y], use_soft_cost=True) #mmmmmmmm...
                 did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
                                           do_sparsify=True, do_flip=True)
 
@@ -138,7 +137,7 @@ class MRPlanningLoop():
                 else:
                     # Force the robot to return to known space
                     cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                        planning_grids[i], [self.goals[i].x, self.goals[i].y],
+                        planning_grids[i], [self.chosen_subgoals[i].x, self.chosen_subgoals[i].y],
                         use_soft_cost=True,
                         obstacle_cost=1e5)
                     did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
