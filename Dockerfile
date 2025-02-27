@@ -85,6 +85,9 @@ RUN pip3 install modules/mrlsp_accel
 COPY modules/mrlsp modules/mrlsp
 RUN pip3 install modules/mrlsp
 RUN cp -r /usr/local/lib/python3.8/dist-packages/mrlsp* /temp
+COPY modules/mr_exploration modules/mr_exploration
+RUN pip3 install modules/mr_exploration
+RUN cp -r /usr/local/lib/python3.8/dist-packages/mr_exploration* /temp
 
 # Build the final image
 FROM base-python AS target

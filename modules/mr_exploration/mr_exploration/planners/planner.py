@@ -5,7 +5,7 @@ import mrlsp
 import lsp
 
 class MRPlanner(object):
-    def __init__(self, robots, goal_poses, args):
+    def __init__(self, robots, args):
         self.name = 'MultirobotBasePlanner'
         self.args = args
         self.num_robots = len(robots)
@@ -15,9 +15,9 @@ class MRPlanner(object):
         # Global observed map and inflated grid
         self.observed_map = None
         self.inflated_grid = None
-        self.goal_poses = goal_poses
+        #self.goal_poses = goal_poses
         # same goal for all robots
-        self.goal = self.goal_poses[0]
+        #self.goal = self.goal_poses[0]
 
     def update(self, observations, observed_maps, subgoals, robot_poses, visibility_masks):
         self.observations = observations
@@ -50,8 +50,8 @@ class MRPlanner(object):
 
 
 class BaseMRLSPPlanner(MRPlanner):
-    def __init__(self, robots, goal_poses, args, verbose=False):
-        super(BaseMRLSPPlanner, self).__init__(robots, goal_poses, args)
+    def __init__(self, robots, args, verbose=False):
+        super(BaseMRLSPPlanner, self).__init__(robots, args)
         self.subgoals = set()
         self.selected_joint_action = None
         self.args = args
@@ -97,17 +97,17 @@ class BaseMRLSPPlanner(MRPlanner):
             max_dist=2.0 / self.args.base_resolution)
 
         # Also check that the goal is not inside the frontier
-        lsp.core.update_frontiers_goal_in_frontier(self.subgoals, self.goal)
+        lsp.core.update_frontiers_goal_in_frontier(self.subgoals)
 
         # Update the subgoal inputs
-        self._update_subgoal_inputs(observations['images'], robot_poses, self.goal)
+        self._update_subgoal_inputs(observations['images'], robot_poses)
 
         # Once the subgoal inputs are set, compute their properties
-        self._update_subgoal_properties(robot_poses, self.goal)
+        self._update_subgoal_properties(robot_poses)
 
-    def _update_subgoal_inputs(self, images, robot_poses, goal_pose):
+    def _update_subgoal_inputs(self, images, robot_poses):
         # Loop through subgoals and get the 'input data'
-        subgoal_distances = mrlsp.utils.utility.get_robot_subgoal_distances(self.inflated_grid, self.robot_poses, self.subgoals)
+        subgoal_distances = mrlsp.utils.utility.get_robot_subgoal_distances(self.inflated_grid, self.robot_poses)
 
         for subgoal in self.subgoals:
             if subgoal.props_set:
@@ -117,10 +117,10 @@ class BaseMRLSPPlanner(MRPlanner):
             robot_idx = np.argmin(distance_to_subgoal)
             # Compute the data that will be passed to the neural net
             input_data = lsp.utils.learning_vision.get_oriented_input_data(
-                images[robot_idx], robot_poses[robot_idx], goal_pose, subgoal)
+                images[robot_idx], robot_poses[robot_idx], subgoal)
 
             # Store the input data alongside each subgoal
             subgoal.nn_input_data = input_data
 
-    def _update_subgoal_properties(self, robot_pose, goal_pose):
+    def _update_subgoal_properties(self, robot_pose):
         raise NotImplementedError("Method for abstract class")

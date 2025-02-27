@@ -364,14 +364,15 @@ def goal_in_range(grid, robot_pose, goal_pose, frontiers):
     return goal_visible
 
 
-def update_frontiers_goal_in_frontier(all_frontiers, end_pose):
+#I don't think I actually need this anymore for exploration, soooo eh. 
+def update_frontiers_goal_in_frontier(all_frontiers):
     """This function checks to see if the goal point is inside a frontier. If
     it is, all frontiers are set as leading to the goal (and
     props_set <- True)."""
 
     is_goal_in_frontier = False
     for f in all_frontiers:
-        if [int(end_pose.x), int(end_pose.y)] in f.points.T.tolist():
+        #if [int(end_pose.x), int(end_pose.y)] in f.points.T.tolist():
             is_goal_in_frontier = True
 
     if is_goal_in_frontier:

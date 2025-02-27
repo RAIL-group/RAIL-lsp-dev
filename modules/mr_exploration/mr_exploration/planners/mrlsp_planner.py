@@ -49,7 +49,6 @@ class MRKnownSubgoalPlanner(BaseMRLSPPlanner):
 
         _, joint_action = mrlsp.core.get_best_expected_ordering_and_cost(self.inflated_grid,
                                                                             self.robots,
-                                                                            self.goal,
                                                                             self.subgoals)
         return joint_action
 

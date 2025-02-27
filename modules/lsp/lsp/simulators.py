@@ -17,7 +17,6 @@ import lsp.core
 class Simulator(object):
     def __init__(self,
                  known_map,
-                 goal,
                  args,
                  unity_bridge=None,
                  world=None,
@@ -33,7 +32,7 @@ class Simulator(object):
         """
         # Store some necesasry data and arguments
         self.args = args
-        self.goal = goal
+        #self.goal = goal
         self.resolution = args.base_resolution
         self.inflation_radius = args.inflation_radius_m / self.resolution
         self.frontier_grouping_inflation_radius = 0
@@ -218,7 +217,7 @@ class Simulator(object):
         saved_frontiers = lsp.core.update_frontier_set(saved_frontiers,
                                                        new_frontiers)
 
-        lsp.core.update_frontiers_goal_in_frontier(saved_frontiers, self.goal)
+        lsp.core.update_frontiers_goal_in_frontier(saved_frontiers)
 
         return saved_frontiers
 
