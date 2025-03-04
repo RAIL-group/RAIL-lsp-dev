@@ -76,3 +76,16 @@ def test_unitybridge_can_add_objects(unity_path, do_debug_plot):
 
         assert np.std(pano_image - pano_image_cubes) > 0
         assert np.std(pano_depth_image - pano_depth_image_cubes) > 0
+
+
+@pytest.mark.timeout(15)
+def test_unitybridge_does_use_gpu(unity_path):
+    """Test if UnityBridge is using NVIDIA GPU."""
+    with unitybridge.UnityBridge(unity_path):
+        with open("/data/unity_logs.txt", "r") as file:
+            for line in file:
+                if "renderer" in line.lower():
+                    assert "nvidia" in line.lower(), "NVIDIA GPU not detected in logs"
+                    break
+            else:
+                assert False, "No renderer found in logs"
