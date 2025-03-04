@@ -365,10 +365,11 @@ def goal_in_range(grid, robot_pose, goal_pose, frontiers):
 
 
 #I don't think I actually need this anymore for exploration, soooo eh. 
+"""
 def update_frontiers_goal_in_frontier(all_frontiers):
-    """This function checks to see if the goal point is inside a frontier. If
+    This function checks to see if the goal point is inside a frontier. If
     it is, all frontiers are set as leading to the goal (and
-    props_set <- True)."""
+    props_set <- True).
 
     is_goal_in_frontier = False
     for f in all_frontiers:
@@ -379,7 +380,7 @@ def update_frontiers_goal_in_frontier(all_frontiers):
         for f in all_frontiers:
             if f.props_set is False:
                 f.set_props(prob_feasible=1.0)
-
+"""
 
 FrontWithPoint = namedtuple('FrontWithPoint', ['frontier', 'point'])
 
@@ -476,10 +477,10 @@ def get_robot_distances(grid, robot_pose, frontiers, downsample_factor=1):
 
     return robot_distances
 
-
+""" I don't think this part is actually necessary or relevant because it relates the subgoal distance to the overall final goal
 def get_goal_distances(grid, goal_pose, frontiers, downsample_factor=1):
-    """take in occupancy grid and goal position and returns a dictionary relating a frontier to it's distance
-    from the goal, and the path corresponding to that distance"""
+    #take in occupancy grid and goal position and returns a dictionary relating a frontier to it's distance
+    #from the goal, and the path corresponding to that distance
     goal_distances = dict()
     if len(frontiers) <= 0:
         return [0, np.array([[]])]
@@ -514,7 +515,7 @@ def get_goal_distances(grid, goal_pose, frontiers, downsample_factor=1):
         goal_distances[frontier] = cost
 
     return goal_distances
-
+"""
 
 class FState(object):
     """Used to conviently store the 'state' during recursive cost search.

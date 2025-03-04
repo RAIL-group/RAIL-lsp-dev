@@ -179,10 +179,10 @@ def get_top_n_frontiers_multirobot(num_robots, frontiers, distances, n):
     return top_frontiers
 
 
-def get_multirobot_distances(robot_grid, robots, goal_pose, subgoals):
+def get_multirobot_distances(robot_grid, robots, subgoals):
     subgoals = {copy.copy(s) for s in subgoals}
     distances = {}
-    distances['goal'] = lsp.core.get_goal_distances(robot_grid, goal_pose[0], frontiers=subgoals)
+    #distances['goal'] = lsp.core.get_goal_distances(robot_grid, goal_pose[0], frontiers=subgoals)
     distances['frontier'] = lsp.core.get_frontier_distances(robot_grid, frontiers=subgoals)
     distances['robot'] = get_robot_subgoal_distances(robot_grid, [robot.pose for robot in robots], subgoals)
     return distances

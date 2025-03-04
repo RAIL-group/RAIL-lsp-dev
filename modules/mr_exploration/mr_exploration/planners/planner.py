@@ -97,7 +97,7 @@ class BaseMRLSPPlanner(MRPlanner):
             max_dist=2.0 / self.args.base_resolution)
 
         # Also check that the goal is not inside the frontier
-        lsp.core.update_frontiers_goal_in_frontier(self.subgoals)
+        #lsp.core.update_frontiers_goal_in_frontier(self.subgoals)
 
         # Update the subgoal inputs
         self._update_subgoal_inputs(observations['images'], robot_poses)

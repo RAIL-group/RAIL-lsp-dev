@@ -217,7 +217,7 @@ class Simulator(object):
         saved_frontiers = lsp.core.update_frontier_set(saved_frontiers,
                                                        new_frontiers)
 
-        lsp.core.update_frontiers_goal_in_frontier(saved_frontiers)
+        #lsp.core.update_frontiers_goal_in_frontier(saved_frontiers)
 
         return saved_frontiers
 
