@@ -2,7 +2,6 @@
 numpy
 scipy
 scikit-image
-sknw
 # shapely==1.6.4
 shapely
 # opencv-python
@@ -13,6 +12,8 @@ setuptools
 # pybullet
 prior
 ai2thor
+sentence_transformers
+google-generativeai
 
 # Plotting & Data Handling
 matplotlib
