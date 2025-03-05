@@ -83,8 +83,8 @@ def test_unitybridge_can_add_objects(unity_path, do_debug_plot):
 def test_unitybridge_does_use_gpu(unity_path):
     """Test if UnityBridge is using NVIDIA GPU."""
     use_gpu = os.environ.get("USE_GPU")
-    if use_gpu is None or use_gpu.lower() != "true":
-        pytest.xfail("USE_GPU is not set to true")
+    if use_gpu is None or use_gpu != "true":
+        pytest.xfail("USE_GPU is not set to 'true'")
     with unitybridge.UnityBridge(unity_path):
         with open("/data/unity_logs.txt", "r") as file:
             for line in file:
