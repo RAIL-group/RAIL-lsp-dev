@@ -47,7 +47,6 @@ class Vertex:
     def __init__(self, coord, block_prob=0.0):
         self.id = Vertex._id_counter
         Vertex._id_counter += 1
-        self.parent = None
         self.coord = coord
         self.neighbors = []
         self.heur2goal = 0.0
@@ -165,8 +164,8 @@ def linear_graph_unc():
     nodes = [start_node, node1, goal_node]
     graph = Graph(nodes)
     graph.edges.clear()
-    graph.add_edge(start_node, node1, 0.9)
-    graph.add_edge(node1, goal_node, 0.0)
+    graph.add_edge(start_node, node1, 0.5)
+    graph.add_edge(node1, goal_node, 0.3)
     G_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id)
     D_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id, robot_type=RobotType.Drone)
     robots = [G_robot, D_robot]
@@ -335,7 +334,7 @@ def random_graph(n_vertex=10, xmin=0, ymin=0):
     goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
     goal = graph.vertices[goalId]
     start = graph.vertices[startId]
-    robots = RobotData(robot_id=1, position=[start.coord[0],start.coord[1]], cur_node=start)
+    robots = Robot(position=[start.coord[0],start.coord[1]], cur_node=start)
     dijkstra(graph, goal)
     return start, goal, graph, robots
 
