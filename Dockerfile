@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y software-properties-common
 # Add ppa for python install
 RUN apt-add-repository -y ppa:deadsnakes/ppa
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl ca-certificates cmake git python3.10 python3.10-dev \
+    curl ca-certificates cmake git python3.10 python3.10-dev python3-pip \
     xvfb libxv1 libxrender1 libxrender-dev libgeos-dev \
     libboost-all-dev libcgal-dev ffmpeg python3-tk \
     libxtst6 libglu1-mesa libegl1 \
@@ -25,14 +25,12 @@ RUN curl -sSL https://github.com/VirtualGL/virtualgl/releases/download/"${VIRTUA
 	rm virtualgl_*_amd64.deb
 
 FROM base AS base-python
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py && rm get-pip.py
-COPY modules/requirements.txt requirements.txt
 RUN pip3 install uv
+COPY modules/requirements.txt requirements.txt
 RUN uv pip install -r requirements.txt --system
 RUN uv pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124 --system
-RUN pip3 install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
-RUN pip3 install numba
-RUN pip3 install sknw --no-dependencies
+RUN uv pip install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cu124.html --system
+RUN uv pip install sknw --system
 
 # Build Spot
 FROM base AS spot
