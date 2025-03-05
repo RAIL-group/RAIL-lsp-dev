@@ -29,6 +29,7 @@ IMAGE_NAME = ${APP_NAME}
 DOCKER_CORE_VOLUMES = \
 	--env XPASSTHROUGH=$(XPASSTHROUGH) \
 	--env DISPLAY=$(DISPLAY) \
+	--env USE_GPU=$(USE_GPU) \
 	$(DOCKER_GPU_ARG) \
 	--volume="$(RAIL_SIM_DIR)/v$(RAIL_SIM_VERSION):/unity/:ro" \
 	--volume="$(DATA_BASE_DIR):/data/:rw" \
