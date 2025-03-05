@@ -2,14 +2,10 @@
 numpy
 scipy
 scikit-image
-# shapely==1.6.4
 shapely
-# opencv-python
 pyyaml
 setuptools
-# tensorboard
-# pyscreenshot
-# pybullet
+tensorboard
 prior
 ai2thor
 sentence_transformers
