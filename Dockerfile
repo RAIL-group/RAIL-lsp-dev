@@ -28,10 +28,10 @@ FROM base AS base-python
 RUN python3 -m venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH
 RUN pip3 install uv
-COPY modules/requirements.txt requirements.txt
-RUN uv pip install -r requirements.txt
 RUN uv pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
 RUN uv pip install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
+COPY modules/requirements.txt requirements.txt
+RUN uv pip install -r requirements.txt
 RUN uv pip install sknw
 
 # Build Spot
