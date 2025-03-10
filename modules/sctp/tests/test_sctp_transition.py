@@ -16,7 +16,7 @@ def test_sctp_transition_lg_noblock():
     assert len(init_state.uav_actions) == len(state_actions)
     assert init_state.robot.need_action == True
     assert init_state.robot.last_node ==1
-    # the first transitiopn - assign action 4 to the drone
+    # the first transition - assign action 4 to the drone
     state_prob_cost = init_state.transition(state_actions[0])
     assert len(state_prob_cost) == 1
     state1 = list(state_prob_cost.keys())[0]
@@ -51,13 +51,13 @@ def test_sctp_transition_lg_noblock():
     # assign action 1 to ground robot then move then get stuck
     state_prob_cost = state3_2.transition(actions[0])
     assert len(state_prob_cost) == 1
-    assert list(state_prob_cost.values())[0][1] == 30.0
+    assert list(state_prob_cost.values())[0][1] == 31.25
     state4_2 = list(state_prob_cost.keys())[0]
     actions = state4_2.get_actions()
     assert len(actions) == 0
     assert state4_2.robot.need_action == True 
     assert state4_2.uavs[0].need_action == False
-    assert state4_2.get_stuck == True 
+    assert state4_2.noway2goal == True 
     assert state4_2.is_goal_state == True
     # ==================== end of block situation ======================
     action = state2.get_actions()

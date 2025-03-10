@@ -1,6 +1,6 @@
 import copy, random
 import numpy as np
-from sctp.param import VEL_RATIO, RobotType
+from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 
 class Robot:
     _id_counter = 0
@@ -38,11 +38,11 @@ class Robot:
         self._cost_to_target -= advance_distance
         self.remaining_time -= delta_time
         # print(f"The remaining time of {self.robot_type} is {self.remaining_time}")
-        # if self.remaining_time < 0.01:
-        #     self.remaining_time = 0.0
-        #     self._cost_to_target = 0.0
+        if self.remaining_time < APPROX_TIME:
+            self.remaining_time = 0.0
+            self._cost_to_target = 0.0
         # if self.remaining_time < 0.0:
-        print(f"The remaining time of {self.robot_type} is {self.remaining_time}")
+        # print(f"The remaining time of {self.robot_type} is {self.remaining_time}")
         assert self.remaining_time >= 0.0, 'Remaining time cannot be negative'
         if self.remaining_time == 0.0:
             self.need_action = True

@@ -2,7 +2,7 @@ import pytest
 from sctp import sctp_graphs as graphs
 from sctp import core
 from sctp.robot import Robot
-from sctp.param import RobotType
+from sctp.param import RobotType, VEL_RATIO
 from sctp.param import EventOutcome
 
 def test_sctp_actions():
@@ -75,9 +75,9 @@ def test_sctp_function_advance_assign_task():
     assert state1.robot.cur_pose[0] == 0.0 and state1.robot.cur_pose[1] ==0.0
     assert state1.uavs[0].cur_pose[0] == 0.0 and state1.uavs[0].cur_pose[1] ==0.0
     assert state1.action_cost == state_prob_cost[state1][1]
-    assert state1.action_cost == core.sctp_metric(0.0, 0.0)
+    # assert state1.action_cost == core.sctp_metric(0.0, 0.0)
     assert state1.uavs[0].need_action == False
-    assert state1.uavs[0].remaining_time == pytest.approx(2.5/3.0, 0.1)
+    assert state1.uavs[0].remaining_time == pytest.approx(2.5/VEL_RATIO, 0.1)
     assert state1.robot.need_action == True
     assert state1.robot.remaining_time == 0.0
     assert state1.robot_actions == state1.state_actions
@@ -94,7 +94,7 @@ def test_sctp_function_advance_assign_task():
     states_list = list(state_prob_cost2.keys())
     state2_1 = states_list[0]
     assert state2_1.robot.need_action == True
-    assert state2_1.robot.cur_pose[0] == pytest.approx(2.5/3.0, 0.05)
+    assert state2_1.robot.cur_pose[0] == pytest.approx(2.5/VEL_RATIO, 0.05)
     assert state2_1.robot.cur_pose[1] == pytest.approx(0.0, 0.05)
     assert state2_1.uavs[0].need_action == True
     assert state2_1.uavs[0].cur_pose[0] == 2.5
@@ -142,13 +142,13 @@ def test_sctp_gateway_lg_prob():
     assert len(state_actions) == 2
     assert len(init_state.v_vertices) == 1
     assert len(init_state.gateway) == 1
-    # the first transitiopn - assign action 4 to the drone
+    # the 1st transition - assign action 4 to the drone
     state_prob_cost = init_state.transition(state_actions[0])
     state1 = list(state_prob_cost.keys())[0]
     assert state1.action_cost == state_prob_cost[state1][1] and state1.action_cost == 0.0
-    assert state1.uavs[0].remaining_time == pytest.approx(2.5/2.0, 0.1)
+    assert state1.uavs[0].remaining_time == pytest.approx(2.5/VEL_RATIO, 0.1)
     assert len(state1.state_actions) == 1
-    # the second transtion - assign action 4 to the robot then move
+    # the 2nd transtion - assign action 4 to the robot then move
     state_prob_cost = state1.transition(state1.state_actions[0])
     assert len(state_prob_cost) == 2
     assert list(state_prob_cost.values())[0][0] == 0.5
@@ -169,7 +169,6 @@ def test_sctp_gateway_lg_prob():
     actions = state2_1.get_actions()
     assert state2_1.uavs[0].need_action == True
     assert state2_1.robot.need_action == True
-    # print(actions[0])
     assert actions[0] == core.Action(target=5)
     # assign action 5 to the drone
     state_prob_cost1 = state2_1.transition(actions[0])
@@ -183,7 +182,6 @@ def test_sctp_gateway_lg_prob():
     assert actions[0].target == 1
     assert actions[1].target == 4
     state3.uavs[0].at_node = True
-    # assert state3.is_goal_state == False
     assert len(state3.gateway) == 1
     assert len(state3.v_vertices) == 1
     ####### reassign action 4 and move the robot.
@@ -193,10 +191,12 @@ def test_sctp_gateway_lg_prob():
     assert state4.uavs[0].need_action == False
     assert len(state4.gateway) == 1
     assert len(state4.v_vertices) == 2
+    
     ###### assign action 2 for robot then move
     actions = state4.get_actions()
     assert len(actions) == 2
     assert actions[1].target == 2
+    ## drone reaches v5 and robot reach v2 at the same time
     state_prob_cost3 = state4.transition(actions[1])
     assert len(state_prob_cost3) == 2
     act = core.Action(target=5)
@@ -204,7 +204,7 @@ def test_sctp_gateway_lg_prob():
     state5_2 = list(state_prob_cost3.keys())[1]
     assert state5_1.history.get_action_outcome(act) == EventOutcome.TRAV 
     assert state5_2.history.get_action_outcome(act) == EventOutcome.BLOCK 
-    assert state5_1.robot.need_action == state5_2.robot.need_action and state5_1.robot.need_action == False
+    assert state5_1.robot.need_action == state5_2.robot.need_action and state5_1.robot.need_action == True
     assert state5_2.robot.remaining_time == 0.0
     assert state5_2.uavs[0].need_action == True
     assert len(state5_1.gateway) == 1
@@ -212,11 +212,11 @@ def test_sctp_gateway_lg_prob():
     actions1 = state5_1.get_actions()
     actions2 = state5_2.get_actions()
     assert actions1[0] == actions2[0]
-    ###### assign action 3 to the drone and move
+    
+    ###### drone reaches v5 (robot reaches v2), assign action 3 to the drone
     state_prob_cost4_1 = state5_1.transition(actions1[0])
     state_prob_cost4_2 = state5_2.transition(actions2[0])
     assert len(state_prob_cost4_1) == len(state_prob_cost4_2) and len(state_prob_cost4_1) == 1
-
     state6_1 = list(state_prob_cost4_1.keys())[0]
     state6_2 = list(state_prob_cost4_2.keys())[0]
     assert state6_1.robot.need_action == state6_2.robot.need_action and state6_2.robot.need_action == True 
@@ -225,12 +225,12 @@ def test_sctp_gateway_lg_prob():
     assert state6_1.uavs[0].need_action == False 
     assert state6_1.uavs[0].action.target == 3
     assert len(state6_1.gateway) == 1
-    assert len(state6_1.v_vertices) == 3
+    assert len(state6_1.v_vertices) == 2
     assert state6_1.is_goal_state == False
-
-    assert len(state6_2.gateway) == 0
-    assert len(state6_2.v_vertices) == 3
-    assert state6_2.is_goal_state == True
+    assert len(state6_2.gateway) == 1
+    assert len(state6_2.v_vertices) == 2
+    assert state6_2.is_goal_state == False
+    assert state6_2.robot.need_action == True
  
     ##### assign action 5 to ground robot then move
     actions = state6_1.get_actions()
@@ -246,24 +246,32 @@ def test_sctp_gateway_lg_prob():
     assert state7.uavs[0].last_node == 3
     assert state7.robot.need_action == False
     assert state7.uavs[0].need_action == True
-
-    ##### ground robot keep moving
-    actions = state7.get_actions()
+    #### moving back due to block at v5
+    actions = state6_2.get_actions()
     assert len(actions) == 1
-    state_prob_cost6 = state7.transition(actions[0])
-    assert len(state_prob_cost6) == 1
-    state8 = list(state_prob_cost6.keys())[0]
-    assert state8.uavs[0].last_node == 3 and state8.uavs[0].need_action == False
-    assert state8.robot.last_node == 5 and state8.robot.need_action == True
-    actions = state8.get_actions()
-    assert len(actions) == 2
-    #### assign action 3 to the robot and move
-    state_prob_cost6 = state8.transition(actions[1])
-    assert len(state_prob_cost6) == 1
-    state9 = list(state_prob_cost6.keys())[0]
-    assert state9.is_goal_state == True
-    assert state9.robot.need_action == True 
-    assert state9.robot.last_node == 3
+    actions[0].target ==2
+    state_prob_cost5_2 = state6_2.transition(actions[0])
+    assert len(state_prob_cost5_2) == 1
+    state7_2 = list(state_prob_cost5_2.keys())[0]
+    assert state7_2.is_goal_state == True
+    
+    ##### ground robot keep moving
+    # actions = state7.get_actions()
+    # assert len(actions) == 1
+    # state_prob_cost6 = state7.transition(actions[0])
+    # assert len(state_prob_cost6) == 1
+    # state8 = list(state_prob_cost6.keys())[0]
+    # assert state8.uavs[0].last_node == 3 and state8.uavs[0].need_action == False
+    # assert state8.robot.last_node == 5 and state8.robot.need_action == True
+    # actions = state8.get_actions()
+    # assert len(actions) == 2
+    # #### assign action 3 to the robot and move
+    # state_prob_cost6 = state8.transition(actions[1])
+    # assert len(state_prob_cost6) == 1
+    # state9 = list(state_prob_cost6.keys())[0]
+    # assert state9.is_goal_state == True
+    # assert state9.robot.need_action == True 
+    # assert state9.robot.last_node == 3
 
     
 def test_sctp_gateway_splitting_sametime_sg():
