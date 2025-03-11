@@ -1,0 +1,26 @@
+from object_search.core import Subgoal
+
+
+class Planner():
+    """Abstract class for all planners"""
+    def __init__(self, target_obj_info, args, verbose=True):
+        self.target_obj_info = target_obj_info
+        self.args = args
+        self.verbose = verbose
+
+    def update(self, graph, grid, subgoals, robot_pose):
+        self.graph = graph
+        self.grid = grid
+        self.robot_pose = robot_pose
+        self.new_subgoals = [s for s in subgoals]
+        self.subgoals = []
+        for idx in subgoals:
+            pose = self.graph.get_node_position_by_idx(idx)[:2]
+            self.subgoals.append(Subgoal(idx, pose))
+        self._update_subgoal_properties()
+
+    def _update_subgoal_properties(self):
+        pass
+
+    def compute_selected_subgoal(self):
+        raise NotImplementedError
