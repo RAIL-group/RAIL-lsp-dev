@@ -59,7 +59,7 @@ class ThorInterface:
 
     def gen_map_and_poses(self, num_objects=1):
         """Returns scene graph, grid, initial robot pose and target object info."""
-        self.target_objs_info = self.get_target_objs_info(self.scene_graph, num_objects)
+        self.target_objs_info = self.get_target_objs_info(num_objects)
         return (self.scene_graph,
                 self.occupancy_grid,
                 self.robot_pose,
@@ -87,10 +87,10 @@ class ThorInterface:
         pose = self.scale_to_grid(position)
         return Pose(*pose)
 
-    def get_target_objs_info(self, scene_graph, num_objects=1):
+    def get_target_objs_info(self, num_objects=1):
         object_name_to_idxs = {}
-        for idx in scene_graph.object_indices:
-            name = scene_graph.get_node_name_by_idx(idx)
+        for idx in self.scene_graph.object_indices:
+            name = self.scene_graph.get_node_name_by_idx(idx)
             if name not in object_name_to_idxs.keys():
                 object_name_to_idxs[name] = [idx]
             else:
@@ -102,8 +102,8 @@ class ThorInterface:
         target_objs_info = []
         for name in target_obj_names:
             idxs = object_name_to_idxs[name]
-            container_idxs = [scene_graph.get_parent_node_idx(idx) for idx in idxs]
-            node_type = scene_graph.nodes[idxs[0]]['type']
+            container_idxs = [self.scene_graph.get_parent_node_idx(idx) for idx in idxs]
+            node_type = self.scene_graph.nodes[idxs[0]]['type']
             target_objs_info.append({
                 'name': name,
                 'idxs': object_name_to_idxs[name],
