@@ -73,6 +73,13 @@ class SceneGraph:
         """Get position of a node by its index."""
         return self.nodes[node_idx]['position']
 
+    def get_node_idx_by_position(self, position):
+        """Get index of a node by its position."""
+        for idx, node in self.nodes.items():
+            if node['position'][0] == position[0] and node['position'][1] == position[1]:
+                return idx
+        return None
+
     def __len__(self):
         return len(self.nodes)
 
