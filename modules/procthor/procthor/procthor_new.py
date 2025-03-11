@@ -17,7 +17,7 @@ IGNORE_CONTAINERS = [
 
 
 class ThorInterface:
-    def __init__(self, args, numb_objects=1, preprocess=True):
+    def __init__(self, args, preprocess=True):
         self.args = args
         self.seed = args.current_seed
         random.seed(self.seed)
@@ -88,21 +88,32 @@ class ThorInterface:
         return Pose(*pose)
 
     def get_target_objs_info(self, scene_graph, num_objects=1):
-        unique_obj_idxs = {}
+        object_name_to_idxs = {}
         for idx in scene_graph.object_indices:
             name = scene_graph.get_node_name_by_idx(idx)
-            if name not in unique_obj_idxs.values():
-                unique_obj_idxs[idx] = name
-        target_obj_idxs = random.sample(list(unique_obj_idxs.keys()), num_objects)
-        target_obj_names = [unique_obj_idxs[idx] for idx in target_obj_idxs]
-        target_object_types = [scene_graph.nodes[idx]['type'] for idx in target_obj_idxs]
-        target_container_idxs = [scene_graph.get_parent_node_idx(idx) for idx in target_obj_idxs]
-        return [{
-            'name': target_obj_names[i],
-            'idx': target_obj_idxs[i],
-            'type': target_object_types[i],
-            'container_idx': target_container_idxs[i]
-        } for i in range(num_objects)]
+            if name not in object_name_to_idxs.keys():
+                object_name_to_idxs[name] = [idx]
+            else:
+                object_name_to_idxs[name].append(idx)
+        if num_objects > len(object_name_to_idxs):
+            num_objects = len(object_name_to_idxs)
+
+        target_obj_names = random.sample(list(object_name_to_idxs.keys()), num_objects)
+        target_objs_info = []
+        for name in target_obj_names:
+            idxs = object_name_to_idxs[name]
+            container_idxs = [scene_graph.get_parent_node_idx(idx) for idx in idxs]
+            node_type = scene_graph.nodes[idxs[0]]['type']
+            target_objs_info.append({
+                'name': name,
+                'idxs': object_name_to_idxs[name],
+                'type': node_type,
+                'container_idxs': container_idxs
+            })
+
+        if num_objects == 1:
+            return target_objs_info[0]
+        return target_objs_info
 
     def get_occupancy_grid(self):
         event = self.controller.step(action="GetReachablePositions")
