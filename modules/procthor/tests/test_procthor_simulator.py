@@ -24,7 +24,7 @@ def test_thorinterface():
     save_file = save_dir / f'grid-scene-{args.current_seed}.png'
 
     thor_interface = procthor.ThorInterface(args=args)
-    known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses()
+    known_graph, known_grid, robot_pose, target_obj_info = thor_interface.gen_map_and_poses()
 
     assert len(known_graph.nodes) > 0
     assert len(known_graph.edges) > 0
@@ -32,18 +32,18 @@ def test_thorinterface():
     assert hasattr(robot_pose, 'x') and hasattr(robot_pose, 'y')
     unique_vals = np.unique(known_grid)
     assert 1 in unique_vals and 0 in unique_vals
-    assert 'name' in target_objs_info[0]
-    assert 'idx' in target_objs_info[0]
-    assert 'type' in target_objs_info[0]
-    assert 'container_idx' in target_objs_info[0]
+    assert 'name' in target_obj_info
+    assert 'idxs' in target_obj_info
+    assert 'type' in target_obj_info
+    assert 'container_idxs' in target_obj_info
 
     top_down_image = thor_interface.get_top_down_image(orthographic=False)
     assert top_down_image.size > 0
     assert np.std(top_down_image) > 0
     assert np.mean(top_down_image) > 0
 
-    plt.subplot(121)
-    plotting.plot_graph_on_grid(known_grid, known_graph)
+    ax = plt.subplot(121)
+    plotting.plot_graph_on_grid(ax, known_grid, known_graph)
     plt.text(robot_pose.x, robot_pose.y, '+', color='red', size=6, rotation=45)
 
     plt.subplot(122)
@@ -53,7 +53,7 @@ def test_thorinterface():
 
 
 @pytest.mark.timeout(15)
-def test_simulator():
+def test_scenegraph_simulator():
     '''This test initializes the SceneGraphSimulator and performs a basic operational test.'''
     args = get_args()
     save_dir = Path(args.save_dir)
@@ -62,7 +62,7 @@ def test_simulator():
     thor_interface = procthor.ThorInterface(args=args)
     known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses()
     simulator = SceneGraphSimulator(known_graph, args, target_objs_info, known_grid, thor_interface)
-    observed_graph, containers = simulator.initialize_graph_and_containers()
+    observed_graph, observed_grid, containers = simulator.initialize_graph_grid_and_containers()
 
     assert len(observed_graph.nodes) > 0
     assert len(observed_graph.edges) > 0
@@ -75,8 +75,8 @@ def test_simulator():
     assert np.std(top_down_image) > 0
     assert np.mean(top_down_image) > 0
 
-    plt.subplot(121)
-    plotting.plot_graph_on_grid(simulator.known_grid, observed_graph)
+    ax = plt.subplot(121)
+    plotting.plot_graph_on_grid(ax, observed_grid, observed_graph)
     plt.text(robot_pose.x, robot_pose.y, '+', color='red', size=6, rotation=45)
 
     plt.subplot(122)
