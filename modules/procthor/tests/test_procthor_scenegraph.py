@@ -1,7 +1,7 @@
 from procthor.scenegraph import SceneGraph
 
 
-def test_scene_graph_add_node():
+def test_scenegraph():
     sg = SceneGraph()
     # add apartment node
     idx_apartment0 = sg.add_node({'id': 'apartment0', 'type': [1, 0, 0, 0], 'position': [0, 0], 'name': 'apartment'})
