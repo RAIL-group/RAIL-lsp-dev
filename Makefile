@@ -37,10 +37,11 @@ DOCKER_CORE_VOLUMES = \
 	--volume="$(RESOURCES_BASE_DIR)/notebooks:/notebooks/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/ai2thor:/root/.ai2thor/:rw" \
 	--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"
-DOCKER_BASE = docker run --init --ipc=host --rm \
+DOCKER_BASE = docker run --platform linux/amd64 --init --ipc=host --rm \
 	$(DOCKER_ARGS) $(DOCKER_CORE_VOLUMES) \
 	${IMAGE_NAME}:${VERSION}
-DOCKER_PYTHON = $(DOCKER_BASE) python3
+DOCKER_PYTHON = $(DOCKER_BASE) uv run python
+DOCKER_JUPYTER = $(DOCKER_BASE) uv run --with jupyter jupyter
 
 ## ==== Helpers for setting up the environment ====
 define arg_check_unity
@@ -79,7 +80,8 @@ $(unity-simulator-full-name):
 .PHONY: build
 build: $(unity-simulator-full-name)
 	@echo "Building the Docker container"
-	@docker build -t ${IMAGE_NAME}:${VERSION} \
+	@DOCKER_CLI_HINTS=false docker build -t ${IMAGE_NAME}:${VERSION} \
+		--platform linux/amd64 \
 		--build-arg NUM_BUILD_CORES=$(NUM_BUILD_CORES) \
 		-f ./${DOCKERFILE} .
 
@@ -122,11 +124,12 @@ shell:
 .PHONY: notebook
 notebook: DOCKER_ARGS=-it -p 8889:8888
 notebook: build
-	@$(DOCKER_BASE) jupyter notebook \
+	@$(DOCKER_JUPYTER) notebook \
 		--notebook-dir=/notebooks \
 		--no-browser --allow-root \
 		--ip 0.0.0.0 \
 		--NotebookApp.token='' --NotebookApp.password=''
 
 # ==== Includes ====
+include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
