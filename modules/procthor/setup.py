@@ -8,4 +8,4 @@ setup(name='procthor',
       author='Raihan Islam Arnob',
       author_email='rarnob@gmu.edu',
       packages=find_packages(),
-      install_requires=['numpy', 'matplotlib'])
+      install_requires=[])

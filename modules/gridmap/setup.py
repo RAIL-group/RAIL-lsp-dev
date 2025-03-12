@@ -7,4 +7,4 @@ setup(name='gridmap',
       author='Gregory J. Stein',
       author_email='gjstein@gmu.edu',
       packages=find_packages(),
-      install_requires=['numpy'])
+      install_requires=[])
