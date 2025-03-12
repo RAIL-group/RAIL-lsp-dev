@@ -8,4 +8,4 @@ setup(name='environments',
       author='Gregory J. Stein',
       author_email='gjstein@gmu.edu',
       packages=find_packages(),
-      install_requires=['numpy', 'unitybridge'])
+      install_requires=[])
