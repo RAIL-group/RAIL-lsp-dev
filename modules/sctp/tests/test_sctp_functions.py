@@ -196,7 +196,7 @@ def test_sctp_gateway_lg_prob():
     actions = state4.get_actions()
     assert len(actions) == 2
     assert actions[1].target == 2
-    ## drone reaches v5 and robot reach v2 at the same time
+    ## drone reaches v5 and robot reach v2 at the same time after doing this action
     state_prob_cost3 = state4.transition(actions[1])
     assert len(state_prob_cost3) == 2
     act = core.Action(target=5)
@@ -204,7 +204,7 @@ def test_sctp_gateway_lg_prob():
     state5_2 = list(state_prob_cost3.keys())[1]
     assert state5_1.history.get_action_outcome(act) == EventOutcome.TRAV 
     assert state5_2.history.get_action_outcome(act) == EventOutcome.BLOCK 
-    assert state5_1.robot.need_action == state5_2.robot.need_action and state5_1.robot.need_action == True
+    assert state5_1.robot.need_action == state5_2.robot.need_action and state5_1.robot.need_action == False
     assert state5_2.robot.remaining_time == 0.0
     assert state5_2.uavs[0].need_action == True
     assert len(state5_1.gateway) == 1
@@ -225,11 +225,11 @@ def test_sctp_gateway_lg_prob():
     assert state6_1.uavs[0].need_action == False 
     assert state6_1.uavs[0].action.target == 3
     assert len(state6_1.gateway) == 1
-    assert len(state6_1.v_vertices) == 2
+    assert len(state6_1.v_vertices) == 3
     assert state6_1.is_goal_state == False
-    assert len(state6_2.gateway) == 1
-    assert len(state6_2.v_vertices) == 2
-    assert state6_2.is_goal_state == False
+    assert len(state6_2.gateway) == 0
+    assert len(state6_2.v_vertices) == 3
+    assert state6_2.is_goal_state == True
     assert state6_2.robot.need_action == True
  
     ##### assign action 5 to ground robot then move
@@ -246,35 +246,41 @@ def test_sctp_gateway_lg_prob():
     assert state7.uavs[0].last_node == 3
     assert state7.robot.need_action == False
     assert state7.uavs[0].need_action == True
-    #### moving back due to block at v5
+    #### moving back due to block at v5 and it is still terminate state
     actions = state6_2.get_actions()
     assert len(actions) == 1
     actions[0].target ==2
     state_prob_cost5_2 = state6_2.transition(actions[0])
     assert len(state_prob_cost5_2) == 1
     state7_2 = list(state_prob_cost5_2.keys())[0]
+    assert state7_2.robot.at_node == True 
+    assert state7_2.uavs[0].at_node == True
+    assert state7_2.uavs[0].need_action == True
+    assert state7_2.robot.need_action == False
+    # print(f"number of gateways: {len(state7_2.gateway)}")
     assert state7_2.is_goal_state == True
     
     ##### ground robot keep moving
-    # actions = state7.get_actions()
-    # assert len(actions) == 1
-    # state_prob_cost6 = state7.transition(actions[0])
-    # assert len(state_prob_cost6) == 1
-    # state8 = list(state_prob_cost6.keys())[0]
-    # assert state8.uavs[0].last_node == 3 and state8.uavs[0].need_action == False
-    # assert state8.robot.last_node == 5 and state8.robot.need_action == True
-    # actions = state8.get_actions()
-    # assert len(actions) == 2
-    # #### assign action 3 to the robot and move
-    # state_prob_cost6 = state8.transition(actions[1])
-    # assert len(state_prob_cost6) == 1
-    # state9 = list(state_prob_cost6.keys())[0]
-    # assert state9.is_goal_state == True
-    # assert state9.robot.need_action == True 
-    # assert state9.robot.last_node == 3
+    actions = state7.get_actions()
+    assert len(actions) == 1
+    assert actions[0].target == 3
+    state_prob_cost6 = state7.transition(actions[0])
+    assert len(state_prob_cost6) == 1
+    state8 = list(state_prob_cost6.keys())[0]
+    assert state8.uavs[0].last_node == 3 and state8.uavs[0].need_action == False
+    assert state8.robot.last_node == 5 and state8.robot.need_action == True
+    actions = state8.get_actions()
+    assert len(actions) == 2
+    #### assign action 3 to the robot and move
+    state_prob_cost6 = state8.transition(actions[1])
+    assert len(state_prob_cost6) == 1
+    state9 = list(state_prob_cost6.keys())[0]
+    assert state9.is_goal_state == True
+    assert state9.robot.need_action == True 
+    assert state9.robot.last_node == 3
 
     
-def test_sctp_gateway_splitting_sametime_sg():
+def test_sctp_gateway_splitting_sametime_dg():
     nodes = []
     node1 = graphs.Vertex(coord=(0.0, 0.0))
     nodes.append(node1)
@@ -304,6 +310,7 @@ def test_sctp_gateway_splitting_sametime_sg():
     assert len(init_state.gateway) == 2
     # the first transition - assign action 5 to the drone
     state_prob_cost = init_state.transition(actions[0])
+    assert actions[0].target == 5
     assert len(state_prob_cost) == 1
     state1 = list(state_prob_cost.keys())[0]
     actions = state1.get_actions()
@@ -321,45 +328,94 @@ def test_sctp_gateway_splitting_sametime_sg():
     assert state1_1.history.get_action_outcome(core.Action(target=6)) == EventOutcome.CHANCE
     actions = state1_1.get_actions()
     assert len(actions) == 3
-    ###### 3rd transition - assign action 6 to drone then move
+    ###### 3rd transition - assign action 6 to drone
     state_prob_cost = state1_2.transition(actions[0])
+    assert actions[0].target == 6
     assert len(state_prob_cost) == 2 
     state2_1 = list(state_prob_cost.keys())[0]
     state2_2 = list(state_prob_cost.keys())[1]
     assert state2_1.robot.need_action == state2_2.robot.need_action and state2_2.robot.need_action == True
-    assert state2_1.uavs[0].need_action == state2_2.uavs[0].need_action and state2_1.uavs[0].need_action == False
+    assert state2_1.uavs[0].need_action == state2_2.uavs[0].need_action and \
+            state2_1.uavs[0].need_action == True
     assert state2_2.is_goal_state == True
     assert len(state2_2.get_actions()) == 1 and len(state2_2.gateway) == 0
     assert state2_2.action_cost == 30.0
     actions = state2_1.get_actions()
-    assert len(actions) == 2 
-    ###### 4th transition -- assign action 3 to ground robot then move
+    assert len(actions) == 2
+    assert actions[0].rtype == RobotType.Ground and actions[0].target == 1
+    assert actions[1].rtype == RobotType.Ground and actions[1].target == 3
+    ###### 4th transition -- assign action 3 to ground robot, reassign an action to drone
     state_prob_cost = state2_1.transition(actions[1])
     assert len(state_prob_cost) == 1
     state3 = list(state_prob_cost.keys())[0]
-    assert state3.robot.last_node == 3 and state3.robot.need_action == True 
-    assert state3.uavs[0].need_action == False
-    ###### 5th transition -- assign action 8 to ground robot then move 
+    assert state3.robot.last_node == 6 and state3.robot.need_action == False 
+    assert state3.uavs[0].need_action == True
     actions = state3.get_actions()
     assert len(actions) == 2
+    assert actions[0].rtype == RobotType.Drone and actions[0].target == 7
+    assert actions[1].rtype == RobotType.Drone and actions[1].target == 8
+    ###### 5th transition -- assign action 8 to the drone then move     
     state_prob_cost = state3.transition(actions[1])
-    assert len(state_prob_cost) ==1
-    state4 = list(state_prob_cost.keys())[0]
-    assert state4.robot.last_node == 3
-    assert state4.robot.need_action==False and state4.robot.at_node == False 
-    assert state4.uavs[0].need_action == True and state4.uavs[0].at_node == True
-    assert state4.is_goal_state == False 
-    ###### 6th transition -- assign action 8 to the drone then move
-    actions = state4.get_actions()
-    assert len(actions) == 2
-    # print(actions[1])
-    state_prob_cost = state4.transition(actions[0])
     assert len(state_prob_cost) == 2
-    state5_1 = list(state_prob_cost.keys())[0]
-    state5_2 = list(state_prob_cost.keys())[1]
-    assert state5_2.is_goal_state == True 
-    assert len(state5_2.gateway) == 0
-    assert state5_2.robot.need_action == True 
-    assert state5_2.uavs[0].need_action == False
-
+    state4_1 = list(state_prob_cost.keys())[0]
+    state4_2 = list(state_prob_cost.keys())[1]
+    assert state4_1.robot.last_node == 3
+    assert state4_1.uavs[0].last_node == 8
+    assert state4_1.robot.need_action==False and state4_1.robot.at_node == True 
+    assert state4_1.uavs[0].need_action == True and state4_1.uavs[0].at_node == True
+    assert state4_1.is_goal_state == False 
+    ###### 6th transition -- assign action 7 to the drone
+    actions = state4_1.get_actions()
+    assert len(actions) == 1
+    state_prob_cost = state4_1.transition(actions[0])
+    assert len(state_prob_cost) == 1 # need to assign action for ground robot
+    state5 = list(state_prob_cost.keys())[0]
+    actions = state5.get_actions()
+    assert len(actions) == 2
+    assert actions[1].target == 8
+    assert len(state5.gateway) == 1
+    assert len(state5.v_vertices) == 3
+    ###### 7th transition --- assign action 8 to the ground robot then move
+    state_prob_cost = state5.transition(actions[1])
+    assert len(state_prob_cost ) == 2
+    state6_1 = list(state_prob_cost.keys())[0]
+    assert state6_1.uavs[0].need_action == True 
+    assert state6_1.robot.need_action == True 
+    assert state6_1.uavs[0].at_node == True and state6_1.robot.at_node == False
+    actions = state6_1.get_actions()
+    assert len(actions) == 1 and actions[0].target == 4
+    ###### 8th transition -- assign action 4 to the drone
+    state_prob_cost = state6_1.transition(actions[0])
+    assert len(state_prob_cost) == 1
+    state7 = list(state_prob_cost.keys())[0]
+    actions = state7.get_actions()
+    assert len(actions) == 2 and actions[0].target == 3 and actions[1].target == 8
+    ###### 9th transition -- reassign action 8 to the ground robot
+    state_prob_cost = state7.transition(actions[1])
+    assert len(state_prob_cost) == 1
+    state8 = list(state_prob_cost.keys())[0]
+    assert state8.uavs[0].at_node == True and state8.uavs[0].last_node == 4 and \
+        state8.uavs[0].need_action == True
+    assert state8.robot.at_node == False and state8.robot.last_node == 3 and \
+        state8.robot.need_action == False
+    ###### 10th transition -- wait action for drone
+    actions = state8.get_actions()
+    assert len(actions) == 1 and actions[0].target == 4
+    state_prob_cost = state8.transition(actions[0])
+    assert len(state_prob_cost) == 1
+    state9 = list(state_prob_cost.keys())[0]
+    assert state9.robot.need_action == True and state9.robot.at_node == True and \
+        state9.robot.last_node == 8
+    assert state9.uavs[0].need_action == False and state9.uavs[0].last_node == 4 and \
+        state9.uavs[0].at_node == True
+    ##### 11th transition -- assign action 4 to the robot
+    actions = state9.get_actions()
+    assert len(actions) == 2
+    state_prob_cost = state9.transition(actions[1])
+    assert len(state_prob_cost) == 1
+    state10 = list(state_prob_cost.keys())[0]
+    assert state10.robot.at_node == True and state10.robot.need_action == True 
+    assert state10.uavs[0].at_node == True and state10.uavs[0].need_action == False 
+    assert state10.is_goal_state == True
+    
 

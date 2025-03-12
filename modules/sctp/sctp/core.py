@@ -10,14 +10,16 @@ class Action(object):
         self.target = target # vertex id
         self.rtype=rtype
         self.start_pose = start_pose
+    def update_pose(self, pose):
+        self.start_pose = pose
     def __eq__(self, other):
         return self.target == other.target
     def __hash__(self):
         return hash(self.target)
     def __str__(self):
         if self.rtype == RobotType.Ground:
-            return f'Robot goes to vertex ({self.target})'
-        return f'Drone goes to vertex ({self.target})'
+            return f'Robot goes from {self.start_pose[0], self.start_pose[1]} to V{self.target}'
+        return f'Drone goes from {self.start_pose[0], self.start_pose[1]} to V{self.target}'
 
 class History(object):
     def __init__(self, data=None):
@@ -117,13 +119,14 @@ class SCTPState(object):
             self.goalID = last_state.goalID
             self.robot = last_state.robot.copy()
             self.uavs = [uav.copy() for uav in last_state.uavs]
-            self.uav_actions = [action for action in last_state.uav_actions]
-            self.robot_actions = [action for action in last_state.robot_actions]
+            self.uav_actions = [Action(target=action.target, rtype=action.rtype) for action in last_state.uav_actions]
+            self.robot_actions = [Action(target=action.target, rtype=action.rtype) for action in last_state.robot_actions]
             # self.action_cost = 0.0
             self.assigned_pois = last_state.assigned_pois.copy() # [poi for poi in last_state.assigned_pois]
             self.state_actions = []
             self.gateway = last_state.gateway.copy()
             self.v_vertices = last_state.v_vertices.copy()
+            self.noway2goal = last_state.noway2goal
         # self.cal_heuristic() 
 
     def get_actions(self):
@@ -148,50 +151,60 @@ class SCTPState(object):
         temp_state = self.copy()
         uav_needs_action = [uav.need_action for uav in temp_state.uavs]
         anyrobot_action = False
-        print("+++++++++++++++++++++++++++++++++++++++++++++++")
-        if any(uav_needs_action):
-            print(f"Assigning action: {action} to drone")
-            assert action.rtype == RobotType.Drone
-            # self.assigned_pois.add(action.target)
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++")
+        
+        if action.rtype == RobotType.Drone:
+            # print(f"Assigning action: {action} to drone")
+            assert any(uav_needs_action) == True
+            assert action in temp_state.uav_actions
             uav_idx = uav_needs_action.index(True)
             start_pos = temp_state.uavs[uav_idx].cur_pose
+            action.update_pose(start_pos)
             end_pos = [node for node in temp_state.vertices+temp_state.pois if node.id == action.target][0].coord
-            distance = np.linalg.norm(start_pos - np.array(end_pos))
-            direction = (np.array(end_pos) - start_pos)/distance
+            if np.isnan(start_pos[0]) or np.isnan(start_pos[1]):
+                ValueError("Start position is NaN") 
+            distance = np.linalg.norm(start_pos - np.array([end_pos[0], end_pos[1]]))
+            if distance != 0.0:
+                direction = (np.array([end_pos[0], end_pos[1]]) - start_pos)/distance
+            else:
+                direction = np.array([1.0, 1.0])
             temp_state.uavs[uav_idx].retarget(action, distance, direction)
-            temp_state.uav_actions = [act for act in temp_state.uav_actions if act != action]
             if action.target not in temp_state.assigned_pois:
                 temp_state.assigned_pois.add(action.target)
             anyrobot_action = True
-        elif temp_state.robot.need_action:
-            print(f"Assigning action: {action} to robot")
-            assert action.rtype == RobotType.Ground
+        elif action.rtype == RobotType.Ground:
+            # print(f"Assigning action: {action} to robot")
+            assert temp_state.robot.need_action == True
             start_pos = temp_state.robot.cur_pose
+            action.update_pose(start_pos)
             end_pos = [node for node in temp_state.vertices+temp_state.pois if node.id == action.target][0].coord
             distance = np.linalg.norm(start_pos - np.array(end_pos))
-            direction = (np.array(end_pos) - start_pos)/distance
+            if distance != 0.0:
+                direction = (np.array([end_pos[0], end_pos[1]]) - start_pos)/distance
+            else:
+                direction = np.array([1.0, 1.0])
             temp_state.robot.retarget(action, distance, direction)
             anyrobot_action = True
         assert anyrobot_action == True
-        print("##########################################")
+        # print("##########################################")
         return advance_state(temp_state, action)
 
     def copy(self):
         return SCTPState(last_state=self)
 
-def advance_state(state, action):
+def advance_state(state1, action):
+    state = state1.copy()
     # 1. if any robot needs action, determine its actions then return
     if any([uav.need_action for uav in state.uavs]):
         state.state_actions = [action for action in state.uav_actions]
         return {state: (1.0, 0.0)}
     if state.robot.need_action:
         # set action for this state
-        state.state_actions = [action for action in state.robot_actions]
+        state.state_actions = [Action(target=action.target, rtype=action.rtype) for action in state.robot_actions]
         stuck = is_robot_stuck(state)
         return {state: (1.0, 0.0)}
     
     # 2. Find the robot that finishes its action first.
-    # print("--------------------------------------------------------------------------")
     robot_reach_first, uav_index, time_advance = _get_robot_that_finishes_first(state)
     assert time_advance >= 0.0
     state.action_cost = time_advance
@@ -204,10 +217,10 @@ def advance_state(state, action):
         if uav.last_node != state.goalID:
             uav.advance_time(time_advance)
         else:
-            print("Drone is at goal - no move")
+            # print("Drone is at goal - no move")
             uav.need_action = False
     if robot_reach_first:
-        print(f"Robot finishes its action {state.robot.action} with time {time_advance}")
+        # print(f"Robot finishes its action {state.robot.action} with time {time_advance}")
         vertex_status = state.history.get_action_outcome(state.robot.action)
         vertex = [node for node in state.vertices+state.pois if node.id == state.robot.action.target][0]
         # update the uav action set.
@@ -239,8 +252,7 @@ def advance_state(state, action):
             return {state: (1.0, state.action_cost)}
         # if edge_status is 'CHANCE', we don't know the outcome.action
         elif vertex_status == EventOutcome.CHANCE:        
-            reset_uavs_action(state) problem right here --- so, in the next state, the drone 
-                will be assigned action first.
+            reset_uavs_action(state)
             # TRAVERSABLE
             new_state_trav = state.copy()
             new_state_trav.action_cost = state.action_cost
@@ -262,12 +274,13 @@ def advance_state(state, action):
             else:
                 new_state_block.robot_actions = [Action(target=edge[0])]
             new_state_block.state_actions = [action for action in new_state_block.robot_actions]
-            stuck = is_robot_stuck(new_state_block)
+            stuck= is_robot_stuck(new_state_block)
+                # print("robot gets stuck -- terminal state")
 
             return {new_state_trav: (1.0-vertex.block_prob, new_state_trav.action_cost),
                         new_state_block: (vertex.block_prob, new_state_block.action_cost)}
     else:
-        print(f"Drone finishes its action {state.uavs[0].action} with time {time_advance}")
+        # print(f"Drone finishes its action {state.uavs[0].action} with time {time_advance}")
         vertex_status = state.history.get_action_outcome(state.uavs[uav_index].action)
         vertex = [node for node in state.pois+state.vertices if node.id == state.uavs[uav_index].action.target][0]
         # determine all actions related to the poi and remove it from the set.
@@ -280,46 +293,20 @@ def advance_state(state, action):
         else:
             state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
         
-        # Check check update the state action set
-        # uav_na_idx = get_uavs_needAction(state)
-        # for uav_idx in uav_na_idx:
-        #     if uav_idx != uav_index:
-        #         state.uavs[uav_idx].need_action = False
-
         # if some uavs also finish theirs actions, reset need_action for the next iteration
         for i, uav in enumerate(state.uavs):
             if i != uav_index and uav.need_action: # and uav.last_node != state.goalID:
                 uav.need_action = False 
         if state.robot.at_node:
             state.robot.need_action = False 
-        # else: # reset if it is in middle of action
-            # state.robot.remaining_time = 0.0
-            # state.robot_actions = [Action(target=state.robot.edge[0]), Action(target=state.robot.edge[1])        
         
         if vertex_status == EventOutcome.BLOCK: # should not go here
             ValueError("Drones should never visit this node")
             return {state: (1.0, state.action_cost)}
         elif vertex_status == EventOutcome.TRAV: 
             assert vertex.id == state.goalID
-            # if state.robot.at_node:
-            #     # determine action for the ground robot
-            #     neighbors = [node for node in state.vertices+state.pois if node.id == state.robot.last_node][0].neighbors
-            #     state.robot_actions = [Action(target=neighbor) for neighbor in neighbors]
-            #     state.robot_actions = [action for action in state.robot_actions \
-            #                             if state.history.get_action_outcome(action) != EventOutcome.BLOCK]    
             return {state: (1.0, state.action_cost)}
         elif vertex_status == EventOutcome.CHANCE:
-            # if the robot reaches its goal, let it continue
-            # if state.robot.at_node:
-                # if state.robot.last_node == vertex.id or \
-                #         state.history.get_action_outcome(Action(target=state.robot.last_node))!=EventOutcome.CHANCE:
-                #     # determine action for the ground robot
-                #     neighbors = [node for node in state.vertices+state.pois if node.id == state.robot.last_node][0].neighbors
-                #     state.robot_actions = [Action(target=neighbor) for neighbor in neighbors]
-                #     state.v_vertices.add(state.robot.last_node)
-                #     state.gateway.discard(state.robot.last_node)
-                # else: 
-                # state.robot.need_action = False 
             if not state.robot.at_node: # reset if it is in middle of action
                 state.robot.need_action = True 
                 state.robot.remaining_time = 0.0
@@ -330,13 +317,7 @@ def advance_state(state, action):
             new_state_trav.action_cost = state.action_cost
             new_state_trav.history.add_history(state.uavs[uav_index].action, EventOutcome.TRAV)
             new_state_trav.robot_actions = [action for action in new_state_trav.robot_actions \
-                                if new_state_trav.history.get_action_outcome(action) != EventOutcome.BLOCK]
-            # if new_state_trav.robot.at_node:
-            #     if new_state_trav.robot.last_node == vertex.id or \
-            #             new_state_trav.history.get_action_outcome(Action(target=new_state_trav.robot.last_node))==EventOutcome.TRAV:
-            #         add_gateway(new_state_trav)
-            
-            
+                                if new_state_trav.history.get_action_outcome(action) != EventOutcome.BLOCK]            
             stuck = is_robot_stuck(new_state_trav)
             new_state_trav.state_actions = [action for action in new_state_trav.uav_actions]
 
@@ -351,12 +332,8 @@ def advance_state(state, action):
                 if new_state_block.history.get_action_outcome(Action(target=gate)) != EventOutcome.BLOCK:
                     new_state_block.gateway.add(gate)
 
-            # if new_state_block.robot.at_node:
-            #     if new_state_block.robot.last_node == vertex.id or \
-            #             new_state_block.history.get_action_outcome(Action(target=new_state_block.robot.last_node))==EventOutcome.TRAV:
-            #         add_gateway(new_state_block)
-
             stuck = is_robot_stuck(new_state_block)
+                # print("robot gets stuck -- terminal state")
             new_state_block.state_actions = [action for action in new_state_block.uav_actions]
             return {new_state_trav: (1.0-vertex.block_prob, new_state_trav.action_cost),
                         new_state_block: (vertex.block_prob, new_state_block.action_cost)}
@@ -382,20 +359,8 @@ def reset_uavs_action(state):
         if not uav.need_action and uav.action not in state.uav_actions and uav.last_node != state.goalID:
             uav.need_action = True 
             uav.remaining_time = 0.0
-       
-def get_uavs_needAction(state):
-    need_actions = []
-    for i, uav in enumerate(state.uavs):
-        if uav.need_action and uav.last_node != state.goalID:
-            need_actions.append(i)
-    return need_actions
 
-# def get_edge_from_action(state, action):
-#    v1 = [v for v in state.vertices if v.id == action.start][0]
-#    v2 = [v for v in state.vertices if v.id == action.end][0]
-#    edge = [e for e in state.edges if (e.hash_id == hash(v1) + hash(v2))][0]
-#    return edge
-    
+
 def _get_robot_that_finishes_first(state):
     time_remaining_uavs = []
     for uav in state.uavs:
@@ -404,19 +369,13 @@ def _get_robot_that_finishes_first(state):
     robot_reach_first = False
     if len(time_remaining_uavs)==0 or state.robot.remaining_time < min(time_remaining_uavs):
         robot_reach_first = True
-        # print(f"smallest time remaining of ground robot is: {state.robot.remaining_time}")
         return robot_reach_first, len(time_remaining_uavs), state.robot.remaining_time
     else:
         min_time = min(time_remaining_uavs)
         remaining_times = [uav.remaining_time for uav in state.uavs]
         uav_index = remaining_times.index(min_time)
-        # print(f"smallest time remaining of drone {uav_index} is: {min_time}")
         return robot_reach_first, uav_index, min_time
 
-
-
-# def get_action_traversability_from_history(history, action):
-#    return history.get_action_outcome(action)
 
 def sctp_rollout(state):
     cost = 0.0
@@ -438,3 +397,22 @@ def sctp_rollout(state):
         state = np.random.choice(list(node_action_transition.keys()), p=prob)
         cost += node_action_transition_cost[state]
     return cost
+
+# def get_uavs_needAction(state):
+#     need_actions = []
+#     for i, uav in enumerate(state.uavs):
+#         if uav.need_action and uav.last_node != state.goalID:
+#             need_actions.append(i)
+#     return need_actions
+
+# def get_edge_from_action(state, action):
+#    v1 = [v for v in state.vertices if v.id == action.start][0]
+#    v2 = [v for v in state.vertices if v.id == action.end][0]
+#    edge = [e for e in state.edges if (e.hash_id == hash(v1) + hash(v2))][0]
+#    return edge
+
+
+
+# def get_action_traversability_from_history(history, action):
+#    return history.get_action_outcome(action)
+

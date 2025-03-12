@@ -39,12 +39,12 @@ class POUCTNode(object):
 
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
     root = POUCTNode(state)
-    for _ in range(n_iterations):
-        print(f"--------------- a new iteration: robot is at {root.state.robot.last_node} --------------------")
-        assert root.state.robot.last_node == 1
-        assert root.state.robot.at_node == True
-        assert root.state.robot.edge == None
-        assert root.state.robot.cur_pose[0] ==0.0 and root.state.robot.cur_pose[1] ==0.0
+    for i in range(n_iterations):
+        # print(f"----------------------------- iteration: {i} ----------------------------")
+        # assert root.state.robot.last_node == 1
+        # assert root.state.robot.at_node == True
+        # assert root.state.robot.edge == None
+        # assert root.state.robot.cur_pose[0] ==0.0 and root.state.robot.cur_pose[1] ==0.0
         leaf = traverse(root, C=C)
         simulation_result = rollout(leaf, rollout_fn=rollout_fn)
         backpropagate(leaf, simulation_result)

@@ -112,7 +112,7 @@ def dijkstra(vertices, edges, goal):
     for node in vertices:
         node.heur2goal = dist[node]
     
-def plot_sctpgraph(nodes, edges, name="Testing Graph", path=None, 
+def plot_sctpgraph(nodes, pois, edges, name="Testing Graph", path=None, 
                startID=None, goalID=None, seed=None):
     """Plot graph using matplotlib."""
     plt.figure(figsize=(10, 10))
@@ -126,12 +126,12 @@ def plot_sctpgraph(nodes, edges, name="Testing Graph", path=None,
         mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
         mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
         costs = f"{edge.cost:.1f}"
-        plt.text(mid_x, mid_y+0.1, costs, color='red', fontsize=8)
+        plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=8)
 
     # Plot nodes
     for node in nodes:
         plt.scatter(node.coord[0], node.coord[1], color='black', s=50)
-        plt.text(node.coord[0], node.coord[1] + 0.2, f"{node.id}"+f"/{node.block_prob:.2f}", color='blue', fontsize=10)
+        plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=10)
         if startID is not None:
             if node.id == startID:
                 plt.text(node.coord[0] - 0.2, node.coord[1] - 0.5, "S", color='blue', fontsize=15)
@@ -141,15 +141,26 @@ def plot_sctpgraph(nodes, edges, name="Testing Graph", path=None,
             if node.id == goalID:
                 plt.text(node.coord[0] + 0.4, node.coord[1] - 0.4, "G", color='red', fontsize=15)
 
+    for poi in pois:
+        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=50)
+        plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"POI{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=9)
+        
+    
     if path is not None:
-        x_values = []
-        y_values = []
+        x_robot = []
+        y_robot = []
+        x_drone = []
+        y_drone = []
         for a in path:
-            x_values.append(nodes[a.start-1].coord[0])
-            y_values.append(nodes[a.start-1].coord[1])
-        x_values.append(nodes[path[-1].end-1].coord[0])
-        y_values.append(nodes[path[-1].end-1].coord[1])
-        plt.plot(x_values, y_values, color='orange', linewidth=2)
+            if a.rtype == RobotType.Ground:
+                x_robot.append(a.start_pose[0])
+                y_robot.append(a.start_pose[1])
+            elif a.rtype == RobotType.Drone:
+                x_drone.append(a.start_pose[0])
+                y_drone.append(a.start_pose[1])
+        plt.plot(x_robot, y_robot, color='orange', linewidth=2)
+        plt.scatter(x_robot, y_robot, color='orange',s=20)
+        plt.plot(x_drone, y_drone, color='purple', linewidth=2)
     plt.title(name)
     plt.xlabel("X-coordinate")
     plt.ylabel("Y-coordinate")

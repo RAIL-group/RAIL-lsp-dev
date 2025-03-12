@@ -1,7 +1,7 @@
 import pytest
 from sctp import sctp_graphs as graphs
 from sctp import core
-from sctp.param import EventOutcome
+from sctp.param import EventOutcome, RobotType
 import numpy as np
 
 def test_sctp_transition_lg_noblock():
@@ -62,7 +62,7 @@ def test_sctp_transition_lg_noblock():
     # ==================== end of block situation ======================
     action = state2.get_actions()
     assert len(action) == 1
-    # the third transition - assign action 5 to drone
+    # 3rd transition - assign action 5 to drone
     assert action[0].target == 5
     state_prob_cost2 = state2.transition(action[0])
     assert len(state_prob_cost2) == 1
@@ -71,7 +71,7 @@ def test_sctp_transition_lg_noblock():
     assert len(action) == 2
     assert state3.robot.edge is not None 
     assert state3.robot.at_node == False
-    # forth transition - assign action 1 to the ground robot and move
+    # 4th transition - assign action 1 to the ground robot and move
     assert action[0].target == 1
     state_prob_cost3 = state3.transition(action[0])
     assert len(state_prob_cost3) == 1
@@ -80,13 +80,13 @@ def test_sctp_transition_lg_noblock():
     state4 = list(state_prob_cost3.keys())[0]
     action = state4.get_actions()
     assert len(action) == 1
-    # fifth transition - assign action 4 to the ground robot and move
+    # 5th transition - assign action 4 to the ground robot and move
     assert action[0].target == 4
     state_prob_cost4 = state4.transition(action[0])
     assert len(state_prob_cost4) == 2
     assert list(state_prob_cost4.values())[0][1] == 2.5
     state = list(state_prob_cost4.keys())[0]
-    assert state.robot.need_action == True 
+    assert state.robot.need_action == False 
     assert state.robot.at_node == True 
     assert state.robot.edge == None 
     assert state.uavs[0].need_action == True 
@@ -200,3 +200,63 @@ def test_sctp_transition_lg_prob():
     state5_1 = list(state_prob_cost1.keys())[0]
     state5_2 = list(state_prob_cost1.keys())[1]
 
+def test_sctp_transition_dg_noblock():
+    # when you test transition, we focus on the number of children state, prob, and cost
+    start, goal, dgraph, robots = graphs.disjoint_unc()
+    for poi in dgraph.pois:
+        poi.block_prob = 0.0
+    init_state = core.SCTPState(graph=dgraph, goal=goal.id, robots=robots)
+    actions = init_state.get_actions()
+    assert len(actions) == 4
+    assert actions[0].rtype == RobotType.Drone
+    assert len(init_state.v_vertices) == 1
+    assert len(init_state.gateway) == 2
+    assert actions[0].target == 5 and actions[1].target == 6 and actions[2].target == 7 and actions[3].target == 8
+    ###### calling transition 1: assign action 7 to drone
+    state_prob_cost = init_state.transition(actions[2])
+    assert len(state_prob_cost) == 1
+    state = list(state_prob_cost.keys())[0]
+    assert list(state_prob_cost.values())[0][0] == 1.0
+    assert list(state_prob_cost.values())[0][1] == 0.0
+    assert state.robot.need_action == True and state.uavs[0].need_action == False
+    ######  calling transition 2: assign action 8 to the robot
+    actions = state.get_actions()
+    assert len(actions) == 2
+    assert actions[0].target == 5 and actions[1].target == 8
+    state_prob_cost = state.transition(actions[1])
+    assert len(state_prob_cost) == 2
+    assert list(state_prob_cost.values())[0][0] == 1.0 and list(state_prob_cost.values())[0][1] == pytest.approx(2.83, 0.01)
+    assert list(state_prob_cost.values())[1][0] == 0.0 and list(state_prob_cost.values())[1][1] == pytest.approx(2.83, 0.01)
+    state = list(state_prob_cost.keys())[0]
+    assert state.robot.need_action == True and state.uavs[0].need_action == False
+    assert state.robot.last_node == 8 and state.robot.at_node == True and state.uavs[0].at_node ==False
+    ##### transition call 3: if the edge is passable, keep going - assign action 4 to the ground robot:
+    actions = state.get_actions()
+    assert len(actions) == 1
+    assert actions[0].target == 4
+    state_prob_cost = state.transition(actions[0]) # drone reach its goal first
+    assert len(state_prob_cost) == 2
+    assert list(state_prob_cost.values())[0][0] == 1.0 and list(state_prob_cost.values())[0][1] == pytest.approx(0.17, 0.01) 
+    state = list(state_prob_cost.keys())[0]
+    assert state.robot.need_action == True and state.uavs[0].need_action == True 
+    assert state.robot.at_node == False and state.uavs[0].at_node == True
+    ###### transition call 4: assign action 5 to the drone
+    actions = state.get_actions()
+    assert len(actions) == 2 and actions[0].target == 5 and actions[1].target == 6
+    state_prob_cost = state.transition(actions[0])
+    assert len(state_prob_cost) == 1
+    assert list(state_prob_cost.values())[0][0] == 1.0 and list(state_prob_cost.values())[0][1] == 0.0
+    state = list(state_prob_cost.keys())[0]
+    assert state.uavs[0].need_action == False and state.robot.need_action == True 
+    assert state.robot.at_node == False and state.robot.edge is not None and state.uavs[0].at_node == True
+    ###### transition call 5: assign action 8 to the robot, then move
+    actions = state.get_actions()
+    assert len(actions) == 2 and actions[0].target == 8 and actions[1].target == 4
+    state_prob_cost = state.transition(actions[0])
+
+
+
+
+def test_sctp_transition_dg_prob():
+    # when you test transition, we focus on the number of children state, prob, and cost
+    pass
