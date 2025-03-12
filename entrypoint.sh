@@ -2,12 +2,8 @@
 set -e
 
 # Needed to point the system towards pytorch CUDA
-export LD_LIBRARY_PATH=/opt/venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/opt/venv/lib:$LD_LIBRARY_PATH
-
-# Ensures 'spot' is on the path
-export PYTHONPATH=/opt/venv/lib/python3.10/site-packages/:$PYTHONPATH
-
+export LD_LIBRARY_PATH=/opt/.venv/lib/python3.10/site-packages/torch/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/.venv/lib:$LD_LIBRARY_PATH
 
 # Main command
 if [ "$XPASSTHROUGH" = true ]
