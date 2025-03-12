@@ -1,17 +1,15 @@
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
 
-ARG NUM_BUILD_CORES
 ENV VIRTUALGL_VERSION=3.1.2
 # Enable all NVIDIA GPU capabilities (includes both CUDA and OpenGL)
 ENV NVIDIA_DRIVER_CAPABILITIES=all
+ENV VIRTUAL_ENV=/opt/.venv
+ENV PYTHON_VERSION=3.10
 
 # Install all apt dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-RUN apt-get update && apt-get install -y software-properties-common
-# Add ppa for python install
-RUN apt-add-repository -y ppa:deadsnakes/ppa
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl ca-certificates cmake git python3.10 python3.10-dev python3-pip python3.10-venv \
+    software-properties-common \
+    curl ca-certificates cmake git \
     xvfb libxv1 libxrender1 libxrender-dev libgeos-dev \
     libboost-all-dev libcgal-dev ffmpeg python3-tk \
     libxtst6 libglu1-mesa libegl1 \
@@ -24,17 +22,20 @@ RUN curl -sSL https://github.com/VirtualGL/virtualgl/releases/download/"${VIRTUA
 	/opt/VirtualGL/bin/vglserver_config -config +s +f -t && \
 	rm virtualgl_*_amd64.deb
 
+# Install uv & Initialize python setup
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN uv venv /opt/.venv --python ${PYTHON_VERSION}
+RUN uv pip install pybind11 wheel setuptools
+
+
 FROM base AS base-python
-RUN python3 -m venv /opt/venv
-ENV PATH=/opt/venv/bin:$PATH
-RUN pip3 install uv
 RUN uv pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
 RUN uv pip install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
 COPY modules/requirements.txt requirements.txt
 RUN uv pip install -r requirements.txt
 RUN uv pip install sknw
 
-# Build Spot
+
 FROM base AS spot
 # Install spot (for LTL specifications and PO-TLP)
 RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
@@ -44,45 +45,27 @@ RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
     make -j8 2>&1 | tee make.log && make install
 
 
-FROM base-python AS pkg-lsp
-RUN mkdir /temp
+FROM base AS pkg-lsp
 COPY modules/lsp_accel modules/lsp_accel
-RUN pip3 install modules/lsp_accel
 COPY modules/lsp modules/lsp
-RUN pip3 install modules/lsp
-RUN cp -r /opt/venv/lib/python3.10/site-packages/lsp* /temp
+RUN uv pip install modules/* --no-build-isolation
 
 
-FROM base-python AS pkg-core
-RUN mkdir /temp
+FROM base AS pkg-core
 COPY modules/common modules/common
-RUN pip3 install modules/common
-RUN cp -r /opt/venv/lib/python3.10/site-packages/common* /temp
 COPY modules/example modules/example
-RUN pip3 install modules/example
-RUN cp -r /opt/venv/lib/python3.10/site-packages/example* /temp
 COPY modules/learning modules/learning
-RUN pip3 install modules/learning
-RUN cp -r /opt/venv/lib/python3.10/site-packages/learning* /temp
 COPY modules/gridmap modules/gridmap
-RUN pip3 install modules/gridmap
-RUN cp -r /opt/venv/lib/python3.10/site-packages/gridmap* /temp
+RUN uv pip install modules/*
 
 
-FROM base-python AS pkg-environments
-RUN mkdir /temp
+FROM base AS pkg-environments
 COPY modules/unitybridge modules/unitybridge
-RUN pip3 install modules/unitybridge
-RUN cp -r /opt/venv/lib/python3.10/site-packages/unitybridge* /temp
 COPY modules/environments modules/environments
-RUN pip3 install modules/environments
-RUN cp -r /opt/venv/lib/python3.10/site-packages/environments* /temp
 COPY modules/procthor modules/procthor
-RUN pip3 install modules/procthor
-RUN cp -r /opt/venv/lib/python3.10/site-packages/procthor* /temp
+RUN uv pip install modules/*
 
 
-# Build the final image
 FROM base-python AS target
 
 # Needed for using matplotlib without a screen
@@ -92,21 +75,23 @@ RUN echo "backend: TkAgg" > matplotlibrc
 COPY modules/conftest.py modules/conftest.py
 COPY modules/setup.cfg modules/setup.cfg
 
-# Migrate files from spot
-COPY --from=spot /usr/local/lib/*spot* /opt/venv/lib
-COPY --from=spot /usr/local/lib/*bdd* /opt/venv/lib
-COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /opt/venv/lib/python3.10/site-packages/spot
-COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /opt/venv/lib/python3.10/site-packages/
+# # Migrate files from our package installs
+COPY --from=pkg-environments /opt/.venv/lib/ /opt/.venv/lib/
+COPY --from=pkg-environments /modules /modules
+COPY --from=pkg-core /opt/.venv/lib/ /opt/.venv/lib/
+COPY --from=pkg-core /modules /modules
+COPY --from=pkg-lsp /opt/.venv/lib/ /opt/.venv/lib/
+COPY --from=pkg-lsp /modules /modules
 
-# Migrate files from our package installs
-COPY --from=pkg-core /temp/ /opt/venv/lib/python3.10/site-packages
-COPY --from=pkg-core /modules/* /modules
-COPY --from=pkg-lsp /temp/ /opt/venv/lib/python3.10/site-packages
-COPY --from=pkg-lsp /modules/* /modules
-COPY --from=pkg-environments /temp/ /opt/venv/lib/python3.10/site-packages
-COPY --from=pkg-environments /modules/* /modules
+# Migrate files from spot
+COPY --from=spot /usr/local/lib/*spot* /opt/.venv/lib
+COPY --from=spot /usr/local/lib/*bdd* /opt/.venv/lib
+COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/spot
+COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
+
+from pkg-environments as final
