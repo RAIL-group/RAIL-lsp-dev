@@ -43,3 +43,26 @@ def test_mrtask_dfa_advance():
     dfa.advance(objects_found)
     assert not 'Knife' in dfa.get_useful_props()
     assert not 'Pillow' in dfa.get_useful_props()
+
+
+def test_mrtask_dfa_ordered_specification():
+    specification = '(!foo U bar) & (!bar U qux) & (F foo)'
+    dfa = DFAManager(specification)
+
+    assert 'foo' in dfa.get_useful_props()
+    assert 'bar' in dfa.get_useful_props()
+    assert 'qux' in dfa.get_useful_props()
+
+    assert not dfa.does_transition_state(('foo',))
+    assert not dfa.does_transition_state(('bar',))
+    assert dfa.does_transition_state(('qux',))
+
+    dfa.advance(('qux',))
+    assert not dfa.does_transition_state(('foo',))
+    assert dfa.does_transition_state(('bar',))
+
+    dfa.advance(('bar',))
+    assert dfa.does_transition_state(('foo',))
+
+    dfa.advance(('foo',))
+    assert dfa.has_reached_accepting_state()

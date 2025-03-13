@@ -5,6 +5,7 @@ from procthor.simulators import SceneGraphSimulator
 import mr_task
 import matplotlib.pyplot as plt
 from common import Pose
+from pathlib import Path
 
 
 def _setup(args):
@@ -29,9 +30,12 @@ def _setup(args):
     planning_loop = mr_task.planner.MRTaskPlanningLoop(
         robot_team, simulator, mrtask_planner.dfa_planner.has_reached_accepting_state)
 
+
     for step_data in planning_loop:
+        print("Total containers to left explore: ", len(planning_loop.containers_idx))
         mrtask_planner.update(
-            {'observed_graph': step_data['observed_graph']},
+            {'observed_graph': step_data['observed_graph'],
+             'observed_map': step_data['observed_map']},
             step_data['robot_poses'],
             step_data['explored_container_nodes'],
             step_data['unexplored_container_nodes'],
@@ -45,6 +49,8 @@ def _setup(args):
     fig = plt.figure(figsize=(10, 10), dpi=300)
     ax1 = plt.subplot(121)
     procthor.plotting.plot_graph_on_grid(known_grid, known_graph)
+    plt.scatter(robot_pose.x, robot_pose.y, marker='o', color='r')
+    plt.text(robot_pose.x, robot_pose.y, 'start', fontsize=8)
     for robot in robot_team:
         path = np.array(robot.all_paths)
         plt.plot(path[0], path[1])
@@ -57,7 +63,11 @@ def _setup(args):
     plt.suptitle(f'Specification: {specification}', fontweight="bold")
     ordering = str(', '.join([str(node) for node in planning_loop.ordering]))
     fig.supxlabel(f'Visit order: {ordering}', wrap=True)
-    plt.savefig(f'{args.save_dir}/eval_{args.seed}_r_{args.num_robots}_{args.planner}.png')
+    plt.savefig(f'{args.save_dir}/mtask_eval_planner_{args.planner}_seed_{args.seed}.png')
+
+    logfile = Path(args.save_dir) / f'log_{args.num_robots}.txt'
+    with open(logfile, "a+") as f:
+        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f}\n")
 
 
 if __name__ == '__main__':

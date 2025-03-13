@@ -52,7 +52,7 @@ def test_mrtask_robot_action_switch_unknown(delta_t):
     assert robot.time_remaining == progress_on_subgoalA + distances[(subgoal_nodeA, subgoal_nodeB)] + 10
 
 
-def test_mrstate_robot_action_switch_multiple():
+def test_mrtask_robot_action_switch_multiple():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
     robot_node = Node()
     robot = RobotNode(robot_node)
@@ -99,7 +99,7 @@ def test_mrstate_robot_action_switch_multiple():
     assert robot.info_time == 25 + 20
 
 
-def test_mrstate_robot_action_switch_same_subgoal_different_object():
+def test_mrtask_robot_action_switch_same_subgoal_different_object():
     '''Robot goes to SN_A. In mid-way, it has to switch action multiple times. Now it has to go SN_B'''
     robot_node = Node()
     robot = RobotNode(robot_node)
