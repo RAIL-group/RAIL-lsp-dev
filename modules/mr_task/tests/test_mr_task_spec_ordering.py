@@ -198,6 +198,146 @@ def test_mr_task_ordered_specification_unknown_cost():
     assert ordering[0][0].target_node == subgoal_node1
     assert ordering[0][1].target_node == subgoal_node2
 
+def test_mr_task_ordered_specification_states_first_unknown_second_known_action():
+    robot1 = RobotNode(Node())
+    robot2 = RobotNode(Node())
+    subgoal_node1 = Node(is_subgoal=True, name='s1')
+    subgoal_node2 = Node(is_subgoal=True, name='s2')
+    known_space_node_far = Node(props=('qux',), name='s3')
+
+    subgoal_prop_dict = {
+        (subgoal_node1, 'foo'): [1.0, 0, 0],
+        (subgoal_node1, 'bar'): [0.0, 0, 0],
+        (subgoal_node1, 'qux'): [0.0, 0, 0],
+        (subgoal_node2, 'foo'): [0.0, 0, 0],
+        (subgoal_node2, 'bar'): [1.0, 0, 0],
+        (subgoal_node2, 'qux'): [0.0, 0, 0],
+    }
+
+    distances = {
+        (robot1.start, subgoal_node1): 5,
+        (robot1.start, subgoal_node2): 15,
+        (robot1.start, known_space_node_far): 40,
+        (robot2.start, subgoal_node1): 20,
+        (robot2.start, subgoal_node2): 10,
+        (robot2.start, known_space_node_far): 30,
+        (subgoal_node1, known_space_node_far): 30,
+        (known_space_node_far, subgoal_node1): 30,
+        (subgoal_node2, known_space_node_far): 20,
+        (known_space_node_far, subgoal_node2): 20,
+        (subgoal_node1, subgoal_node2): 15,
+        (subgoal_node2, subgoal_node1): 15,
+        (subgoal_node1, subgoal_node1): 0,
+        (subgoal_node2, subgoal_node2): 0,
+    }
+
+    specification = '(!foo U bar) & (!bar U qux) & (F foo)'
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot1, robot2],
+                      planner=planner,
+                      distances=distances,
+                      subgoal_prop_dict=subgoal_prop_dict,
+                      known_space_nodes=[known_space_node_far],
+                      unknown_space_nodes=[subgoal_node1, subgoal_node2,])
+
+    action_S1fooUK = Action(subgoal_node1, ('foo',), subgoal_prop_dict)
+    action_S2barUK = Action(subgoal_node2, ('bar',), subgoal_prop_dict)
+    action_S3quxK = Action(known_space_node_far)
+
+    outcome_states = mrstate.transition(action_S2barUK)
+    assert len(outcome_states) == 1
+
+    outcome_states = list(outcome_states.keys())[0].transition(action_S3quxK)
+    assert len(outcome_states) == 2 # one where bar is found, another where bar is not found
+
+    historyS, historyF = History(), History()
+    historyS.add_event(action_S2barUK, EventOutcome.SUCCESS)
+    historyF.add_event(action_S2barUK, EventOutcome.FAILURE)
+
+    # The time is 30 because one robot has to wait and other robot finds qux in known space.
+    mrstateS = get_state_from_history(outcome_states, historyS)
+    assert outcome_states[mrstateS][0] == 1.0
+    assert outcome_states[mrstateS][1] == 30
+
+    mrstateF = get_state_from_history(outcome_states, historyF)
+    assert outcome_states[mrstateF][0] == 0.0
+    assert outcome_states[mrstateF][1] == 15
+
+
+def test_mr_task_ordered_specification_states_both_unknown_actions():
+    robot1 = RobotNode(Node())
+    robot2 = RobotNode(Node())
+    subgoal_node1 = Node(is_subgoal=True, name='s1')
+    subgoal_node2 = Node(is_subgoal=True, name='s2')
+    subgoal_node3 = Node(is_subgoal=True, name='s3')
+
+    subgoal_prop_dict = {
+        (subgoal_node1, 'foo'): [1.0, 0, 0],
+        (subgoal_node1, 'bar'): [0.0, 0, 0],
+        (subgoal_node1, 'qux'): [0.0, 0, 0],
+        (subgoal_node2, 'foo'): [0.0, 0, 0],
+        (subgoal_node2, 'bar'): [1.0, 0, 0],
+        (subgoal_node2, 'qux'): [0.0, 0, 0],
+        (subgoal_node3, 'foo'): [0.0, 0, 0],
+        (subgoal_node3, 'bar'): [0.0, 0, 0],
+        (subgoal_node3, 'qux'): [1.0, 0, 0],
+    }
+
+    distances = {
+        (robot1.start, subgoal_node1): 5,
+        (robot1.start, subgoal_node2): 15,
+        (robot1.start, subgoal_node3): 40,
+        (robot2.start, subgoal_node1): 20,
+        (robot2.start, subgoal_node2): 10,
+        (robot2.start, subgoal_node3): 30,
+        (subgoal_node1, subgoal_node3): 30,
+        (subgoal_node3, subgoal_node1): 30,
+        (subgoal_node2, subgoal_node3): 20,
+        (subgoal_node3, subgoal_node2): 20,
+        (subgoal_node1, subgoal_node2): 15,
+        (subgoal_node2, subgoal_node1): 15,
+        (subgoal_node1, subgoal_node1): 0,
+        (subgoal_node2, subgoal_node2): 0,
+    }
+
+    specification = '(!foo U bar) & (!bar U qux) & (F foo)'
+    planner = DFAManager(specification)
+    mrstate = MRState(robots=[robot1, robot2],
+                      planner=planner,
+                      distances=distances,
+                      subgoal_prop_dict=subgoal_prop_dict,
+                      known_space_nodes=[],
+                      unknown_space_nodes=[subgoal_node1, subgoal_node2,])
+
+    action_S2barUK = Action(subgoal_node2, ('bar',), subgoal_prop_dict)
+    action_S3quxUK = Action(subgoal_node3, ('qux',), subgoal_prop_dict)
+
+    outcome_states = mrstate.transition(action_S2barUK)
+    assert len(outcome_states) == 1
+
+    outcome_states = list(outcome_states.keys())[0].transition(action_S3quxUK)
+    assert len(outcome_states) == 3 # Bar is found (qux found, qux not found), and where bar is not found
+
+    historyS, historyF = History(), History()
+    historyF.add_event(action_S2barUK, EventOutcome.FAILURE)
+    historyS.add_event(action_S2barUK, EventOutcome.SUCCESS)
+    historySS = historyS.copy()
+    historySS.add_event(action_S3quxUK, EventOutcome.SUCCESS)
+    historySF = historyS.copy()
+    historySF.add_event(action_S3quxUK, EventOutcome.FAILURE)
+
+    mrstateSS = get_state_from_history(outcome_states, historySS)
+    assert outcome_states[mrstateSS][0] == 1.0
+    assert outcome_states[mrstateSS][1] == 30
+
+    mrstateSF = get_state_from_history(outcome_states, historySF)
+    assert outcome_states[mrstateSF][0] == 0.0
+    assert outcome_states[mrstateSF][1] == 30
+
+    mrstateF = get_state_from_history(outcome_states, historyF)
+    assert outcome_states[mrstateF][0] == 0.0
+    assert outcome_states[mrstateF][1] == 15
+
 
 def test_mr_task_ordered_specification_no_deadlock_happens_unknown():
     robot1 = RobotNode(Node())
