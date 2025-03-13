@@ -15,6 +15,7 @@ class MRTaskPlanningLoop(object):
         self.verbose = verbose
         self.ordering = []
         self.goal_reached_fn = goal_reached_fn
+        self.revealed_container_nodes = {}
 
     def __iter__(self):
         counter = 0
@@ -23,7 +24,9 @@ class MRTaskPlanningLoop(object):
                                                     name=idx,
                                                     location=self.simulator.known_graph.get_node_position_by_idx(idx))
                                                for idx in self.containers_idx]
-            self.explored_container_nodes = []
+            self.explored_container_nodes = [Node(name=idx, props=objects,
+                                                  location=self.simulator.known_graph.get_node_position_by_idx(idx))
+                                             for idx, objects in self.revealed_container_nodes.items()]
 
             yield {
                 "robot_poses": [robot.pose for robot in self.robots],
@@ -31,6 +34,7 @@ class MRTaskPlanningLoop(object):
                 "unexplored_container_nodes": self.unexplored_container_nodes,
                 "object_found": self.found_objects_name,
                 "observed_graph": self.graph,
+                "observed_map": self.simulator.known_grid,
             }
 
             if self.goal_reached_fn():
@@ -55,16 +59,18 @@ class MRTaskPlanningLoop(object):
                 robot.move(path)
 
             first_revealed_action = self.joint_action[np.argmin(distances)]
+            first_revealed_action_idx = first_revealed_action.target_node.name
 
             self.graph, self.containers_idx = self.simulator.update_graph_and_containers(
                 observed_graph=self.graph,
                 containers=self.containers_idx,
-                chosen_container_idx=first_revealed_action.target_node.name
+                chosen_container_idx=first_revealed_action_idx
             )
-            self.found_objects_idx = self.graph.get_adjacent_nodes_idx(first_revealed_action.target_node.name, filter_by_type=3)
+            self.found_objects_idx = self.graph.get_adjacent_nodes_idx(first_revealed_action_idx, filter_by_type=3)
             self.found_objects_name = tuple(self.graph.get_node_name_by_idx(idx) for idx in self.found_objects_idx)
+            self.revealed_container_nodes[first_revealed_action_idx] = self.found_objects_name
 
-            self.ordering.append(self.graph.get_node_name_by_idx(first_revealed_action.target_node.name))
+            self.ordering.append(self.graph.get_node_name_by_idx(first_revealed_action_idx))
             counter += 1
 
 

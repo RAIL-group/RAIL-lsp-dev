@@ -32,7 +32,7 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
 
         for node in self.unexplored_container_nodes:
             for obj in self.objects_to_find:
-                PS = object_container_prop_dict[obj][node.name]
+                PS = round(object_container_prop_dict[obj][node.name], 2)
                 self.node_prop_dict[(node, obj)] = [PS, 0, 0]
 
     def compute_joint_action(self):
@@ -40,8 +40,8 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
             return None, None
 
         robot_nodes = [mr_task.core.RobotNode(Node(location=(r_pose.x, r_pose.y))) for r_pose in self.robot_poses]
-        distances = get_inter_distances_nodes(self.explored_container_nodes + self.unexplored_container_nodes,
-                                              robot_nodes)
+        distances = get_inter_distances_nodes(
+            self.explored_container_nodes + self.unexplored_container_nodes, robot_nodes, observed_map=self.observed_map)
         mrstate = mr_task.core.MRState(robots=robot_nodes,
                                        planner=copy.copy(self.dfa_planner),
                                        distances=distances,
@@ -52,6 +52,8 @@ class LearnedMRTaskPlanner(BaseMRTaskPlanner):
             return 0
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
             mrstate, n_iterations=self.args.num_iterations, C=self.args.C, rollout_fn=rollout_fn)
+        if len(ordering) < len(self.robot_poses):
+            ordering += [np.random.choice(ordering) for _ in range(len(self.robot_poses) - len(ordering))]
         print("action ordering=", [(action.target_node.name, action.props) for action in ordering])
         print("costs=", costs)
         return ordering[:len(self.robot_poses)], cost

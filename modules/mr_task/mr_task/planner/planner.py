@@ -21,6 +21,7 @@ class BaseMRTaskPlanner(object):
 
     def update(self, observations, robot_poses, explored_container_nodes, unexplored_container_nodes, objects_found):
         self.observed_graph = observations['observed_graph']
+        self.observed_map = observations['observed_map']
         self.robot_poses = robot_poses
         self.explored_container_nodes = explored_container_nodes
         self.unexplored_container_nodes = unexplored_container_nodes
@@ -58,10 +59,14 @@ class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
         containers = [Node(location=node.location, name=node.name, is_subgoal=False)
                        for node in self.unexplored_container_nodes]
         distances = mr_task.utils.get_inter_distances_nodes(
-            containers, robot_nodes)
+            containers, robot_nodes, observed_map=self.observed_map)
         # To make sure that this function returns action object
         cost_dictionary = [None for _ in range(len(self.robot_poses))]
         for i in range(len(self.robot_poses)):
+            # cost_dictionary[i] = {
+            #     container: distances[(robot_nodes[i].start, container)]
+            #     for container in containers
+            # }
             cost_dictionary[i] = {
                 container: distances[(robot_nodes[i].start, container)]
                 for container in containers

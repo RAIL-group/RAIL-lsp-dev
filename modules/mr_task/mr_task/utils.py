@@ -1,19 +1,33 @@
 import os
 import numpy as np
+import gridmap
+from common import compute_path_length
 
 SBERT_PATH = '/resources/sentence_transformers/'
 
-def get_inter_distances_nodes(nodes, robot_nodes):
-    distances = {
-        (node1, node2): np.linalg.norm(np.array(node1.location) - np.array(node2.location))
-        for node1 in nodes
-        for node2 in nodes
-    }
-    distances.update({
-        (robot_node.start, node): np.linalg.norm(np.array(robot_node.start.location) - np.array(node.location))
-        for robot_node in robot_nodes
-        for node in nodes
-    })
+def get_inter_distances_nodes(nodes, robot_nodes, observed_map=None):
+    if observed_map is None:
+        distances = {
+            (node1, node2): np.linalg.norm(np.array(node1.location) - np.array(node2.location))
+            for node1 in nodes
+            for node2 in nodes
+        }
+        distances.update({
+            (robot_node.start, node): np.linalg.norm(np.array(robot_node.start.location) - np.array(node.location))
+            for robot_node in robot_nodes
+            for node in nodes
+        })
+    else:
+        distances = {}
+        for node1 in nodes:
+            cost_grid, _ = gridmap.planning.compute_cost_grid_from_position(
+                observed_map, node1.location, use_soft_cost=True)
+            distances.update({
+                (node1, node2): cost_grid[node2.location[0], node2.location[1]] for node2 in nodes
+            })
+            distances.update({
+                (robot.start, node1): cost_grid[robot.start.location[0], robot.start.location[1]] for robot in robot_nodes
+            })
     return distances
 
 def get_partial_path_upto_distance(cost_grid, path, distance):

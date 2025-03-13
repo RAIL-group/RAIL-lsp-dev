@@ -1,7 +1,10 @@
+import pdb
 import copy
 from enum import Enum
+import numpy as np
 
 ACTION_PRIORITY = 5
+NUM_MAX_ACTIONS = 8
 EventOutcome = Enum('EventOutcome', ['CHANCE', 'SUCCESS', 'FAILURE'])
 
 
@@ -12,10 +15,10 @@ class Node(object):
         self.is_subgoal = is_subgoal
         self.location = location
         self.frontier = frontier
-        self.hash_id = hash(str(self.location) + str(self.props) + str(self.is_subgoal))
+        self.hash_id = hash(str(self.location) + str(self.props) + str(self.name) + str(self.is_subgoal))
 
     def __repr__(self):
-        return f'{self.location}'
+        return f'{self.location, self.name, self.props}'
 
     def __hash__(self):
         return self.hash_id
@@ -106,6 +109,7 @@ class MRState(object):
         self.known_space_nodes = known_space_nodes
         self.unknown_space_nodes = unknown_space_nodes
         self.subgoal_prop_dict = subgoal_prop_dict
+        self.waiting_robot_props = [robot.action.props[0] for robot in self.robots if robot.is_waiting]
         self.history = history
         if planner.is_accepting_state(self.dfa_state):
             self.is_goal_state = True
@@ -131,35 +135,65 @@ class MRState(object):
         return self.actions
 
     def get_all_actions(self):
-        useful_props = self.planner.get_useful_props()
-        ks_actions = [Action(node) for node in self.known_space_nodes if self.planner.does_transition_state(node.props)]
+        # useful props that any robot has not found yet
+        useful_props = [props for props in self.planner.get_useful_props()
+                         if props not in self.waiting_robot_props]
+        # ks actions that are useful
+        ks_actions = [Action(node) for node in self.known_space_nodes if set(node.props) & set(useful_props)]
+        # unk actions that are useful
         unk_actions = [Action(node, (props,), self.subgoal_prop_dict)
                        for node in self.unknown_space_nodes
                        for props in useful_props]
+        # remove unknown actions that are already in history
         unk_actions = [action for action in unk_actions
                        if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
-        return ks_actions + unk_actions
+
+        actions = ks_actions + unk_actions
+        return filter_actions(self.planner, self.robots, actions, self.distances)
 
     def copy(self, robots, planner, history):
-        return MRState(robots=robots,
-                       planner=planner,
-                       history=history,
-                       distances=self.distances,
-                       known_space_nodes=self.known_space_nodes,
-                       unknown_space_nodes=self.unknown_space_nodes,
-                       subgoal_prop_dict=self.subgoal_prop_dict)
+        mrstate = MRState(robots=robots,
+                          planner=planner,
+                          history=history,
+                          distances=self.distances,
+                          known_space_nodes=self.known_space_nodes,
+                          unknown_space_nodes=self.unknown_space_nodes,
+                          subgoal_prop_dict=self.subgoal_prop_dict)
+        return mrstate
 
     def get_action_priority_heuristic(self):
         useful_props = self.planner.get_useful_props()
-        action_priority = {a:  ACTION_PRIORITY * sum([self.subgoal_prop_dict[(a.target_node, props)][0]
-                                for props in useful_props])
-                                for a in self.actions}
+        action_priority = {a: ACTION_PRIORITY * sum(self.subgoal_prop_dict[(a.target_node, props)][0]
+                                                     if a.target_node.is_subgoal else 1
+                                                    for props in useful_props)
+                           for a in self.actions}
         return action_priority
+
+def filter_actions(dfa_planner, robots, actions, distances=None):
+    num_robots = len(robots)
+    # if there's only one robot that's not waiting, remove actions that makes the robot wait
+    # i.e., only return action that transitions the state
+    # This is done to prevent deadlocking (i.e., all robots waiting for each other)
+    num_non_waiting_robots = sum([not robot.is_waiting for robot in robots])
+    if num_non_waiting_robots == 1:
+        actions = [action for action in actions if dfa_planner.does_transition_state(action.props)]
+    # if there's more than one robot and total actions from that state > total number of robots that need action,
+    # remove actions for nodes that are already targeted by other robots
+    if num_robots > 1 and len(actions) > num_robots:
+        # for robot in robots:
+            # if robot.needs_action and robot.action is None:
+            #     pdb.set_trace()
+        other_robots_target = [robot.action.target_node for robot in robots if not robot.needs_action]
+        actions = [action for action in actions if action.target_node not in other_robots_target]
+
+    # TODO: prune actions based on distance and probability
+    actions = sorted(actions, key=lambda x: x.PS, reverse=True)
+    # return top NUM_MAX_ACTIONS actions only
+    return actions[:NUM_MAX_ACTIONS]
 
 
 def advance_mrstate(mrstate, prob=1.0, cost=0.0):
     '''This function propagates the state as far as it goes, until some robot needs re-assignment'''
-
     # 1.) If any robots need an action, return:
     if any(robot.needs_action for robot in mrstate.robots):
         robots = [robot.copy() for robot in mrstate.robots]
@@ -175,11 +209,31 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
     if event_outcome == EventOutcome.SUCCESS:
         # 1) If SUCCESS, advance the dfa_state
         dfa_planner = copy.copy(mrstate.planner)
+
+        # 1.1) If the robot's action doesn't transition the state, but the action is 'useful'; the robot waits.
+        if not dfa_planner.does_transition_state(event_robot.action.props):
+            event_robot.is_waiting = True
+            waiting_state = mrstate.copy(robots=robots,
+                                         planner=copy.copy(dfa_planner),
+                                         history=mrstate.history.copy())
+            # If the last robot is remaining, and it is also taking action that would lead to a waiting state, reset
+            # EDGE CASE:
+            non_waiting_robots = [robot for robot in waiting_state.robots if not robot.is_waiting]
+            if len(non_waiting_robots) == 1:
+                about_to_wait_robot = non_waiting_robots[0]
+                if not dfa_planner.does_transition_state(about_to_wait_robot.action.props):
+                    about_to_wait_robot.reset_needs_action()
+
+            # Other robots looking for the same object (event_robot.action.props) need to be retargeted.
+            for robot in waiting_state.robots:
+                if not robot.is_waiting and robot.action.props[0] in waiting_state.waiting_robot_props:
+                    robot.reset_needs_action()
+            return advance_mrstate(waiting_state, prob=prob, cost=cost + event_time)
+
         dfa_planner.advance(event_robot.action.props)
         event_robot.reset_needs_action()
-
         # 2). Check for 'waiting' agents & see if they can advance the state as well.
-        # _advance_dfa_if_robots_waiting(event_robot, robots, dfa_planner)
+        _advance_dfa_if_robots_waiting(event_robot, robots, dfa_planner)
 
         # 3). Some robots' actions will not be 'useful' anymore and also need retargeting.
         useful_props = dfa_planner.get_useful_props()
@@ -200,7 +254,7 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
                                        planner=copy.copy(mrstate.planner),
                                        history=success_history)
 
-        # 2. Propagate the success state again as no robots need re-targeting
+        # 2. Propagate the success state again because no robots need re-targeting
         outcome_states_success = advance_mrstate(success_mrstate,
                                                  cost=cost + event_time,
                                                  prob=prob * event_robot.action.PS)
@@ -208,7 +262,7 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
         # 3. Create a FAILURE state from mrstate with the event_robot's action as FAILURE
         failure_history = mrstate.history.copy()
         failure_history.add_event(event_robot.action, EventOutcome.FAILURE)
-        # 3.1 Find all the robots those were doing the same action, they need re-targeting
+        # 3.1 Find all the robots that were doing the same action; they need re-targeting
         failure_robots = [robot.copy() for robot in robots]
         event_failure_robots = [robot for robot in failure_robots if robot.action == event_robot.action]
         for robot in event_failure_robots:
@@ -223,10 +277,13 @@ def advance_mrstate(mrstate, prob=1.0, cost=0.0):
 
 
 def _get_robot_that_finishes_first(mrstate):
+    useful_props = mrstate.planner.get_useful_props()
     all_robots = [robot.copy() for robot in mrstate.robots]
     events = [(robot, *get_next_event_and_time(robot, mrstate.history))
               for robot in all_robots
-              if mrstate.planner.does_transition_state(robot.action.props)]
+              if robot.action.props[0] in useful_props and not robot.is_waiting]
+    if len(events) == 0:
+        pdb.set_trace()
     shortest_event = min(events, key=lambda x: x[2])
     event_robot, event_outcome, event_time = shortest_event
     return all_robots, event_robot, event_outcome, event_time
@@ -240,9 +297,10 @@ def _advance_dfa_if_robots_waiting(event_robot, robots, dfa_planner):
             # [REVISIT: If info time is <=0 (which is set to 0 in the advance function), the robot
             # is waiting.]
             if (robot != event_robot and dfa_planner.does_transition_state(robot.action.props)
-                    and robot.info_time == 0):
+                    and robot.is_waiting):
                 dfa_planner.advance(robot.action.props)
                 robot.reset_needs_action()
+                robot.is_waiting = False
                 do_loop = True
 
 
@@ -257,10 +315,12 @@ class RobotNode(object):
         self._start_offset = 0
         self.time_remaining = 0
         self.info_time = 0
+        self._max_delta_t = 0
         self.id = RobotNode._id_counter
         RobotNode._id_counter += 1
         self._same_direction = True
         self.hash_id = hash(start_node) + hash(self.id)
+        self.is_waiting = False
 
     def retarget(self, new_action, distances):
         if not self.time_remaining == 0:
@@ -288,17 +348,16 @@ class RobotNode(object):
         # when a robot finds an object, other robot searching for the same object needs to be re-targeted.
 
     def advance_time(self, delta_time):
-        self.info_time -= delta_time
-        self.time_remaining -= delta_time
-        self._cost_to_target -= delta_time
-        self._start_offset = self._start_offset - self._same_direction * delta_time + \
-            + (1 - self._same_direction) * delta_time
+        # The maximum time that can be advanced is the time_remaining. i.e, max_delta_t
+        # pdb.set_trace()
+        if not self.is_waiting:
+            delta_time = min(delta_time, self._max_delta_t)
+            self.info_time -= delta_time
+            self.time_remaining -= delta_time
+            self._cost_to_target -= delta_time
+            self._start_offset = self._start_offset - self._same_direction * delta_time + \
+                + (1 - self._same_direction) * delta_time
 
-        self.info_time = max(0, self.info_time)
-        self.time_remaining = max(0, self.time_remaining)
-
-        # What if history says we succeed, so that we end up with negative info time?
-        # There's more to consider here, I think. Will need a test to resolve this.
 
     def _update_time_to_target(self, new_action, distances):
         inter_node_time = distances[(self.start, new_action.target_node)]
@@ -306,6 +365,7 @@ class RobotNode(object):
             (1 - self._same_direction) * abs(self._start_offset) + \
             inter_node_time
         self.time_remaining = max(0, self._cost_to_target + new_action.RS)
+        self._max_delta_t = self.time_remaining
         self.info_time = max(0, self._cost_to_target + min(new_action.RS, new_action.RE))
 
     def copy(self):
@@ -316,9 +376,11 @@ class RobotNode(object):
         new_robot.info_time = self.info_time
         new_robot.id = self.id
 
+        new_robot._max_delta_t = self._max_delta_t
         new_robot._cost_to_target = self._cost_to_target
         new_robot._start_offset = self._start_offset
         new_robot._same_direction = self._same_direction
+        new_robot.is_waiting = self.is_waiting
 
         return new_robot
 
