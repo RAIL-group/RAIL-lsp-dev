@@ -109,6 +109,10 @@ class SCTPState(object):
                     [self.gateway.add(nei) for nei in v.neighbors]
             self.v_vertices = set()
             self.v_vertices.add(self.robot.last_node)
+            self.heuristic_vertices = dict()
+            self.heuristic_vertices[self.robot.last_node] = [v.heur2goal for v in self.vertices+self.pois if v.id == self.robot.last_node][0]
+            self.heuristic = self.heuristic_vertices[self.robot.last_node]
+            # self.cal_heuristic()
         else:
             self.history = last_state.history.copy()
             self.poi_probs = last_state.poi_probs
@@ -127,21 +131,37 @@ class SCTPState(object):
             self.gateway = last_state.gateway.copy()
             self.v_vertices = last_state.v_vertices.copy()
             self.noway2goal = last_state.noway2goal
-        # self.cal_heuristic() 
+            self.heuristic = last_state.heuristic
+            self.heuristic_vertices = last_state.heuristic_vertices.copy()
+        
 
     def get_actions(self):
         return self.state_actions
 
     # need to work on this - the heuristic is changed
-    # def cal_heuristic(self): 
-    #     if self.robot.at_node:
-    #         self.heuristic = [node for node in self.vertices + self.pois \
-    #                           if node.id == self.robot.last_node][0].heur2goal
-    #     else:
-    #         node1_id = self.robot.edge[0]
-    #         node2_id = self.robot.edge[1]
-    #          = [node for node in self.vertices + self.pois \
-    #                           if node.id == self.robot.last_node][0].heur2goal
+    def update_heuristic(self): 
+        if self.robot.at_node:
+            if self.robot.last_node in self.heuristic_vertices: # is None:
+                self.heuristic = self.heuristic_vertices[self.robot.last_node]+20.0
+            else:
+                self.heuristic = [node for node in self.vertices + self.pois \
+                              if node.id == self.robot.last_node][0].heur2goal                
+            self.heuristic_vertices[self.robot.last_node] = self.heuristic
+            
+        else:
+            edge_heuristics = []
+            for node_id in self.robot.edge:
+                if node_id in self.heuristic_vertices:
+                    edge_heu = self.heuristic_vertices[node_id]
+                else:
+                    edge_heu = [node for node in self.vertices + self.pois \
+                              if node.id == node_id][0].heur2goal
+                edge_heuristics.append(edge_heu)
+            
+            self.heuristic = min([edge_heuristics[i] + np.linalg.norm(self.robot.cur_pose - np.array(node.coord)) 
+                                  for i, edge_id in enumerate(self.robot.edge) \
+                                  for node in self.vertices + self.pois \
+                                    if node.id == edge_id])
     @property
     def is_goal_state(self):
         return self.robot.last_node == self.goalID or self.noway2goal
@@ -219,12 +239,16 @@ def advance_state(state1, action):
         else:
             # print("Drone is at goal - no move")
             uav.need_action = False
+    state.update_heuristic()
     if robot_reach_first:
         # print(f"Robot finishes its action {state.robot.action} with time {time_advance}")
         vertex_status = state.history.get_action_outcome(state.robot.action)
         vertex = [node for node in state.vertices+state.pois if node.id == state.robot.action.target][0]
         # update the uav action set.
         state.uav_actions = [action for action in state.uav_actions if action.target != state.robot.last_node]
+        if len(state.uav_actions) == 0:
+            state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone)]
+        
         visiting = False
         state.gateway.discard(state.robot.last_node)
         if state.robot.last_node not in state.v_vertices:
@@ -340,6 +364,8 @@ def advance_state(state1, action):
 
 
 def is_robot_stuck(state):
+    if state.robot.last_node == state.goalID:
+        return False
     if len(state.robot_actions) == 0 or len(state.gateway)==0:
         state.noway2goal = True 
         state.action_cost += STUCK_COST
@@ -381,16 +407,24 @@ def sctp_rollout(state):
     cost = 0.0
     while not state.is_goal_state:
         actions = state.get_actions()
-        robot_assign = True 
-        if any([uav.need_action for uav in state.uavs]):
-            robot_assign = False
-        action_cost = [(action, state.transition(action)) for action in actions]
+        assert len(actions) > 0
+        rtype = actions[0].rtype
+        # compute the best action depending on drone or ground robot
+        if rtype == RobotType.Ground:
+            state_prob_costs = [(action, state.transition(action)) for action in actions]
+            best_states = min(state_prob_costs, key=lambda x: list(x[1].keys())[0].heuristic + list(x[1].keys())[0].action_cost)
+            state1 = list(best_states[1].keys())[0]
+            best_states = best_states[1]
+            assert len(state1.v_vertices) == len(state1.heuristic_vertices)
+        elif rtype==RobotType.Drone: # random selection
+            best_action = np.random.choice(actions)
+            best_states = state.transition(best_action)
+        else:
+            TypeError("robot type is wrong")
 
-
-        best_action = min(action_cost, key=lambda x: list(x[1].keys())[0].heuristic)
         node_action_transition = {}
         node_action_transition_cost = {}
-        for state, (prob, cost) in best_action[1].items():
+        for state, (prob, cost) in best_states.items():
             node_action_transition[state] = prob
             node_action_transition_cost[state] = cost
         prob = [p for p in node_action_transition.values()]

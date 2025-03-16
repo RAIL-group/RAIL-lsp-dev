@@ -418,4 +418,3 @@ def test_sctp_gateway_splitting_sametime_dg():
     assert state10.uavs[0].at_node == True and state10.uavs[0].need_action == False 
     assert state10.is_goal_state == True
     
-
