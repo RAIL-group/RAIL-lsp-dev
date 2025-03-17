@@ -35,3 +35,22 @@ def save_navigation_video(trajectory, thor_interface, video_file_path, fig_title
         plt.title(f'{fig_title} [Step: {step}]', fontsize='10')
         writer.grab_frame()
     writer.finish()
+
+
+def plot_plan_progression(ax, plan):
+    textstr = ''
+    for p in plan:
+        textstr += str(p) + '\n'
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+
+    # Place a text box in upper left in axes coords
+    ax.text(0, 1, textstr, transform=ax.transAxes, fontsize=5,
+            verticalalignment='top', bbox=props)
+    ax.box(False)
+    # Hide x and y ticks
+    ax.xticks([])
+    ax.yticks([])
+
+    # Add labels and title
+    ax.title.set_text('Plan progression')
+    ax.title.set_fontsize(6)
