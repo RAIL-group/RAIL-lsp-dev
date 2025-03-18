@@ -93,5 +93,3 @@ COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /opt/.venv/lib/
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-
-from pkg-environments as final
