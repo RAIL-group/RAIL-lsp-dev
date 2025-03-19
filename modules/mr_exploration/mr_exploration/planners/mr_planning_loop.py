@@ -103,7 +103,7 @@ class MRPlanningLoop():
             paths = []
             for i in range(self.num_robots):
                 cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                    planning_grids[i], [self.chosen_subgoals[i].x, self.chosen_subgoals[i].y], use_soft_cost=True) #mmmmmmmm... 
+                    planning_grids[i], self.chosen_subgoals[i].get_centroid(), use_soft_cost=True) #mmmmmmmm... 
                 did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
                                           do_sparsify=True, do_flip=True)
 
@@ -137,7 +137,7 @@ class MRPlanningLoop():
                 else:
                     # Force the robot to return to known space
                     cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                        planning_grids[i], [self.chosen_subgoals[i].x, self.chosen_subgoals[i].y],
+                        planning_grids[i], frontier_distances[i],
                         use_soft_cost=True,
                         obstacle_cost=1e5)
                     did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
