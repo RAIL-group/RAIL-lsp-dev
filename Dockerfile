@@ -63,6 +63,7 @@ FROM base AS pkg-environments
 COPY modules/unitybridge modules/unitybridge
 COPY modules/environments modules/environments
 COPY modules/procthor modules/procthor
+COPY modules/object_search modules/object_search
 RUN uv pip install modules/*
 
 

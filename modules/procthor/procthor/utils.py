@@ -103,15 +103,3 @@ def get_dc_comps(room_idxs, edges):
     sorted_dc = sorted(disconnected_components, key=lambda x: len(x))
 
     return sorted_dc
-
-
-def get_object_color_from_type(encoding):
-    if encoding[0] == 1:
-        return "red"
-    if encoding[1] == 1:
-        return "blue"
-    if encoding[2] == 1:
-        return "green"
-    if encoding[3] == 1:
-        return "orange"
-    return "violet"
