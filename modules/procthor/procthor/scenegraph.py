@@ -9,9 +9,9 @@ class SceneGraph:
         self.edges = []  # list of (src, dst) tuples
         self.asset_id_to_node_idx_map = {}  # asset id -> node index mapping
 
-    def add_node(self, node_dict, node_idx=None):
+    def add_node(self, node_dict):
         """Add a new node to the graph."""
-        node_idx = len(self.nodes) if node_idx is None else node_idx
+        node_idx = len(self.nodes)
         self.nodes[node_idx] = node_dict
         if 'id' in node_dict:
             self.asset_id_to_node_idx_map[node_dict['id']] = node_idx
@@ -62,6 +62,15 @@ class SceneGraph:
         obj_idx = graph.object_indices
         for _, v in self.edges:
             if v in obj_idx:
+                graph.delete_node(v)
+        return graph
+
+    def get_room_only_graph(self):
+        """Get a copy of the graph with room nodes only."""
+        graph = self.copy()
+        cnt_obj_idx = graph.container_indices + graph.object_indices
+        for _, v in self.edges:
+            if v in cnt_obj_idx:
                 graph.delete_node(v)
         return graph
 
