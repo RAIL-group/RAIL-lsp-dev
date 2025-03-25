@@ -7,15 +7,13 @@ from pathlib import Path
 def plot_grid_with_robot_trajectory(ax, grid, robot_all_poses, trajectory, graph):
     plotting_grid = procthor.plotting.make_plotting_grid(grid.T)
     ax.imshow(plotting_grid)
-    ax.plot(trajectory[0], trajectory[1])
+    ax.plot(trajectory[0], trajectory[1], 'b-')
     ax.text(robot_all_poses[0].x, robot_all_poses[0].y, '0 - ROBOT', color='brown', size=4)
     for i, pose in enumerate(robot_all_poses[1:]):
         idx = graph.get_node_idx_by_position([pose.x, pose.y])
         if idx is not None:
             name = graph.get_node_name_by_idx(idx)
             ax.text(pose.x, pose.y, f'{i+1} - {name}', color='brown', size=4)
-        else:
-            print(f'Plotting warning: No node found in graph for pose [{pose.x:.2f}, {pose.y:.2f}]')
 
 
 def save_navigation_video(trajectory, thor_interface, video_file_path, fig_title):
@@ -25,11 +23,11 @@ def save_navigation_video(trajectory, thor_interface, video_file_path, fig_title
     fig = plt.figure()
     writer = animation.FFMpegWriter(12)
     writer.setup(fig, video_file_path, 500)
-    for step, grid_coord in enumerate(list(zip(trajectory[0], trajectory[1]))[::5]):
-        position = thor_interface.g2p_map[grid_coord]
-        thor_interface.controller.step(action="Teleport", position=position, horizon=30)
+    is_yaw = len(trajectory) == 3
+    trajectory = trajectory if is_yaw else [trajectory[0], trajectory[1], [0] * len(trajectory[0])]
+    for step, pose in enumerate(zip(*trajectory)[::2]):
+        top_down_image = thor_interface.get_top_down_image(robot_pose=pose, orthographic=False)
         plt.clf()
-        top_down_image = thor_interface.get_top_down_image(orthographic=False)
         plt.imshow(top_down_image)
         plt.axis('off')
         plt.title(f'{fig_title} [Step: {step}]', fontsize='10')
