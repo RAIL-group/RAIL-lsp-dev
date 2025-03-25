@@ -58,3 +58,38 @@ object-search-results:
 object-search-data-gen: $(object-search-data-gen-seeds)
 object-search-train: $(object-search-train-file)
 object-search-eval: $(object-search-eval-seeds)
+
+# Object Search with Frontier
+# ===========================
+
+.PHONY: object-search-frontier
+object-search-frontier: $(object-search-eval-seeds)
+$(object-search-eval-seeds): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(object-search-eval-seeds):
+	@$(call xhost_activate)
+	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_BASENAME)/$(OBJECT_SEARCH_EXPERIMENT_NAME)
+	@$(DOCKER_PYTHON) -m object_search.scripts.object_search_frontier \
+		$(OBJECT_SEARCH_CORE_ARGS) \
+		--save_dir /data/$(OBJECT_SEARCH_BASENAME)/$(OBJECT_SEARCH_EXPERIMENT_NAME) \
+	 	--current_seed $(seed) \
+		--network_file /data/$(OBJECT_SEARCH_BASENAME)/logs/FCNNforObjectSearch.pt \
+		--image_filename object_search_frontier_$(seed).png
+
+
+.PHONY: object-search-frontier-demo
+object-search-frontier-demo: DOCKER_ARGS ?= -it
+object-search-frontier-demo: seed = 1021
+object-search-frontier-demo:
+	@$(call xhost_activate)
+	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_BASENAME)/demo
+	@$(DOCKER_PYTHON) -m object_search.scripts.object_search_frontier \
+		$(OBJECT_SEARCH_CORE_ARGS) \
+		--save_dir /data/$(OBJECT_SEARCH_BASENAME)/demo \
+	 	--current_seed $(seed) \
+		--network_file /data/$(OBJECT_SEARCH_BASENAME)/logs/FCNNforObjectSearch.pt \
+		--image_filename object_search_frontier_$(seed).png
+
+object-search-frontier-results:
+	@$(DOCKER_PYTHON) -m lsp.scripts.vis_lsp_plotting \
+		--data_file /data/$(OBJECT_SEARCH_BASENAME)/$(OBJECT_SEARCH_EXPERIMENT_NAME)/costs_log.txt \
+		--output_image_file /data/$(OBJECT_SEARCH_BASENAME)/$(OBJECT_SEARCH_EXPERIMENT_NAME)/results.png
