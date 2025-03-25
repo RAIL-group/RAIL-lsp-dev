@@ -1,5 +1,6 @@
 import numpy as np
 import gridmap
+import argparse
 
 
 def compute_cost_and_trajectory(grid, path):
@@ -34,3 +35,17 @@ def compute_cost_and_trajectory(grid, path):
             trajectory = np.concatenate((trajectory, robot_path), axis=1)
 
     return total_cost, trajectory
+
+
+def get_command_line_parser():
+    parser = argparse.ArgumentParser(description='Object Search')
+    parser.add_argument('--resolution', type=float, default=0.05)
+    parser.add_argument('--inflation_radius_m', type=float, default=0.0)
+    parser.add_argument('--laser_max_range_m', type=float, default=10.0)
+    parser.add_argument('--disable_known_grid_correction', action='store_true')
+    parser.add_argument('--laser_scanner_num_points', type=int, default=1024)
+    parser.add_argument('--field_of_view_deg', type=int, default=360)
+    parser.add_argument('--step_size', type=float, default=1.8)
+    parser.add_argument('--num_primitives', type=int, default=32)
+
+    return parser
