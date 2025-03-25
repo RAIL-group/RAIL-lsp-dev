@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import math
 import random
 import copy
 from shapely import geometry
@@ -272,7 +273,12 @@ class ThorInterface:
 
         return known_cost
 
-    def get_top_down_image(self, orthographic=True):
+    def get_top_down_image(self, robot_pose=None, orthographic=True):
+        if robot_pose is not None:
+            position = self.g2p_map[(int(robot_pose[0]), int(robot_pose[1]))]
+            rotation = (360 - math.degrees(robot_pose[2])) + 90 if len(robot_pose) == 3 else 0
+            self.controller.step(action="Teleport", position=position, rotation=rotation, horizon=30)
+
         # Setup top down camera
         event = self.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
         pose = copy.deepcopy(event.metadata["actionReturn"])
@@ -299,3 +305,9 @@ class ThorInterface:
         top_down_image = event.third_party_camera_frames[-1]
         top_down_image = top_down_image[::-1, ...]
         return top_down_image
+
+    def get_egocentric_image(self, robot_pose):
+        position = self.g2p_map[(int(robot_pose[0]), int(robot_pose[1]))]
+        rotation = (360 - math.degrees(robot_pose[2])) + 90
+        event = self.controller.step(action="Teleport", position=position, rotation=rotation, horizon=30)
+        return event.frame[:, ::-1, :]
