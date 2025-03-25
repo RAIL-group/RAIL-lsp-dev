@@ -23,4 +23,20 @@ class Planner():
         pass
 
     def compute_selected_subgoal(self):
-        raise NotImplementedError
+        raise NotImplementedError()
+
+
+class BaseFrontierPlanner(Planner):
+
+    def update(self, graph, grid, containers, frontiers, robot_pose):
+        self.graph = graph
+        self.grid = grid
+        self.containers = []
+        for idx in containers:
+            pose = self.graph.get_node_position_by_idx(idx)[:2]
+            self.containers.append(Subgoal(idx, pose))
+        self.frontiers = [f for f in frontiers]
+        self.robot_pose = robot_pose
+        self.subgoals = self.containers + self.frontiers
+
+        self._update_subgoal_properties()
