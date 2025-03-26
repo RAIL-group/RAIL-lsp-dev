@@ -117,13 +117,13 @@ class SCTPState(object):
                     self.uav_actions =[Action(target=self.goalID,rtype=RobotType.Drone)]
             if self.robot.at_node:
                 neighbors = [node for node in self.vertices+self.pois if node.id == self.robot.last_node][0].neighbors
-                self.robot_actions = [Action(target=neighbor) for neighbor in neighbors]
-                for v in self.vertices+self.pois:
-                    if v.id == self.robot.last_node:
-                        [self.gateway.add(nei) for nei in v.neighbors \
-                            if self.history.get_action_outcome(Action(target=nei)) != EventOutcome.BLOCK]
-                        break
+                self.robot_actions = [Action(target=neighbor, start_pose=self.robot.cur_pose) for neighbor in neighbors]
                 self.v_vertices.add(self.robot.last_node)
+                if self.history.get_action_outcome(Action(target=self.robot.last_node))==EventOutcome.BLOCK:
+                    self.robot_actions = [action for action in self.robot_actions if action.target in list(self.robot.v_vertices)]
+                [self.gateway.add(action.target) for action in self.robot_actions]
+                
+                
                 self.heuristic_vertices[self.robot.last_node] = [v.heur2goal for v in self.vertices+self.pois \
                                                               if v.id == self.robot.last_node][0]
                 self.heuristic = self.heuristic_vertices[self.robot.last_node]
@@ -132,14 +132,14 @@ class SCTPState(object):
                                       Action(target=self.robot.edge[1],start_pose=self.robot.cur_pose)]
                 [self.gateway.add(nodeid) for nodeid in self.robot.edge \
                     if self.history.get_action_outcome(Action(target=nodeid)) != EventOutcome.BLOCK]
-                self.gateway.add(self.robot.edge[0])
-                self.gateway.add(self.robot.edge[1])
                 n1 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[0]][0]
                 n2 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[1]][0]
                 self.heuristic = min(n1.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n1.coord)),
                                      n2.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n2.coord)))
             self.robot_actions = [action for action in self.robot_actions \
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
+            assert len(self.robot_actions) > 0
+            assert len(self.uav_actions) > 0
             self.state_actions = [action for action in self.uav_actions]    
             
     def get_actions(self):
@@ -502,19 +502,19 @@ def sctp_rollout2(node):
         else:
             TypeError("robot type is wrong")
         # if 2 in list(node.state.gateway):
-        print(f"The action is: {action} with count = {count}")
-        if len(node.state.gateway)==1 and list(node.state.gateway)[0] == 2:
-            act5 = Action(target=5)
-            act8 = Action(target=8)
-            act6 = Action(target=6)
+        # print(f"The action is: {action} with count = {count} and gateway {list(node.state.gateway)}")
+        # if len(node.state.gateway)==1 and list(node.state.gateway)[0] == 2:
+        #     act5 = Action(target=5)
+        #     act8 = Action(target=8)
+        #     act6 = Action(target=6)
             
-            if node.state.history.get_action_outcome(act5) == EventOutcome.BLOCK and node.state.history.get_action_outcome(act6) == EventOutcome.BLOCK:
-                print(f"The action is: {action}")
-                print(f"count = {count} and the robot get stuck")
-                exit()
+        #     if node.state.history.get_action_outcome(act5) == EventOutcome.BLOCK and node.state.history.get_action_outcome(act6) == EventOutcome.BLOCK:
+        #         print(f"The action is: {action}")
+        #         print(f"count = {count} and the robot get stuck")
+        #         exit()
 
         node = pomcp.get_chance_node(node, action)
-    print("Out of rln loop -------------------")
+    # print("Out of rln loop -------------------")
     # Decomment if doing rollout check
     # if node.state.noway2goal:
     #     print(f"The robot gets stuck ---- tree depth {count}")

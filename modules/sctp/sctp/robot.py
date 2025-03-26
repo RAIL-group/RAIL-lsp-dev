@@ -28,6 +28,7 @@ class Robot:
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
         self.ll_node = self.last_node
+        self.v_vertices = {self.last_node}
         self.net_time = 0.0
         self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
 
@@ -44,6 +45,7 @@ class Robot:
             self.on_action = False
             self.at_node = True
             self.last_node = self.action.target
+            self.v_vertices.add(self.last_node)
             self.edge = None
         else:
             self.at_node = False
@@ -67,6 +69,7 @@ class Robot:
         # new_robot.on_action = self.on_action
         new_robot._cost_to_target = self._cost_to_target
         new_robot.id = self.id
+        new_robot.v_vertices = self.v_vertices.copy()
         new_robot.direction = self.direction.copy()
         return new_robot
 
