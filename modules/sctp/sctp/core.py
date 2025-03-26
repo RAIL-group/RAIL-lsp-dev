@@ -103,6 +103,10 @@ class SCTPState(object):
             self.robot.need_action = True
             self.uavs = drones
             for uav in self.uavs:
+                # uav.need_action = False if uav.last_node == self.goalID else True
+                # # if uav.last_node == self.goalID:
+                # #     uav.need_action = False 
+                # # else:
                 uav.need_action = True
             self.assigned_pois = set()
             self.gateway = set()
@@ -140,7 +144,13 @@ class SCTPState(object):
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
             assert len(self.robot_actions) > 0
             assert len(self.uav_actions) > 0
-            self.state_actions = [action for action in self.uav_actions]    
+            uav_needs_action = [uav.need_action for uav in self.uavs]
+            # if any(uav_needs_action):
+            self.state_actions = [action for action in self.uav_actions]
+            # else: 
+            #     self.state_actions = [action for action in self.robot_actions]
+            print("The robot actions:")
+            print([action.target for action in self.robot_actions])
             
     def get_actions(self):
         return self.state_actions
@@ -250,8 +260,6 @@ def advance_state(state1, action):
         # set action for this state
         state.robot_actions = [action for action in state.robot_actions \
                             if state.history.get_action_outcome(action) != EventOutcome.BLOCK]
-        # state.state_actions = [Action(target=action.target, start_pose=(state.robot.cur_pose[0],state.robot.cur_pose[1])) \
-        #                                 for action in state.robot_actions]
         state.state_actions = [action for action in state.robot_actions]
         stuck = is_robot_stuck(state)
         state.depth += 1

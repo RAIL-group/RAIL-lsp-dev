@@ -87,6 +87,8 @@ class SCTPPlanningLoop(object):
 
         # for drones
         for i, drone in enumerate(self.drones):
+            if drone.last_node == self.goalID:
+                continue
             assert drone.remaining_time == 0.0
             assert drone.need_action == True
             end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[i].target][0].coord

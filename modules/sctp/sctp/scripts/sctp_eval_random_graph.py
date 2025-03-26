@@ -36,7 +36,7 @@ def _setup(args):
 
     elif args.planner == 'sctp':
         sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,\
-                                    robot=planner_robot, drones=planner_drones, verbose=True) 
+                                    robot=planner_robot, drones=planner_drones) 
     
         planning_loop = plan_loop.SCTPPlanningLoop(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)

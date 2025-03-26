@@ -23,7 +23,7 @@ def _get_args():
     parser.add_argument('--resolution', type=float, default=0.05)
 
     args = parser.parse_args(['--save_dir', ''])
-    args.seed = 2007
+    args.seed = 2098
     args.save_dir = '/data/sctp'
     args.planner = 'sctp'
     args.num_drones = 1
