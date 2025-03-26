@@ -1,6 +1,6 @@
 import copy
 import pytest
-from sctp import graphs
+from basesctp import base_graphs as graphs
 
 
 def test_sctpbase_graph_vertex_edge_check():

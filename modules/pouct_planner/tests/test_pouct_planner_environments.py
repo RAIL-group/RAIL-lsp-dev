@@ -1,7 +1,7 @@
 import pytest
-from mdp import MDP
+from .mdp import MDP
 from pouct_planner import core
-from mdp import MDP
+# from mdp import MDP
 
 
 def test_deterministic_linear_mdp():

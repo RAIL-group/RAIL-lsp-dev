@@ -1,5 +1,5 @@
 import copy
-from sctp import base_pomdpstate
+from basesctp import base_pomdpstate
 from pouct_planner import core   
 
 def sctpbase_navigating(nodes, edges, robots, start, goal):

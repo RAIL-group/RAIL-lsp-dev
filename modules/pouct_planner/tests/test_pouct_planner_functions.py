@@ -1,6 +1,6 @@
 import pytest
 from pouct_planner import core
-from mdp import MDP
+from .mdp import MDP
 
 def mdp(current_state='S'):
     mdp_transitions = {

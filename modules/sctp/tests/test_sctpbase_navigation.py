@@ -1,7 +1,7 @@
 import pytest
 from pouct_planner import core
-from sctp import graphs
-from sctp import base_navigation, base_pomdpstate
+from basesctp import base_graphs as graphs
+from basesctp import base_navigation, base_pomdpstate
 
 graph_types = ['linear_det', 'linear_unc', 'disjoint_det', 'disjoint_unc',
                's_regular_det', 'm_regular_unc', 's_streetgraph']
@@ -13,7 +13,7 @@ def test_sctpbase_nav_sense_update_disjointgraph():
    edge_probs = {edge.id: edge.block_prob for edge in edges}
    edge_costs = {edge.id: edge.cost for edge in edges}
    initial_state = base_pomdpstate.SCTPBaseState(edge_probs=edge_probs, edge_costs=edge_costs, 
-                     goal=goal, vertices=nodes, edges=edges, robots=robots)
+                     goasl=goal, vertices=nodes, edges=edges, robots=robots)
 
    observed_status = base_navigation.sense(initial_state) # sense the env 
    assert observed_status == {(1, 2): 0.0, (1, 4): 1.0}

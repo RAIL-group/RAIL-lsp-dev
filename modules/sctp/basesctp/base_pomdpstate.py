@@ -1,5 +1,6 @@
 from enum import Enum
-from sctp import graphs, param
+from basesctp import base_graphs as graphs
+from sctp import param
 import numpy as np
 
 
@@ -79,6 +80,8 @@ class SCTPBaseState(object):
         neighbors = [node for node in self.vertices if node.id == self.robots.cur_vertex][0].neighbors
         self.actions = [Action(start_node=self.robots.cur_vertex, target_node=neighbor)
                         for neighbor in neighbors]
+        self.depth = 0
+        self.max_depth = 10
     def get_actions(self):
         return self.actions
     

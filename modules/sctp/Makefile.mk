@@ -1,28 +1,69 @@
-help::
-	@echo ""
-	@echo ""
-	@echo ""
-	@echo ""
 
-SCTP_BASENAME = SCTP
-SCTP_UNITY_BASENAME ?= $(RAIL_SIM_BASENAME)
-SCTP_CORE_ARGS ?= --unity_path /unity/$(SCTP_UNITY_BASENAME).x86_64 \
-		--map_type office2 \
-		--base_resolution 0.5 \
-		--inflation_radius_m 0.75 \
-		--laser_max_range_m 18 \
-		--iterations 40000 \
-		--ucb_c 500
+SCTP_BASENAME = sctp
+SCTP_SEED_START = 2000
+SCTP_NUM_EXPERIMENTS = 10
+SCTP_NUM_DRONES = 1
+SCTP_EXPERIMENT_NAME = dbg_Mar26_$(SCTP_NUM_DRONES)_more_actions_ordering
+define sctp_get_seeds
+	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
+endef
 
-# For debugging purposes
-.PHONY: test-sctpbase create_graph
+SCTP_PLANNERS = sctp
+all-targets-sctp-eval = $(foreach planner, $(SCTP_PLANNERS), \
+							$(foreach seed, $(call sctp_get_seeds), \
+								$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/sctp_eval_planner_$(planner)_seed_$(seed).png))
 
-create_graph: DOCKER_ARGS ?= -it
-create_graph:
-	$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m modules.pouct_planner.sctp.graphs
+.PHONY: sctp-eval-random-graph
+sctp-eval-random-graph: $(all-targets-sctp-eval)
+$(all-targets-sctp-eval): seed = $(shell echo $@ | grep -oE '_seed_[0-9]+' | cut -d'_' -f3)
+$(all-targets-sctp-eval): planner = $(shell echo $@ | grep -oE '_planner_[a-z]+' | cut -d'_' -f3)
+$(all-targets-sctp-eval):
+	@echo "Evaluating: planner: $(planner), seed: $(seed)"
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)
+	@$(DOCKER_PYTHON) -m sctp.scripts.sctp_eval_random_graph \
+	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
+		--num_drones $(SCTP_NUM_DRONES) \
+		--planner $(planner) \
+		--seed $(seed) \
+		--num_iterations 2000 \
+		--C 30 \
+		--resolution 0.05 \
 
-test-sctpbase: DOCKER_ARGS ?= -it
-test-sctpbase:
-	$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m modules.tests.test_sctp_ground
+.PHONY: sctp-planner-test
+sctp-planner-test:
+	@echo "Evaluating: planner: $(planner), seed: $(seed)"
+	@$(DOCKER_PYTHON) -m modules.tests.test_sctp_planner \
+	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
+		--num_drones $(SCTP_NUM_DRONES) \
+		--num_iterations 1000 \
+		--C 10 \
+		--resolution 0.05 \
+
+.PHONY: sctp-planning-loop-test
+sctp-planning-loop-test: DOCKER_ARGS ?= -it
+sctp-planning-loop-test:
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m modules.tests.test_sctp_planning_loop\
+		--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
+		--num_drones $(SCTP_NUM_DRONES) \
+		--num_iterations 2000 \
+		--C 30 \
+		--resolution 0.05 \
+
+# .PHONY: mr-task-results
+# mr-task-results: mr-task-eval-procthor
+# mr-task-results:
+# 	@$(DOCKER_PYTHON) -m mr_task.scripts.mr_task_results \
+# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
+# 		--num_robots $(SCTP_NUM_ROBOTS)
+
+# .PHONY: mr-task-vis-net-predictions
+# mr-task-vis-net-predictions: DOCKER_ARGS ?= -it
+# mr-task-vis-net-predictions:
+# 	@rm -f $(DATA_BASE_DIR)/$(SCTP_BASENAME)/raihan_nn/network_output.txt
+# 	@touch $(DATA_BASE_DIR)/$(SCTP_BASENAME)/raihan_nn/network_output.txt
+# 	@$(DOCKER_PYTHON) -m mr_task.scripts.vis_net_predictions \
+# 	 	--save_dir data/$(SCTP_BASENAME)/raihan_nn \
+# 		--network_file data/$(SCTP_BASENAME)/raihan_nn/fcnn.pt \
+# 		--seed 2020 \
+# 		--resolution 0.05

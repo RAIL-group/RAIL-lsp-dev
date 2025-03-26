@@ -1,8 +1,8 @@
 import pytest, random
 import numpy as np
-from sctp import base_pomdpstate, base_navigation
+from basesctp import base_pomdpstate, base_navigation
 from pouct_planner import core
-from sctp import graphs
+from basesctp import base_graphs as graphs
 
 def test_sctpbase_planner_lineargraph():
     start_node, goal_node, graph, robot = graphs.linear_graph_unc()

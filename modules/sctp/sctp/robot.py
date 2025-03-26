@@ -4,24 +4,20 @@ from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 
 class Robot:
     _id_counter = 0
-    def __init__(self, position, cur_node=None, robot_type=RobotType.Ground, edge=None):
+    def __init__(self, position, cur_node=None, at_node=False, robot_type=RobotType.Ground, edge=None):
         self.id = Robot._id_counter
         Robot._id_counter += 1
         self.robot_type = robot_type
         self.cur_pose = np.array(position)
         self.last_node = cur_node
-        if cur_node is None:
-            self.edge = edge
-            self.at_node = False
-        else:
+        if at_node:
             self.edge = None
             self.at_node = True #id
+        else:
+            self.edge = edge
+            self.at_node = False
         if self.robot_type == RobotType.Ground:
             self.vel = 1.0
-            if self.edge is None:
-                assert self.at_node == True
-            else:
-                assert self.at_node == False
         elif self.robot_type == RobotType.Drone:
             self.vel = 1.0*VEL_RATIO
             self.edge = None
@@ -31,7 +27,9 @@ class Robot:
         self.remaining_time = 0.0
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
-
+        self.ll_node = self.last_node
+        self.net_time = 0.0
+        self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
 
     def advance_time(self, delta_time):
         advance_distance = self.vel * delta_time
@@ -40,8 +38,6 @@ class Robot:
         if self.remaining_time < APPROX_TIME:
             self.remaining_time = 0.0
             self._cost_to_target = 0.0
-        # if not self.remaining_time >= 0.0:
-        #     print(f"The remaining time of {self.robot_type} is {self.remaining_time}")
         assert self.remaining_time >= 0.0, 'Remaining time cannot be negative'
         if self.remaining_time == 0.0:
             self.need_action = True
@@ -54,21 +50,21 @@ class Robot:
             self.edge = [self.last_node, self.action.target]
         
         self._get_coordinates_after_distance(advance_distance)
+        self.net_time += delta_time
 
 
     def _get_coordinates_after_distance(self, distance):
         self.cur_pose += self.direction * distance
+        self.all_poses.append([self.cur_pose[0],self.cur_pose[1]])
 
     def copy(self):
         new_robot = Robot(position=self.cur_pose.copy(), cur_node=self.last_node, 
-                          robot_type=self.robot_type, edge=self.edge)
+                          at_node=self.at_node, robot_type=self.robot_type, edge=self.edge)
         new_robot.need_action = self.need_action
-        # new_robot.last_node = self.last_node
-        new_robot.at_node = self.at_node
-        new_robot.edge = self.edge
+        new_robot.ll_node = self.ll_node
         new_robot.action = self.action
         new_robot.remaining_time = self.remaining_time
-        new_robot.on_action = self.on_action
+        # new_robot.on_action = self.on_action
         new_robot._cost_to_target = self._cost_to_target
         new_robot.id = self.id
         new_robot.direction = self.direction.copy()
@@ -84,6 +80,8 @@ class Robot:
         self.action = new_action
         self.need_action = False
         self.on_action = True
+        if self.action.target != self.last_node:
+            self.ll_node = self.last_node
 
     def _update_time_to_target(self, distance):
         self._cost_to_target = distance

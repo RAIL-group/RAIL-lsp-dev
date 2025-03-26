@@ -1,5 +1,5 @@
 import pytest
-from sctp import base_pomdpstate
+from basesctp import base_pomdpstate
 
 def test_sctpbase_history():
    start = 1

@@ -1,6 +1,7 @@
 import pytest
 from pouct_planner import core
-from sctp import graphs, base_pomdpstate, base_navigation
+from basesctp import base_pomdpstate, base_navigation
+from basesctp import base_graphs as graphs
 from sctp.param import EventOutcome
 
 def test_robot_position():
@@ -50,8 +51,11 @@ def test_sctpbase_function_rollout():
         assert action in [action2, action3]
 
 
-    best_action, cost, path = core.po_mcts(init_state, n_iterations=10,
-                                C=15.0, rollout_fn=base_pomdpstate.sctpbase_rollout)
+    best_action, cost, path = core.po_mcts(init_state, n_iterations=10,C=15.0)
+
+    # best_action, cost, path = core.po_mcts(init_state, n_iterations=10,
+    #                             C=15.0, rollout_fn=base_pomdpstate.sctpbase_rollout)
+
 
     # assert best_action == action3
     # assert len(path[1]) == 4

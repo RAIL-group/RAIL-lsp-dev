@@ -1,7 +1,7 @@
 import pytest
-from sctp import base_pomdpstate, base_navigation
+from basesctp import base_pomdpstate, base_navigation
 from pouct_planner import core
-from sctp import graphs
+from basesctp import base_graphs as graphs
 
 
 def test_sctpbase_state_lineargraph_outcome_states():

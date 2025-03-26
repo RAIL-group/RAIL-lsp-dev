@@ -40,11 +40,6 @@ class POUCTNode(object):
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
     root = POUCTNode(state)
     for i in range(n_iterations):
-        # print(f"----------------------------- iteration: {i} ----------------------------")
-        # assert root.state.robot.last_node == 1
-        # assert root.state.robot.at_node == True
-        # assert root.state.robot.edge == None
-        # assert root.state.robot.cur_pose[0] ==0.0 and root.state.robot.cur_pose[1] ==0.0
         leaf = traverse(root, C=C)
         simulation_result = rollout(leaf, rollout_fn=rollout_fn)
         backpropagate(leaf, simulation_result)
@@ -73,7 +68,8 @@ def traverse(node, C=1.0):
 
 def rollout(node, rollout_fn=None):
     if rollout_fn is not None:
-        return node.cost + rollout_fn(node.state)
+        # return node.cost + rollout_fn(node.state)
+        return rollout_fn(node)
     else:
         # do a random rollout
         rollout_cost = 0.0
@@ -90,13 +86,13 @@ def backpropagate(node, result):
         backpropagate(node.parent, result)
 
 def get_best_action(node):
-    actions = list(node.action_n.keys())
+    actions = list(node.action_n.keys())    # print(f"The number of visits for each action: {action_n}")    
+
     action_values = [node.action_values[a] for a in actions]
     action_n = [node.action_n[a] for a in actions]
 
     # get all index with highest action_n
     max_n = np.max(action_n)
-    print(f"The number of visits for each action: {action_n}")
     best_action_idxs = [i for i, n in enumerate(action_n) if n == max_n]
 
     # if there are multiple actions with the same number of visits, choose the one with the lowest cost
@@ -128,6 +124,7 @@ def get_best_path(root):
     paths = []
     costs = []
     node = root
+    # print(f"the depth is {node.state.depth}")
     while not node.is_terminal_node():
         if node.total_n == 0:
             break
@@ -136,4 +133,7 @@ def get_best_path(root):
         costs.append(cost)
         children = list(node.action_outcomes[best_action].keys())
         node = max(children, key=lambda x: x.total_n)
+        # print(f"the depth is {node.state.depth}")
+        # pdb.set_trace()
     return paths, costs
+

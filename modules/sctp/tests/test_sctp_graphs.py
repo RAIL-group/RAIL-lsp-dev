@@ -242,9 +242,10 @@ def test_sctp_graph_medium_check():
     for edge in m_graph.edges:
         assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
-# def test_sctpbase_rangraph_check():
-#     start, goal, ran_graph, robot = graphs.random_graph(n_vertex=14)
-#     graphs.plot_graph(nodes=ran_graph.vertices, edges=ran_graph.edges, startID=start.id, goalID=goal.id)
+def test_sctp_rangraph_check():
+    start, goal, ran_graph, robot = graphs.random_graph(n_vertex=8)
+    graphs.plot_sctpgraph(nodes=ran_graph.vertices, pois=ran_graph.pois, 
+                edges=ran_graph.edges, startID=start.id, goalID=goal.id)
     
 
    
