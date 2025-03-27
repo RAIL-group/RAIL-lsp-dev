@@ -22,13 +22,13 @@ class SCTPPlanningLoop(object):
             
             if self.drones:
                 yield {
-                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node, self.robot.v_vertices]),
+                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node, self.robot.pl_vertex]),
                     "drones": ([[drone.cur_pose, drone.at_node, drone.last_node] for drone in self.drones]),
                     "observed_pois": (vertices_status)
                 }
             else:
                 yield {
-                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node,self.robot.v_vertices]),
+                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node,self.robot.pl_vertex]),
                     "drones": None,
                     "observed_pois": (vertices_status)
                 }

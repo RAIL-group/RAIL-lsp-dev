@@ -1,9 +1,9 @@
 
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 2000
-SCTP_NUM_EXPERIMENTS = 20
+SCTP_NUM_EXPERIMENTS = 10
 SCTP_NUM_DRONES = 1
-SCTP_EXPERIMENT_NAME = dbg_Mar26_$(SCTP_NUM_DRONES)_sgraph
+SCTP_EXPERIMENT_NAME = dbg_Mar27_$(SCTP_NUM_DRONES)_mgraph
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
@@ -25,7 +25,7 @@ $(all-targets-sctp-eval):
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(planner) \
 		--seed $(seed) \
-		--num_iterations 2000 \
+		--num_iterations 4000 \
 		--C 30 \
 		--resolution 0.05 \
 

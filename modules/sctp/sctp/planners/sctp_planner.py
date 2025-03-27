@@ -29,7 +29,7 @@ class SCTPPlanner(object):
         self.robot.at_node = robot_data[1]
         self.robot.edge = robot_data[2].copy()
         self.robot.last_node = robot_data[3]
-        self.robot.v_vertices = robot_data[4]
+        self.robot.pl_vertex = robot_data[4]
         self.robot.remaining_time = 0.0
         self.robot.need_action = True
         if drone_data:

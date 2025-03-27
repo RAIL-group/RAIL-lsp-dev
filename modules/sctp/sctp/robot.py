@@ -27,8 +27,8 @@ class Robot:
         self.remaining_time = 0.0
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
-        self.ll_node = self.last_node
-        self.v_vertices = self.last_node
+        # self.ll_node = self.last_node
+        self.pl_vertex = self.last_node
         self.net_time = 0.0
         self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
 
@@ -42,11 +42,10 @@ class Robot:
         assert self.remaining_time >= 0.0, 'Remaining time cannot be negative'
         if self.remaining_time == 0.0:
             self.need_action = True
-            # self.on_action = False
             self.at_node = True
             self.edge = []
             if self.last_node != self.action.target:
-                self.v_vertices = self.last_node
+                self.pl_vertex = self.last_node
                 self.last_node = self.action.target
                 # print(f"+++++ Does it go here anytime and change the value of {self.v_vertices}+++++++++")
         else:
@@ -65,13 +64,12 @@ class Robot:
         new_robot = Robot(position=self.cur_pose.copy(), cur_node=self.last_node, 
                           at_node=self.at_node, robot_type=self.robot_type, edge=self.edge)
         new_robot.need_action = self.need_action
-        new_robot.ll_node = self.ll_node
+        # new_robot.ll_node = self.ll_node
         new_robot.action = self.action
         new_robot.remaining_time = self.remaining_time
-        # new_robot.on_action = self.on_action
         new_robot._cost_to_target = self._cost_to_target
         new_robot.id = self.id
-        new_robot.v_vertices = self.v_vertices
+        new_robot.pl_vertex = self.pl_vertex
         new_robot.direction = self.direction.copy()
         return new_robot
 
@@ -84,9 +82,6 @@ class Robot:
         # Store the new action
         self.action = new_action
         self.need_action = False
-        # self.on_action = True
-        if self.action.target != self.last_node:
-            self.ll_node = self.last_node
 
     def _update_time_to_target(self, distance):
         self._cost_to_target = distance

@@ -67,7 +67,7 @@ class Vertex:
         if self.block_prob == 0.0:
             self.block_status = int(0)
         else:
-            self.block_status = int(0) if np.random.random() < block_prob else int(1)
+            self.block_status = int(0) if np.random.random() > block_prob else int(1)
 
     def get_id(self):
         return self.id
@@ -208,12 +208,14 @@ def plot_sctpgraph_combine(graph, plt, verbose=False):
 
     # Plot nodes
     for node in graph.vertices:
-        plt.scatter(node.coord[0], node.coord[1], color='black', s=20)
+        plt.scatter(node.coord[0], node.coord[1], color='green', s=25)
         if verbose:
             plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=6)
 
     for poi in graph.pois:
-        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=20)
+        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=25)
+        if poi.block_status == 1:
+            plt.scatter(poi.coord[0], poi.coord[1], color='black', s=18)
         if verbose:
             plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"POI{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=6)
         else:
@@ -230,9 +232,6 @@ def linear_graph_unc():
     graph.edges.clear()
     graph.add_edge(start_node, node1, 0.5)
     graph.add_edge(node1, goal_node, 0.3)
-    # G_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id)
-    # D_robot = Robot(position=[0.0, 0.0], cur_node=start_node.id, robot_type=RobotType.Drone)
-    # robots = [G_robot, D_robot]
     vertices = graph.vertices + graph.pois
     dijkstra(vertices=vertices, edges=graph.edges, goal=goal_node)
     return start_node, goal_node, graph
@@ -323,14 +322,8 @@ def m_graph_unc():
     graph.add_edge(node5, node7, 0.90) #17
     graph.add_edge(node6, node7, 0.1) #18
     graph.add_edge(node6, node5, 0.1) #19
-    # G_robot = Robot(position=[-3.0, 4.0], cur_node=node1.id)
-    # D_robot = Robot(position=[-3.0, 4.0], cur_node=node1.id, robot_type=RobotType.Drone)
-    # robots = [G_robot, D_robot]
-    #    plot_street_graph(nodes, graph.edges)
     vertices = graph.vertices + graph.pois
-
     dijkstra(vertices=vertices, edges=graph.edges, goal=node7)
-
     return node1, node7, graph
 
 

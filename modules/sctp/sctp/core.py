@@ -103,10 +103,6 @@ class SCTPState(object):
             self.robot.need_action = True
             self.uavs = drones
             for uav in self.uavs:
-                # uav.need_action = False if uav.last_node == self.goalID else True
-                # # if uav.last_node == self.goalID:
-                # #     uav.need_action = False 
-                # # else:
                 uav.need_action = True
             self.assigned_pois = set()
             self.gateway = set()
@@ -123,14 +119,9 @@ class SCTPState(object):
                 neighbors = [node for node in self.vertices+self.pois if node.id == self.robot.last_node][0].neighbors
                 self.robot_actions = [Action(target=neighbor, start_pose=self.robot.cur_pose) for neighbor in neighbors]
                 self.v_vertices.add(self.robot.last_node)
-                # print("The initial robot actions:")
-                # print([action.target for action in self.robot_actions])
-                # print(f"The last visited vertex: {self.robot.v_vertices}")
                 if self.history.get_action_outcome(Action(target=self.robot.last_node))==EventOutcome.BLOCK:
-                    self.robot_actions = [action for action in self.robot_actions if action.target ==self.robot.v_vertices]
+                    self.robot_actions = [action for action in self.robot_actions if action.target ==self.robot.pl_vertex]
                 [self.gateway.add(action.target) for action in self.robot_actions]
-                
-                
                 self.heuristic_vertices[self.robot.last_node] = [v.heur2goal for v in self.vertices+self.pois \
                                                               if v.id == self.robot.last_node][0]
                 self.heuristic = self.heuristic_vertices[self.robot.last_node]
@@ -143,16 +134,12 @@ class SCTPState(object):
                 n2 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[1]][0]
                 self.heuristic = min(n1.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n1.coord)),
                                      n2.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n2.coord)))
-            # print("The robot actions before filtering:")
-            # print([action.target for action in self.robot_actions])
             
             self.robot_actions = [action for action in self.robot_actions \
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
             assert len(self.robot_actions) > 0
             assert len(self.uav_actions) > 0
             self.state_actions = [action for action in self.uav_actions]
-            # print("The robot actions after filtering:")
-            # print([action.target for action in self.robot_actions])
             
     def get_actions(self):
         return self.state_actions
@@ -346,7 +333,8 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         if last_node != new_state_block.robot.last_node:
             target = last_node
         else:
-            target = new_state_block.robot.ll_node
+            # target = new_state_block.robot.ll_node
+            target = new_state_block.robot.pl_vertex
         new_state_block.robot_actions = [Action(target=target,start_pose=(state.robot.cur_pose[0],state.robot.cur_pose[1]))]
         new_state_block.state_actions = [action for action in new_state_block.robot_actions]
         stuck= is_robot_stuck(new_state_block)
