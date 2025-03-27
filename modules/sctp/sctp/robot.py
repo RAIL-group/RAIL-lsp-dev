@@ -11,8 +11,8 @@ class Robot:
         self.cur_pose = np.array(position)
         self.last_node = cur_node
         if at_node:
-            self.edge = None
-            self.at_node = True #id
+            self.edge = []
+            self.at_node = True
         else:
             self.edge = edge
             self.at_node = False
@@ -20,15 +20,15 @@ class Robot:
             self.vel = 1.0
         elif self.robot_type == RobotType.Drone:
             self.vel = 1.0*VEL_RATIO
-            self.edge = None
+            self.edge = []
         self.need_action = True 
         self.action = None
-        self.on_action = False
+        # self.on_action = False
         self.remaining_time = 0.0
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
         self.ll_node = self.last_node
-        self.v_vertices = {self.last_node}
+        self.v_vertices = self.last_node
         self.net_time = 0.0
         self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
 
@@ -42,11 +42,13 @@ class Robot:
         assert self.remaining_time >= 0.0, 'Remaining time cannot be negative'
         if self.remaining_time == 0.0:
             self.need_action = True
-            self.on_action = False
+            # self.on_action = False
             self.at_node = True
-            self.last_node = self.action.target
-            self.v_vertices.add(self.last_node)
-            self.edge = None
+            self.edge = []
+            if self.last_node != self.action.target:
+                self.v_vertices = self.last_node
+                self.last_node = self.action.target
+                # print(f"+++++ Does it go here anytime and change the value of {self.v_vertices}+++++++++")
         else:
             self.at_node = False
             self.edge = [self.last_node, self.action.target]
@@ -69,7 +71,7 @@ class Robot:
         # new_robot.on_action = self.on_action
         new_robot._cost_to_target = self._cost_to_target
         new_robot.id = self.id
-        new_robot.v_vertices = self.v_vertices.copy()
+        new_robot.v_vertices = self.v_vertices
         new_robot.direction = self.direction.copy()
         return new_robot
 
@@ -82,7 +84,7 @@ class Robot:
         # Store the new action
         self.action = new_action
         self.need_action = False
-        self.on_action = True
+        # self.on_action = True
         if self.action.target != self.last_node:
             self.ll_node = self.last_node
 

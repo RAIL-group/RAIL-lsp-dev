@@ -22,13 +22,13 @@ class SCTPPlanningLoop(object):
             
             if self.drones:
                 yield {
-                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node]),
+                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node, self.robot.v_vertices]),
                     "drones": ([[drone.cur_pose, drone.at_node, drone.last_node] for drone in self.drones]),
                     "observed_pois": (vertices_status)
                 }
             else:
                 yield {
-                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node]),
+                    "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node,self.robot.v_vertices]),
                     "drones": None,
                     "observed_pois": (vertices_status)
                 }
@@ -47,7 +47,6 @@ class SCTPPlanningLoop(object):
                 v = [node for node in self.graph.pois if node.id == vertex_id]
                 if v:
                     vertices_status[vertex_id] = v[0].block_status
-                    # v[0].block_prob = float(v[0].block_status)
             # # move the drones
             for i, drone in enumerate(self.drones):
                 if drone.at_node and drone.last_node ==self.goalID:
@@ -58,7 +57,6 @@ class SCTPPlanningLoop(object):
                     v = [node for node in self.graph.pois if node.id == vertex_id]
                     if v:
                         vertices_status[vertex_id] = v[0].block_status
-                        # v[0].block_prob = float(v[0].block_status)
             #Reset the robot and drones
             self.robot.need_action = True
             self.robot.remaining_time = 0.0

@@ -27,24 +27,24 @@ class SCTPPlanner(object):
             self.observed_graph.update(observations)
         self.robot.cur_pose = np.array([robot_data[0][0],robot_data[0][1]])
         self.robot.at_node = robot_data[1]
-        if robot_data[2]:
-            self.robot.edge = [robot_data[2][0], robot_data[2][1]]
+        self.robot.edge = robot_data[2].copy()
         self.robot.last_node = robot_data[3]
+        self.robot.v_vertices = robot_data[4]
         self.robot.remaining_time = 0.0
         self.robot.need_action = True
         if drone_data:
             for i, drone in enumerate(self.drones):
                 drone.cur_pose = np.array([drone_data[i][0][0], drone_data[i][0][1]])
                 drone.at_node = drone_data[i][1]
-                drone.edge = None
+                drone.edge = []
                 drone.last_node = drone_data[i][2]
                 drone.remaining_time = 0.0
                 drone.need_action = True    
 
         if self.verbose:
-            print('---------------------------')
-            print(f"Drones' positions: ", [drone.cur_pose for drone in self.drones])
-            print(f"Robot's position: {self.robot.cur_pose} at node? {self.robot.at_node} /on edge? {self.robot.edge}/ last node: {self.robot.last_node}")
+            print('------------robots poses after updating ---------------')
+            print(f"Drones: ", [drone.cur_pose for drone in self.drones])
+            print(f"Robot: {self.robot.cur_pose} at node? {self.robot.at_node} /on edge? {self.robot.edge}/ last node: {self.robot.last_node}")
         
 
 
@@ -63,6 +63,7 @@ class SCTPPlanner(object):
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]
-        print("action ordering=", [f"{action}" for action in ordering[:1+len(self.drones)]])
+        if self.verbose:
+            print("action ordering=", [f"{action}" for action in ordering[:1+len(self.drones)]])
         # print("costs=", costs)
         return ordering[:1+len(self.drones)], sum(costs[:1+len(self.drones)])

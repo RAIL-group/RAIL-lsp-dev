@@ -123,8 +123,11 @@ class SCTPState(object):
                 neighbors = [node for node in self.vertices+self.pois if node.id == self.robot.last_node][0].neighbors
                 self.robot_actions = [Action(target=neighbor, start_pose=self.robot.cur_pose) for neighbor in neighbors]
                 self.v_vertices.add(self.robot.last_node)
+                # print("The initial robot actions:")
+                # print([action.target for action in self.robot_actions])
+                # print(f"The last visited vertex: {self.robot.v_vertices}")
                 if self.history.get_action_outcome(Action(target=self.robot.last_node))==EventOutcome.BLOCK:
-                    self.robot_actions = [action for action in self.robot_actions if action.target in list(self.robot.v_vertices)]
+                    self.robot_actions = [action for action in self.robot_actions if action.target ==self.robot.v_vertices]
                 [self.gateway.add(action.target) for action in self.robot_actions]
                 
                 
@@ -140,17 +143,16 @@ class SCTPState(object):
                 n2 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[1]][0]
                 self.heuristic = min(n1.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n1.coord)),
                                      n2.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n2.coord)))
+            # print("The robot actions before filtering:")
+            # print([action.target for action in self.robot_actions])
+            
             self.robot_actions = [action for action in self.robot_actions \
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
             assert len(self.robot_actions) > 0
             assert len(self.uav_actions) > 0
-            uav_needs_action = [uav.need_action for uav in self.uavs]
-            # if any(uav_needs_action):
             self.state_actions = [action for action in self.uav_actions]
-            # else: 
-            #     self.state_actions = [action for action in self.robot_actions]
-            print("The robot actions:")
-            print([action.target for action in self.robot_actions])
+            # print("The robot actions after filtering:")
+            # print([action.target for action in self.robot_actions])
             
     def get_actions(self):
         return self.state_actions
@@ -271,7 +273,7 @@ def advance_state(state1, action):
     state.action_cost = time_advance
     # save some data before moving
     last_node = state.robot.last_node
-    edge = state.robot.edge
+    edge = state.robot.edge.copy()
     # move the robots
     state.robot.advance_time(time_advance)
     for uav in state.uavs:

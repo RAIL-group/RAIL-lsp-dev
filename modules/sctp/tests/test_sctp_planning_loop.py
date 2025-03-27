@@ -23,7 +23,7 @@ def _get_args():
     parser.add_argument('--resolution', type=float, default=0.05)
 
     args = parser.parse_args(['--save_dir', ''])
-    args.seed = 2098
+    args.seed = 2012
     args.save_dir = '/data/sctp'
     args.planner = 'sctp'
     args.num_drones = 1
@@ -109,7 +109,7 @@ def test_sctp_planning_loop_dg():
     planning_loop = plan_loop.SCTPPlanningLoop(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
     for step_data in planning_loop:
-        print("Print to separate the new navigation #######################################")
+        print("####################### New navigation #######################################")
         sctpplanner.update(
             step_data['observed_pois'],
             step_data['robot'],

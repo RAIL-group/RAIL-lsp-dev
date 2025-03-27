@@ -14,7 +14,8 @@ from sctp.planners import sctp_planning_loop as plan_loop
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.disjoint_unc()
+    # start, goal, graph = graphs.disjoint_unc()
+    start, goal, graph = graphs.s_graph_unc()
     for poi in graph.pois:
         assert poi.block_prob != 0.0
         assert poi.block_prob != 1.0
