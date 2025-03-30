@@ -1,6 +1,6 @@
 import numpy as np
 import argparse
-import sctp
+from sctp.utils import plotting
 import random
 from sctp import sctp_graphs as graphs
 from sctp.robot import Robot
@@ -34,7 +34,8 @@ def mgraph_init():
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = mgraph_init()
+    # start, goal, graph = mgraph_init()
+    start, goal, graph = graphs.random_graph(n_vertex=8)
 
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
@@ -44,7 +45,7 @@ def _setup(args):
 
     if args.planner == 'base':
         sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,\
-                                    robot=planner_robot, verbose=True) 
+                                    robot=planner_robot) 
     
         planning_loop = plan_loop.SCTPPlanningLoop(robot=robot, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
@@ -77,7 +78,7 @@ def _setup(args):
     plt.text(start.coord[0]-0.5, start.coord[1], 'start', fontsize=9)
     plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
     plt.text(goal.coord[0]+0.1, goal.coord[1], 'goal', fontsize=9)
-    graphs.plot_sctpgraph_combine(graph, plt)
+    plotting.plot_sctpgraph_combine(graph, plt)
     x = [pose[0] for pose in robot.all_poses]
     y = [pose[1] for pose in robot.all_poses]
     plt.scatter(x, y, marker='P', s=4.5, alpha=1.0)

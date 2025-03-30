@@ -1,6 +1,8 @@
-import copy
+import copy, random
 import pytest
+import numpy as np
 from sctp import sctp_graphs as graphs
+from sctp.utils import plotting
 
 
 def test_sctp_graph_vertex_edge_check():
@@ -55,20 +57,13 @@ def test_sctp_graph_vertex_edge_check():
     # graphs.plot_sctpgraph(vertices, graph.edges, startID=start_node.id, goalID=goal_node.id)
 
 def test_sctp_graph_linear_check():
-    start, goal, ln_graph, robots = graphs.linear_graph_unc()
+    start, goal, ln_graph = graphs.linear_graph_unc()
     
     assert start in ln_graph.vertices
     assert goal in ln_graph.vertices
     assert len(ln_graph.vertices) == 3
     assert len(ln_graph.edges) == 4
 
-    assert robots.cur_node == start.id
-    assert robots.cur_pose != start.coord
-    assert robots.cur_pose[0] == start.coord[0]
-    assert robots.cur_pose[1] == start.coord[1]
-    robots.cur_pose = [1.0, 1.0]
-    assert robots.cur_pose[0] != start.coord[0]
-    assert robots.cur_pose[1] != start.coord[1]
     for vertex in ln_graph.vertices:
         if vertex.id == 1:
             assert vertex.heur2goal == 15.0
@@ -87,24 +82,12 @@ def test_sctp_graph_linear_check():
         assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
 def test_sctp_graph_disjoint_check():
-    start, goal, dj_graph, robots = graphs.disjoint_unc()
+    start, goal, dj_graph = graphs.disjoint_unc()
     
     assert start in dj_graph.vertices
     assert goal in dj_graph.vertices
-
     assert len(dj_graph.vertices) == 4
     assert len(dj_graph.edges) == 8
-
-    assert robots[0].cur_node == start.id
-    assert robots[1].cur_node == start.id
-    assert robots[0].cur_pose != start.coord
-    assert robots[0].cur_pose[0] == start.coord[0]
-    assert robots[0].cur_pose[1] == start.coord[1]
-    assert robots[0].id != robots[1].id
-    assert robots[0].robot_type != robots[1].robot_type
-    assert robots[1].cur_pose != start.coord
-    assert robots[1].cur_pose[0] == start.coord[0]
-    assert robots[1].cur_pose[1] == start.coord[1]
     for vertex in dj_graph.vertices:
         assert vertex.block_prob == 0.0
         if vertex.id == 1:
@@ -133,7 +116,7 @@ def test_sctp_graph_disjoint_check():
         assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
 def test_sctp_graph_simple_check():
-    start, goal, s_graph, robots = graphs.s_graph_unc()
+    start, goal, s_graph = graphs.s_graph_unc()
     
     assert start in s_graph.vertices
     assert goal in s_graph.vertices
@@ -172,7 +155,7 @@ def test_sctp_graph_simple_check():
     
 
 def test_sctp_graph_medium_check():
-    start, goal, m_graph, robots = graphs.m_graph_unc()
+    start, goal, m_graph = graphs.m_graph_unc()
     
     assert start in m_graph.vertices
     assert goal in m_graph.vertices
@@ -181,9 +164,9 @@ def test_sctp_graph_medium_check():
     assert len(m_graph.edges) == 24
     assert len(m_graph.pois) == 12
 
-    assert robots[0].cur_node == start.id
-    assert robots[0].cur_pose[0] == start.coord[0]
-    assert robots[0].cur_pose[1] == start.coord[1]
+    # assert robots[0].cur_node == start.id
+    # assert robots[0].cur_pose[0] == start.coord[0]
+    # assert robots[0].cur_pose[1] == start.coord[1]
     for vertex in m_graph.vertices:
         if vertex.id == 1:
             assert vertex.heur2goal == pytest.approx(4.0+4.5+3.6, 0.2)
@@ -242,10 +225,12 @@ def test_sctp_graph_medium_check():
     for edge in m_graph.edges:
         assert edge.v1.block_prob == 0.0 or edge.v2.block_prob == 0.0
 
-def test_sctp_rangraph_check():
-    start, goal, ran_graph, robot = graphs.random_graph(n_vertex=8)
-    graphs.plot_sctpgraph(nodes=ran_graph.vertices, pois=ran_graph.pois, 
-                edges=ran_graph.edges, startID=start.id, goalID=goal.id)
-    
+
+def test_sctp_rangraph_unblockPath():
+    seed = np.random.randint(1000,2000)
+    np.random.seed(seed)
+    random.seed(seed)
+    start, goal, ran_graph = graphs.random_graph(n_vertex=8)
+    plotting.plot_sctpgraph(graph=ran_graph, startID=start.id, goalID=goal.id, seed=seed)
 
    

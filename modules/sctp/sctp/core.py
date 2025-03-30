@@ -78,7 +78,7 @@ class sctp_metric:
     def __add__(self, other):
         return sctp_metric(self.elap_time + other.elap_time, self.trav_dist + other.trav_dist)
 class SCTPState(object):
-    def __init__(self, graph=None, goalID=None, robot=None, drones=None, iscopy=False):
+    def __init__(self, graph=None, goalID=None, robot=None, drones=[], iscopy=False):
         self.action_cost = 0.0
         self.heuristic = 0.0
         self.noway2goal = False
@@ -99,37 +99,25 @@ class SCTPState(object):
             self.edges = graph.edges
             self.pois = graph.pois
             self.goalID = goalID
-            self.robot = robot
-            self.robot.need_action = True
-            self.uavs = drones
-            for uav in self.uavs:
-                uav.need_action = True
             self.assigned_pois = set()
             self.gateway = set()
             self.v_vertices = set()
             self.heuristic_vertices = dict()
-            self.uav_actions = None 
-            if drones:
-                self.uav_actions = [Action(target=poi.id, rtype=RobotType.Drone) for poi in self.pois]
-                self.uav_actions = [action for action in self.uav_actions \
-                                    if self.history.get_action_outcome(action) == EventOutcome.CHANCE] # list unexplored pois
-                if len(self.uav_actions) == 0:
-                    self.uav_actions =[Action(target=self.goalID,rtype=RobotType.Drone)]
+            # define robot
+            self.robot = robot
+            self.robot.need_action = True
             if self.robot.at_node:
                 neighbors = [node for node in self.vertices+self.pois if node.id == self.robot.last_node][0].neighbors
                 self.robot_actions = [Action(target=neighbor, start_pose=self.robot.cur_pose) for neighbor in neighbors]
                 self.v_vertices.add(self.robot.last_node)
                 if self.history.get_action_outcome(Action(target=self.robot.last_node))==EventOutcome.BLOCK:
-                    self.robot_actions = [action for action in self.robot_actions if action.target ==self.robot.pl_vertex]
-                [self.gateway.add(action.target) for action in self.robot_actions]
+                    self.robot_actions = [action for action in self.robot_actions if action.target ==self.robot.pl_vertex]                
                 self.heuristic_vertices[self.robot.last_node] = [v.heur2goal for v in self.vertices+self.pois \
                                                               if v.id == self.robot.last_node][0]
                 self.heuristic = self.heuristic_vertices[self.robot.last_node]
             else:
                 self.robot_actions = [Action(target=self.robot.edge[0], start_pose=self.robot.cur_pose), 
                                       Action(target=self.robot.edge[1],start_pose=self.robot.cur_pose)]
-                [self.gateway.add(nodeid) for nodeid in self.robot.edge \
-                    if self.history.get_action_outcome(Action(target=nodeid)) != EventOutcome.BLOCK]
                 n1 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[0]][0]
                 n2 = [v for v in self.vertices+self.pois if v.id == self.robot.edge[1]][0]
                 self.heuristic = min(n1.heur2goal+np.linalg.norm(self.robot.cur_pose - np.array(n1.coord)),
@@ -137,9 +125,26 @@ class SCTPState(object):
             
             self.robot_actions = [action for action in self.robot_actions \
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
+            [self.gateway.add(action.target) for action in self.robot_actions]
             assert len(self.robot_actions) > 0
-            assert len(self.uav_actions) > 0
-            self.state_actions = [action for action in self.uav_actions]
+            # print(f"The gateway at inital state: {self.gateway}")
+            self.state_actions = [action for action in self.robot_actions ]
+            # define drones
+            self.uavs = drones 
+            self.uav_actions = []
+            if self.uavs != []:
+                for uav in self.uavs:
+                    uav.need_action = True
+                self.uav_actions = [] 
+                self.uav_actions = [Action(target=poi.id, rtype=RobotType.Drone) for poi in self.pois]
+                self.uav_actions = [action for action in self.uav_actions \
+                                    if self.history.get_action_outcome(action) == EventOutcome.CHANCE] # list unexplored pois
+                if len(self.uav_actions) == 0:
+                    self.uav_actions =[Action(target=self.goalID,rtype=RobotType.Drone)]
+            
+                assert len(self.uav_actions) > 0
+                self.state_actions = [action for action in self.uav_actions]
+            
             
     def get_actions(self):
         return self.state_actions
@@ -174,10 +179,10 @@ class SCTPState(object):
 
     def transition(self, action):
         temp_state = self.copy()
-        uav_needs_action = [uav.need_action for uav in temp_state.uavs]
         anyrobot_action = False
         
         if action.rtype == RobotType.Drone:
+            uav_needs_action = [uav.need_action for uav in temp_state.uavs]
             assert any(uav_needs_action) == True
             assert action in temp_state.uav_actions
             uav_idx = uav_needs_action.index(True)
@@ -221,12 +226,6 @@ class SCTPState(object):
         new_state.edges = self.edges
         new_state.pois = self.pois
         new_state.goalID = self.goalID
-        new_state.robot = self.robot.copy()
-        new_state.uavs = [uav.copy() for uav in self.uavs]
-        new_state.uav_actions = [Action(target=action.target, rtype=action.rtype, start_pose=action.start_pose) \
-                                 for action in self.uav_actions]
-        new_state.robot_actions = [Action(target=action.target, rtype=action.rtype, start_pose=action.start_pose) \
-                                   for action in self.robot_actions]
         new_state.action_cost = 0.0
         new_state.assigned_pois = self.assigned_pois.copy() # [poi for poi in self.assigned_pois]
         new_state.state_actions = []
@@ -235,13 +234,25 @@ class SCTPState(object):
         new_state.noway2goal = self.noway2goal
         new_state.heuristic = self.heuristic
         new_state.heuristic_vertices = self.heuristic_vertices.copy()
+        # copy the robot
+        new_state.robot = self.robot.copy()
+        new_state.robot_actions = [Action(target=action.target, rtype=action.rtype, start_pose=action.start_pose) \
+                                   for action in self.robot_actions]
+        if self.uavs != []:
+            new_state.uavs = [uav.copy() for uav in self.uavs]
+            new_state.uav_actions = [Action(target=action.target, rtype=action.rtype, start_pose=action.start_pose) \
+                                 for action in self.uav_actions]
+        else:
+            new_state.uavs = []
+            new_state.uav_actions = []
+        
 
         return new_state
 
 def advance_state(state1, action):
     state = state1.copy()
     # 1. if any robot needs action, determine its actions then return
-    if any([uav.need_action for uav in state.uavs]):
+    if state.uavs != [] and any([uav.need_action for uav in state.uavs]):
         state.state_actions = [action for action in state.uav_actions]
         state.depth += 1
         return {state: (1.0, 0.0)}
@@ -279,7 +290,7 @@ def get_new_nodes_grobot(state, last_node, last_edge):
     vertex = [node for node in state.vertices+state.pois if node.id == state.robot.action.target][0]
     # update the uav action set.
     state.uav_actions = [action for action in state.uav_actions if action.target != state.robot.last_node]
-    if len(state.uav_actions) == 0:
+    if len(state.uav_actions) == 0 and len(state.uavs) >0:
         state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone)]
     visiting = False
     state.gateway.discard(state.robot.last_node)
@@ -310,7 +321,8 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         return {state: (1.0, state.action_cost)}
     # if edge_status is 'CHANCE', we don't know the outcome.action
     elif vertex_status == EventOutcome.CHANCE:
-        reset_uavs_action(state)
+        if len(state.uavs) > 0:
+            reset_uavs_action(state)
         # TRAVERSABLE
         new_state_trav = state.copy()
         new_state_trav.action_cost = state.action_cost
@@ -329,11 +341,9 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         new_state_block = state.copy()
         new_state_block.action_cost = state.action_cost
         new_state_block.history.add_history(state.robot.action, EventOutcome.BLOCK)
-        # if new_state_block.robot.at_node:
         if last_node != new_state_block.robot.last_node:
             target = last_node
         else:
-            # target = new_state_block.robot.ll_node
             target = new_state_block.robot.pl_vertex
         new_state_block.robot_actions = [Action(target=target,start_pose=(state.robot.cur_pose[0],state.robot.cur_pose[1]))]
         new_state_block.state_actions = [action for action in new_state_block.robot_actions]
@@ -344,6 +354,7 @@ def get_new_nodes_grobot(state, last_node, last_edge):
                     new_state_block: (vertex.block_prob, new_state_block.action_cost)}
 
 def get_new_nodes_drone(state, uav_index):
+    assert len(state.uavs) > 0
     vertex_status = state.history.get_action_outcome(state.uavs[uav_index].action)
     vertex = [node for node in state.pois+state.vertices if node.id == state.uavs[uav_index].action.target][0]
     # determine all actions related to the poi and remove it from the set.
@@ -435,14 +446,16 @@ def reset_uavs_action(state):
 
 def _get_robot_that_finishes_first(state):
     time_remaining_uavs = []
-    for uav in state.uavs:
-        if uav.remaining_time >APPROX_TIME:
-            time_remaining_uavs.append(uav.remaining_time)
+    if len(state.uavs) > 0:
+        for uav in state.uavs:
+            if uav.remaining_time >APPROX_TIME:
+                time_remaining_uavs.append(uav.remaining_time)
     robot_reach_first = False
     if len(time_remaining_uavs)==0 or state.robot.remaining_time < min(time_remaining_uavs):
         robot_reach_first = True
         return robot_reach_first, len(time_remaining_uavs), state.robot.remaining_time
     else:
+        assert len(state.uavs) > 0
         min_time = min(time_remaining_uavs)
         remaining_times = [uav.remaining_time for uav in state.uavs]
         uav_index = remaining_times.index(min_time)
@@ -481,11 +494,7 @@ def sctp_rollout2(node):
     count = 0
     while not node.is_terminal_node():
         count += 1
-        # print(f"Not a terminal node {count} with gateway {node.state.gateway}")
-        
-        # print(f"The status of the POI5 {node.state.history.get_action_outcome(act5)}")
-        # print(f"The status of the POI8 {node.state.history.get_action_outcome(act8)}")
-        # print(f"The status of the POI6 {node.state.history.get_action_outcome(act6)}")
+        # print(f"Not a terminal node {count} with gateway {node.state.gateway}")        
         actions = node.unexplored_actions
         assert len(actions) > 0
         rtype = actions[0].rtype
@@ -499,16 +508,12 @@ def sctp_rollout2(node):
             action = np.random.choice(actions)
         else:
             TypeError("robot type is wrong")
-        # if 2 in list(node.state.gateway):
-        # print(f"The action is: {action} with count = {count} and gateway {list(node.state.gateway)}")
-        # if len(node.state.gateway)==1 and list(node.state.gateway)[0] == 2:
+        # if len(node.state.gateway)==1 and list(node.state.gateway)[0] == 5:
         #     act5 = Action(target=5)
-        #     act8 = Action(target=8)
-        #     act6 = Action(target=6)
-            
-        #     if node.state.history.get_action_outcome(act5) == EventOutcome.BLOCK and node.state.history.get_action_outcome(act6) == EventOutcome.BLOCK:
+        #     # act8 = Action(target=8)            
+        #     if node.state.history.get_action_outcome(act5) == EventOutcome.BLOCK:
         #         print(f"The action is: {action}")
-        #         print(f"count = {count} and the robot get stuck")
+        #         print(f"count = {count} and the robot get stuck with gateway {node.state.gateway}")
         #         exit()
 
         node = pomcp.get_chance_node(node, action)
@@ -519,3 +524,4 @@ def sctp_rollout2(node):
     # if node.state.robot.last_node == node.state.goalID:
     #     print(f"The robot reaches the goal ----- tree depth {count}")
     return node.cost
+

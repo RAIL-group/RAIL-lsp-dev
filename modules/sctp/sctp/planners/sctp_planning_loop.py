@@ -3,7 +3,7 @@ import sctp
 from sctp.param import VEL_RATIO
 
 class SCTPPlanningLoop(object):
-    def __init__(self, graph, reached_goal, goalID, robot, drones=None, verbose=True):
+    def __init__(self, graph, reached_goal, goalID, robot, drones=[], verbose=True):
         self.robot = robot
         self.drones = drones
         self.graph = graph
@@ -20,7 +20,7 @@ class SCTPPlanningLoop(object):
         vertices_status = {}
         while True:
             
-            if self.drones:
+            if len(self.drones) > 0:
                 yield {
                     "robot": ([self.robot.cur_pose, self.robot.at_node, self.robot.edge, self.robot.last_node, self.robot.pl_vertex]),
                     "drones": ([[drone.cur_pose, drone.at_node, drone.last_node] for drone in self.drones]),
@@ -34,7 +34,8 @@ class SCTPPlanningLoop(object):
                 }
             if self.goal_reached_fn():
                 print("------ The ground robot reaches its goal ----- ")
-                print(f"Drone position: ", [drone.cur_pose for drone in self.drones])
+                if len(self.drones) > 0:
+                    print(f"Drone position: ", [drone.cur_pose for drone in self.drones])
                 print(f"Robot position: {self.robot.cur_pose}")
                 break
 

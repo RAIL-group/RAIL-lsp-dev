@@ -1,4 +1,3 @@
-import copy, random
 import numpy as np
 from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 

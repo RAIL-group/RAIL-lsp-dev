@@ -9,7 +9,7 @@ from sctp.param import RobotType
 
 
 class SCTPPlanner(object):
-    def __init__(self, args, init_graph, goalID, robot, drones=None, verbose=False):
+    def __init__(self, args, init_graph, goalID, robot, drones=[], verbose=False):
         self.args = args
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -43,17 +43,19 @@ class SCTPPlanner(object):
 
         if self.verbose:
             print('------------robots poses after updating ---------------')
-            print(f"Drones: ", [drone.cur_pose for drone in self.drones])
+            if self.drones != []:
+                print(f"Drones: ", [drone.cur_pose for drone in self.drones])
             print(f"Robot: {self.robot.cur_pose} at node? {self.robot.at_node} /on edge? {self.robot.edge}/ last node: {self.robot.last_node}")
         
-
-
     
     def compute_joint_action(self):
         if self.reached_goal():
             return None, 0.0       
         robot = self.robot.copy()
-        drones = [drone.copy() for drone in self.drones]
+        if self.drones == []:
+            drones = []
+        else:
+            drones = [drone.copy() for drone in self.drones]
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
                                         drones=drones

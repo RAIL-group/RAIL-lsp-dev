@@ -1,6 +1,4 @@
 from enum import Enum
-# from sctp import graphs
-# import numpy as np
 
 EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 RobotType = Enum('RobotType', ['Ground', 'Drone'])

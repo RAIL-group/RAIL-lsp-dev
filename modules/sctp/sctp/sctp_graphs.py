@@ -1,10 +1,7 @@
 import numpy as np
-import random, copy
-import matplotlib.pyplot as plt
+from sctp.utils import paths
 from scipy.spatial import Delaunay, distance
-from sctp.robot import Robot
-from sctp.param import RobotType
-import heapq
+
 
 
 class Graph():
@@ -25,13 +22,16 @@ class Graph():
         poi_coord = (0.5*(vertex1.coord[0]+vertex2.coord[0]),0.5*(vertex1.coord[1]+vertex2.coord[1]))
         POI = Vertex(coord=poi_coord, block_prob=block_prob)
         self.pois.append(POI)
+        rand_cost = np.random.randint(1,10)
 
         edge1 = Edge(vertex1, POI)
         self.edges.append(edge1)
+        edge1.rand_cost = rand_cost
         vertex1.neighbors.append(POI.id)
         POI.neighbors.append(vertex1.id)
 
         edge2 = Edge(POI, vertex2)
+        edge2.rand_cost = rand_cost
         self.edges.append(edge2)
         POI.neighbors.append(vertex2.id)
         vertex2.neighbors.append(POI.id)
@@ -95,131 +95,17 @@ class Edge:
         self.dist = np.linalg.norm(
             np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
         self.cost = self.dist
+        self.ran_cost = 0
 
     def get_cost(self) -> float:
         return self.cost
+    
 
     def __eq__(self, other):
         return self.hash_id == other.hash_id
 
     def __hash__(self):
         return hash(self.v1) + hash(self.v2)
-
-
-# helper functions
-def dijkstra(vertices, edges, goal):
-    """Find the shortest paths to a goal from any node in a graph."""
-    # Initialize the distance to all nodes as infinity
-    # poi_vertices = graph.pois + graph.vertices
-    dist = {node: float('inf') for node in vertices}
-    dist[goal] = 0.0
-    parent = {node: None for node in vertices}
-    visited = set()
-    queue = [(0.0, goal.id,  goal)]
-
-    while queue:
-        # Get the node with the smallest distance
-        node_dist, id, node = heapq.heappop(queue)
-        if node in visited:
-            continue
-        # Mark the node as visited
-        visited.add(node)
-        # Update the distance to the neighbors of the node
-        for neighbor in node.neighbors:
-            edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == neighbor) \
-                        or (edge.v1.id == neighbor and edge.v2.id == node.id))][0]
-            neigh_vertex = [node for node in vertices if node.id == neighbor][0]
-            if dist[node] + edge.cost < dist[neigh_vertex]:
-                dist[neigh_vertex] = dist[node] + edge.cost
-                parent[neigh_vertex] = node
-            heapq.heappush(queue, (dist[neigh_vertex], neigh_vertex.id, neigh_vertex))
-    for node in vertices:
-        node.heur2goal = dist[node]
-    
-def plot_sctpgraph(graph, name="Testing Graph", path=None, 
-               startID=None, goalID=None, seed=None):
-    """Plot graph using matplotlib."""
-    plt.figure(figsize=(10, 10))
-
-    # Plot edges
-    for edge in graph.edges:
-        x_values = [edge.v1.coord[0], edge.v2.coord[0]]
-        y_values = [edge.v1.coord[1], edge.v2.coord[1]]
-        plt.plot(x_values, y_values, 'b-', alpha=0.7)
-        # Display block probability
-        mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
-        mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
-        costs = f"{edge.cost:.1f}"
-        plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=8)
-
-    # Plot nodes
-    for node in graph.nodes:
-        plt.scatter(node.coord[0], node.coord[1], color='black', s=50)
-        plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=10)
-        if startID is not None:
-            if node.id == startID:
-                plt.text(node.coord[0] - 0.2, node.coord[1] - 0.5, "S", color='blue', fontsize=15)
-                if seed is not None:
-                    plt.text(node.coord[0] - 0.2, node.coord[1] + 0.5, f"seed={seed}", color='black', fontsize=10)
-        if goalID is not None:
-            if node.id == goalID:
-                plt.text(node.coord[0] + 0.4, node.coord[1] - 0.4, "G", color='red', fontsize=15)
-
-    for poi in graph.pois:
-        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=50)
-        plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"POI{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=9)
-        
-    
-    if path is not None:
-        x_robot = []
-        y_robot = []
-        x_drone = []
-        y_drone = []
-        for a in path:
-            if a.rtype == RobotType.Ground:
-                x_robot.append(a.start_pose[0])
-                y_robot.append(a.start_pose[1])
-            elif a.rtype == RobotType.Drone:
-                x_drone.append(a.start_pose[0])
-                y_drone.append(a.start_pose[1])
-        plt.plot(x_robot, y_robot, color='orange', linewidth=2)
-        plt.scatter(x_robot, y_robot, color='orange',s=20)
-        plt.plot(x_drone, y_drone, color='purple', linewidth=2)
-    plt.title(name)
-    plt.xlabel("X-coordinate")
-    plt.ylabel("Y-coordinate")
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.axis("equal")
-    plt.show()
-
-def plot_sctpgraph_combine(graph, plt, verbose=False):
-
-    # Plot edges
-    for edge in graph.edges:
-        x_values = [edge.v1.coord[0], edge.v2.coord[0]]
-        y_values = [edge.v1.coord[1], edge.v2.coord[1]]
-        plt.plot(x_values, y_values, 'b-', linewidth=1.0, alpha=1.0)
-        # Display block probability
-        if verbose:
-            mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
-            mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
-            costs = f"{edge.cost:.1f}"
-            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=6)
-
-    # Plot nodes
-    for node in graph.vertices:
-        plt.scatter(node.coord[0], node.coord[1], color='green', s=25)
-        if verbose:
-            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=6)
-
-    for poi in graph.pois:
-        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=25)
-        if poi.block_status == 1:
-            plt.scatter(poi.coord[0], poi.coord[1], color='black', s=18)
-        if verbose:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"POI{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=6)
-        else:
-            plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=6)
         
 
 
@@ -232,8 +118,7 @@ def linear_graph_unc():
     graph.edges.clear()
     graph.add_edge(start_node, node1, 0.5)
     graph.add_edge(node1, goal_node, 0.3)
-    vertices = graph.vertices + graph.pois
-    dijkstra(vertices=vertices, edges=graph.edges, goal=goal_node)
+    paths.dijkstra(graph=graph, goal=goal_node)
     return start_node, goal_node, graph
 
 
@@ -255,8 +140,8 @@ def disjoint_unc():  # edge 34 is blocked
     graph.add_edge(node3, node4, 0.1)
     graph.add_edge(node2, node3, 0.9)
     graph.add_edge(node1, node4, 0.2)
-    vertices = graph.vertices + graph.pois
-    dijkstra(vertices=vertices, edges=graph.edges, goal=node3)
+    # vertices = graph.vertices + graph.pois
+    paths.dijkstra(graph=graph, goal=node3)
     return node1, node3, graph
 
 
@@ -280,11 +165,7 @@ def s_graph_unc():
     graph.add_edge(node2, node3, 0.1)
     graph.add_edge(node2, node4, 0.1)
     graph.add_edge(node3, node4, 0.9)
-
-    #    plot_street_graph(nodes, graph.edges)
-    vertices = graph.vertices + graph.pois
-    dijkstra(vertices=vertices, edges=graph.edges, goal=node4)
-
+    paths.dijkstra(graph=graph, goal=node4)
     return node1, node4, graph
 
 
@@ -322,18 +203,15 @@ def m_graph_unc():
     graph.add_edge(node5, node7, 0.90) #17
     graph.add_edge(node6, node7, 0.1) #18
     graph.add_edge(node6, node5, 0.1) #19
-    vertices = graph.vertices + graph.pois
-    dijkstra(vertices=vertices, edges=graph.edges, goal=node7)
+    paths.dijkstra(graph=graph, goal=node7)
     return node1, node7, graph
 
 
 
-def generate_random_coordinates(n, xmin, ymin, xmax, ymax):
+def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
     points = []
     attempts = 0
     max_attempts = 5000
-    min_dist = 1.0
-    max_dist = 6.0
     while len(points) < n and attempts < max_attempts:
         point = np.array([np.random.uniform(xmin, xmax), np.random.uniform(ymin, ymax)])
         if not points:
@@ -353,8 +231,11 @@ def generate_random_coordinates(n, xmin, ymin, xmax, ymax):
 
 def random_graph(n_vertex=8, xmin=0, ymin=0):
     """Generate a random graph with Delaunay triangulation and weighted edges."""    
-    size = 5.0 * (np.sqrt(n_vertex)-1.0)
-    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size)
+    size = 7.0 * (np.sqrt(n_vertex)-1.0)
+    max_edge_length = 9.0
+    min_edge_length = 3.0
+    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
+                                         min_dist=min_edge_length, max_dist=max_edge_length)
     tri = Delaunay(np.array(points))
     graph = Graph(vertices=[Vertex(coord=point) for point in points])
     graph.edges.clear()
@@ -371,12 +252,12 @@ def random_graph(n_vertex=8, xmin=0, ymin=0):
     # Add edges to the graph with random weights
     for i, j in edges:
         dist = np.linalg.norm(np.array(graph.vertices[i].coord) - np.array(graph.vertices[j].coord))
-        if dist > 6.0:
+        if dist > max_edge_length:
             continue
-        if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >5.0:
+        if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >max_edge_length-1.2:
             continue
 
-        if np.random.random() <0.85:
+        if np.random.random() <0.85: # control level of blockage in the graph
             graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.15, 0.6))
         else:
             graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.7, 0.90))
@@ -385,26 +266,10 @@ def random_graph(n_vertex=8, xmin=0, ymin=0):
     goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
     goal = graph.vertices[goalId]
     start = graph.vertices[startId]
-    
-    # G_robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id)
-    # D_robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone)
-    # robots = [G_robot, D_robot]
-    #    plot_street_graph(nodes, graph.edges)
-    vertices = graph.vertices + graph.pois
-    dijkstra(vertices=vertices, edges=graph.edges, goal=goal)
+    paths.dijkstra(graph=graph, goal=goal)
+    trav_path = paths.get_random_path(graph, start=start.id, goal=goal.id)
+    assert len(trav_path) > 1
+    for vertex in graph.pois:
+        if vertex.id in trav_path:
+            vertex.block_status = int(0)
     return start, goal, graph
-
-
-
-def print_graph(nodes, edges, show_edge=False, show_node=False):
-    """Print the graph details."""
-    if show_node:
-        for node in nodes:
-            print(f"Node {node.id}: ({node.coord[0]:.2f}, {node.coord[1]:.2f}) with neighbors: {node.neighbors}")
-            print(f"The neighbors features:")
-            for n in node.neighbors:
-                edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == n) or (edge.v1.id == n and edge.v2.id == node.id))][0]
-                print(f"edge {edge.id}: block prob {edge.block_prob:.2f}, block status {edge.block_status}, cost {edge.cost}")
-    if show_edge:
-        for edge in edges:
-            print(f"Edge {edge.id}: block prob {edge.block_prob:.2f}, block status {edge.block_status}, cost {edge.cost}")
