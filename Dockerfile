@@ -35,7 +35,6 @@ COPY modules/requirements.txt requirements.txt
 RUN uv pip install -r requirements.txt
 RUN uv pip install sknw
 
-
 # Install PDDLStream
 RUN git clone https://github.com/caelan/pddlstream.git \
 	&& cd pddlstream && ls -a && cat .gitmodules\

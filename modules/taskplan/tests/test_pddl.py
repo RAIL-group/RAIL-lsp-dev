@@ -1,26 +1,28 @@
 import os
 import time
 import torch
+import pytest
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 from pddlstream.algorithms.search import solve_from_pddl
+
 import procthor
 import taskplan
 from taskplan.planners.planner import KnownPlanner
-from taskplan.pddl.helper import get_learning_informed_plan
 from taskplan.utilities.utils import get_container_pose
-import pytest
 
 
 def get_args():
     args = lambda: None
-    args.current_seed = 8030
+    args.current_seed = 2
     args.resolution = 0.05
     args.save_dir = '/data/test_logs/'
     args.image_filename = 'tester.png'
-    args.network_file = '/data/taskplan/logs/00_test/gnn.pt'
+    args.network_file = '/data/taskplan/logs/dbg/fcnn.pt'
     args.cache_path = '/data/.cache'
+    args.cost_type = None
+    args.goal_type = '1object'
 
     random.seed(args.current_seed)
     np.random.seed(args.current_seed)
@@ -28,14 +30,14 @@ def get_args():
 
     return args
 
-
+@pytest.mark.timeout(30)
 def test_learned_plan():
     args = get_args()
     if not os.path.exists(args.network_file):
         pytest.xfail(f"Network file not found: {args.network_file}")
 
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.procthor.ThorInterface(args=args)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -46,18 +48,24 @@ def test_learned_plan():
 
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid)
+    partial_map.set_room_info(init_robot_pose, thor_data.rooms)
 
+    args.cost_type = 'learned'
+    if args.cost_type == 'learned':
+        learned_data = {
+            'partial_map': partial_map,
+            'learned_net': args.network_file
+        }
+    else:
+        learned_data = None
     # Instantiate PDDL for this map
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        seed=args.current_seed
+        args=args,
+        learned_data=learned_data
     )
-
-    plan, cost = get_learning_informed_plan(
-        pddl=pddl, partial_map=partial_map,
-        subgoals=pddl['subgoals'], init_robot_pose=init_robot_pose,
-        learned_net=args.network_file)
+    plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
 
     if plan:
         for idx, p in enumerate(plan):
@@ -69,7 +77,7 @@ def test_place_task():
     args = get_args()
 
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.procthor.ThorInterface(args=args)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
@@ -78,7 +86,7 @@ def test_place_task():
     pddl = taskplan.pddl.helper.get_pddl_instance(
         whole_graph=whole_graph,
         map_data=thor_data,
-        seed=args.current_seed
+        args=args
     )
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
     if plan:
@@ -99,7 +107,7 @@ def test_replan():
         'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
     }
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
+    thor_data = procthor.procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -121,7 +129,7 @@ def test_replan():
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'], planner=pddl['planner'])
     executed_actions = []
     robot_poses = [init_robot_pose]
-
+    cost_str = 'Known'
     while plan:
         for action in plan:
             print(action)
@@ -225,7 +233,6 @@ def test_replan():
                 # Over here initiate the planner
                 planner = KnownPlanner(args, partial_map,
                                        destination=fe_pose)
-                cost_str = 'Known'
                 # Initiate planning loop but run for a step
                 planning_loop = taskplan.planners.planning_loop.PlanningLoop(
                     partial_map=partial_map, robot=fs_pose,
@@ -340,7 +347,7 @@ def test_replan():
     plt.box(False)
     plt.xticks([])
     plt.yticks([])
-    assert len(plan) > 0
+    assert len(executed_actions) > 0
     plt.savefig(f'/data/test_logs/replan_{args.current_seed}.png', dpi=400)
 
 
@@ -356,7 +363,7 @@ def test_custom_goal():
         'coffeegrinds': ['diningtable', 'countertop', 'shelvingunit']
     }
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
+    thor_data = procthor.procthor.ThorInterface(args=args, preprocess=obj_loc_dict)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()

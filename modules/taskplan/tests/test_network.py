@@ -3,7 +3,7 @@ import torch
 import random
 import numpy as np
 
-import procthor
+from procthor import procthor
 import taskplan
 from taskplan.planners.planner import LearnedPlanner
 
@@ -14,7 +14,7 @@ def get_args():
     args.current_seed = 0
     args.resolution = 0.05
     args.save_dir = '/data/test_logs/'
-    args.network_file = '/data/taskplan/logs/dbg/gnn.pt'
+    args.network_file = '/data/taskplan/logs/dbg/fcnn.pt'
 
     args.cost_type = 'learned'
 

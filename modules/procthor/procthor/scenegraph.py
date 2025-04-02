@@ -128,5 +128,5 @@ class SceneGraph:
             'obj_node_idx': self.object_indices,
             'idx_map': self.asset_id_to_node_idx_map
 
-        })
+        }, pos='position')
         self.edges.extend(required_edges)

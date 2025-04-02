@@ -1,6 +1,15 @@
+import os
+import io
+import pickle
 import numpy as np
 import networkx as nx
+import matplotlib.pyplot as plt
+from PIL import Image
+
 import gridmap
+
+
+SBERT_PATH = '/resources/sentence_transformers/'
 
 
 def get_nearest_free_point(point, free_points):
@@ -50,7 +59,7 @@ def get_cost(grid, robot_pose, end):
     return cost
 
 
-def get_edges_for_connected_graph(grid, graph):
+def get_edges_for_connected_graph(grid, graph, pos='pos'):
     """ This function finds edges that needs to exist to have a connected graph """
     edges_to_add = []
 
@@ -77,8 +86,8 @@ def get_edges_for_connected_graph(grid, graph):
             merged_set |= s
         for comp in comps:
             for idx, target in enumerate(merged_set):
-                cost = get_cost(grid, graph['nodes'][comp]['position'],
-                                graph['nodes'][target]['position'])
+                cost = get_cost(grid, graph['nodes'][comp][pos],
+                                graph['nodes'][target][pos])
                 if cost < min_cost:
                     min_cost = cost
                     min_index = list(merged_set)[idx]
@@ -115,3 +124,67 @@ def get_object_color_from_type(encoding):
     if encoding[3] == 1:
         return "orange"
     return "violet"
+
+
+def load_sentence_embedding(target_file_name):
+    target_dir = os.path.join(SBERT_PATH, 'cache')
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    # Walk through all directories and files in target_dir
+    for root, dirs, files in os.walk(target_dir):
+        if target_file_name in files:
+            file_path = os.path.join(root, target_file_name)
+            if os.path.exists(file_path):
+                return np.load(file_path)
+    return None
+
+
+def get_sentence_embedding(sentence):
+    loaded_embedding = load_sentence_embedding(sentence + '.npy')
+    if loaded_embedding is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer(SBERT_PATH)
+        sentence_embedding = model.encode([sentence])[0]
+        file_name = os.path.join(SBERT_PATH, 'cache', sentence + '.npy')
+        np.save(file_name, sentence_embedding)
+        return sentence_embedding
+    else:
+        return loaded_embedding
+
+
+def get_graph_image(edge_index, node_names, color_map):
+    # Create a graph object
+    G = nx.Graph()
+
+    # Add nodes to the graph with labels
+    for idx, _ in enumerate(node_names):
+        G.add_node(idx)
+
+    # Add edges to the graph
+    G.add_edges_from(edge_index)
+
+    # Draw the graph
+    pos = nx.spring_layout(G)  # Positions for all nodes
+    nx.draw(G, pos, with_labels=True, node_color=color_map, node_size=150,
+            labels=node_names, font_size=8, font_weight='regular', edge_color='black')
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    img = Image.open(buf)
+    return img
+
+
+def load_cache(seed, cache_path):
+    cache_file = f'{cache_path}/procthor_{seed}.pkl'
+    if os.path.exists(cache_file):
+        with open(cache_file, 'rb') as f:
+            return pickle.load(f)
+
+
+def save_cache(seed, cache_path, data):
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
+    cache_file = f'{cache_path}/procthor_{seed}.pkl'
+    with open(cache_file, 'wb') as f:
+        pickle.dump(data, f)

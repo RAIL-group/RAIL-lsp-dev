@@ -18,7 +18,7 @@ def evaluate_main(args):
     else:
         preprocess = True
     # Load data for a given seed
-    thor_data = procthor.ThorInterface(args=args, preprocess=preprocess)
+    thor_data = procthor.procthor.ThorInterface(args=args, preprocess=preprocess)
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -110,7 +110,7 @@ def evaluate_main(args):
 
     plt.subplot(234)
     # 3 plot the graph overlaied image
-    procthor.plotting.plot_graph_on_grid(grid, whole_graph)
+    procthor.plotting.plot_graph_on_grid_old(grid, whole_graph)
     x, y = init_robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
     plt.title('Graph overlaied occupancy grid', fontsize=6)

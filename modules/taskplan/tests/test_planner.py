@@ -11,10 +11,10 @@ from taskplan.planners.planner import LearnedPlanner
 def get_args():
     args = lambda: None
     args.cache_path = '/data/.cache'
-    args.current_seed = 7007
+    args.current_seed = 7000
     args.resolution = 0.05
     args.save_dir = '/data/test_logs/'
-    args.network_file = '/data/taskplan/logs/dbg/gnn.pt'
+    args.network_file = '/data/taskplan/logs/dbg/fcnn.pt'
 
     args.cost_type = 'learned'
     args.goal_type = '1object'
@@ -29,7 +29,7 @@ def get_args():
 def test_fast_approximation():
     args = get_args()
 
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.procthor.ThorInterface(args=args)
 
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()
@@ -57,7 +57,7 @@ def test_fast_approximation():
 def test_subgoal_selection():
     args = get_args()
 
-    thor_data = procthor.ThorInterface(args=args)
+    thor_data = procthor.procthor.ThorInterface(args=args)
 
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()

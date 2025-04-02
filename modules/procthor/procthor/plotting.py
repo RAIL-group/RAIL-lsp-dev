@@ -76,6 +76,38 @@ def plot_graph_on_grid(grid, graph):
                  size=6, rotation=40)
 
 
+def plot_graph_on_grid_old(grid, graph):
+    '''Plot the scene graph on the occupancy grid to scale'''
+    plotting_grid = make_plotting_grid(np.transpose(grid))
+    plt.imshow(plotting_grid)
+
+    # find the room nodes
+    room_node_idx = [idx for idx in range(1, graph['cnt_node_idx'][0])]
+
+    rc_idx = room_node_idx + graph['cnt_node_idx']
+
+    # plot the edge connectivity between rooms and their containers only
+    filtered_edges = [
+        edge
+        for edge in graph['edge_index']
+        if edge[1] in rc_idx and edge[0] != 0
+    ]
+
+    for (start, end) in filtered_edges:
+        p1 = graph['nodes'][start]['pos']
+        p2 = graph['nodes'][end]['pos']
+        x_values = [p1[0], p2[0]]
+        y_values = [p1[1], p2[1]]
+        plt.plot(x_values, y_values, 'c', linestyle="--", linewidth=0.3)
+
+    # plot room nodes
+    for room in rc_idx:
+        room_pos = graph['nodes'][room]['pos']
+        room_name = graph['nodes'][room]['name']
+        plt.text(room_pos[0], room_pos[1], room_name, color='brown',
+                 size=6, rotation=40)
+
+
 def simulate_plan(trajectory, thor_data, args):
     print(f'Seed[{args.current_seed}]: Making video by simulating plan ...')
     fig = plt.figure()
