@@ -307,7 +307,7 @@ class ThorInterface:
         }
 
         # Add edges to get a connected graph if not already connected
-        req_edges = utils.get_edges_for_connected_graph(self.occupancy_grid, graph)
+        req_edges = utils.get_edges_for_connected_graph(self.occupancy_grid, graph, pos='pos')
         graph['edge_index'] = req_edges + graph['edge_index']
 
         if not include_node_embeddings:
