@@ -59,7 +59,7 @@ def get_cost(grid, robot_pose, end):
     return cost
 
 
-def get_edges_for_connected_graph(grid, graph, pos='pos'):
+def get_edges_for_connected_graph(grid, graph, pos='position'):
     """ This function finds edges that needs to exist to have a connected graph """
     edges_to_add = []
 
