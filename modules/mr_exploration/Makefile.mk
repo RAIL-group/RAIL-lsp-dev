@@ -67,3 +67,18 @@ $(all-targets-mrlsp-results):
 	@$(DOCKER_PYTHON) -m mrlsp.scripts.mrlsp_results \
 		--save_dir data/$(MRLSP_BASENAME)/$(MRLSP_EXPERIMENT_NAME) \
 		--num_robots $(num_robots)
+
+
+
+# Exploration
+
+# Visualize MRLSP and optimistic planner
+.PHONY: mrlsp-vis-exploration
+mrlsp-vis-exploration: DOCKER_ARGS ?= -it
+mrlsp-vis-exploration: arg-check-data
+	@mkdir -p $(DATA_BASE_DIR)/$(MRLSP_BASENAME)/optimistic
+	@$(DOCKER_PYTHON) -m mr_exploration.scripts.mr_exploration_visualize \
+		--save_dir data/$(MRLSP_BASENAME)/optimistic \
+		--num_robots 2
+
+# Put args here

@@ -39,7 +39,7 @@ class MRPlanningLoop():
         robot_grids = [lsp.constants.UNOBSERVED_VAL * np.ones_like(self.known_map) for _ in range(self.num_robots)]
 
         # Main planning loop (We can stop if any of the robot reaches the goal)
-        while counter < 200:
+        while counter < 2000:
 
             if self.verbose:
                 for i, robot in enumerate(self.robots):
@@ -103,7 +103,7 @@ class MRPlanningLoop():
             paths = []
             for i in range(self.num_robots):
                 cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                    planning_grids[i], self.chosen_subgoals[i].get_centroid(), use_soft_cost=True) #mmmmmmmm... 
+                    planning_grids[i], self.chosen_subgoals[i].get_centroid(), use_soft_cost=True) 
                 did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
                                           do_sparsify=True, do_flip=True)
 
@@ -137,7 +137,7 @@ class MRPlanningLoop():
                 else:
                     # Force the robot to return to known space
                     cost_grid, get_path = gridmap.planning.compute_cost_grid_from_position(
-                        planning_grids[i], frontier_distances[i],
+                        planning_grids[i], self.chosen_subgoals[i].get_centroid(),
                         use_soft_cost=True,
                         obstacle_cost=1e5)
                     did_plan, path = get_path([self.robots[i].pose.x, self.robots[i].pose.y],
