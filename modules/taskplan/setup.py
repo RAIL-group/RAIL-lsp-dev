@@ -7,5 +7,4 @@ setup(name='taskplan',
       license="MIT",
       author='Raihan Islam Arnob',
       author_email='rarnob@gmu.edu',
-      packages=find_packages(),
-      install_requires=['numpy', 'matplotlib'])
+      packages=find_packages())
