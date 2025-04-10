@@ -58,6 +58,7 @@ RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
 FROM base AS pkg-lsp
 COPY modules/lsp_accel modules/lsp_accel
 COPY modules/lsp modules/lsp
+COPY modules/lsp_xai modules/lsp_xai
 RUN uv pip install modules/* --no-build-isolation
 
 
@@ -75,6 +76,7 @@ COPY modules/environments modules/environments
 COPY modules/procthor modules/procthor
 COPY modules/taskplan modules/taskplan
 COPY modules/object_search modules/object_search
+COPY modules/procint modules/procint
 RUN uv pip install modules/*
 
 
