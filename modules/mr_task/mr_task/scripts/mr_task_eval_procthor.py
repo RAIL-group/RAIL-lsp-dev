@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from common import Pose
 from pathlib import Path
 
-
 def _setup(args):
     thor_interface = procthor.ThorInterface(args)
     known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses(num_objects=3)
@@ -30,6 +29,12 @@ def _setup(args):
     planning_loop = mr_task.planner.MRTaskPlanningLoop(
         robot_team, simulator, mrtask_planner.dfa_planner.has_reached_accepting_state)
 
+    print("------------------------------------------")
+    print("Environment seed:", args.seed)
+    print("Places to visit:", len(planning_loop.containers_idx))
+    for container in planning_loop.containers_idx:
+        print(f'{container}:{known_graph.get_node_name_by_idx(container)}, {known_graph.get_node_position_by_idx(container)}')
+    print("------------------------------------------")
 
     for step_data in planning_loop:
         print("Total containers to left explore: ", len(planning_loop.containers_idx))
@@ -61,7 +66,7 @@ def _setup(args):
     ax2 = plt.subplot(122)
     procthor.plotting.plot_graph(ax2, known_graph.nodes, known_graph.edges)
     plt.suptitle(f'Specification: {specification}', fontweight="bold")
-    ordering = str(', '.join([str(node) for node in planning_loop.ordering]))
+    ordering = str(', '.join([str(node) for node in planning_loop.ordering.values()]))
     fig.supxlabel(f'Visit order: {ordering}', wrap=True)
     plt.savefig(f'{args.save_dir}/mtask_eval_planner_{args.planner}_seed_{args.seed}.png')
 

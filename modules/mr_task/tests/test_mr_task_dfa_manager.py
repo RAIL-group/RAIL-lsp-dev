@@ -66,3 +66,41 @@ def test_mrtask_dfa_ordered_specification():
 
     dfa.advance(('foo',))
     assert dfa.has_reached_accepting_state()
+
+
+def test_mrtask_dfa_complex_specification_fire():
+    specification = '((!fire U extinguisher) & (F fire)) | (F alarm)'
+    dfa = DFAManager(specification)
+
+    assert 'fire' in dfa.get_useful_props()
+    assert 'alarm' in dfa.get_useful_props()
+    assert 'extinguisher' in dfa.get_useful_props()
+
+    assert dfa.does_transition_state(('alarm',))
+    dfa.advance(('alarm',))
+    assert dfa.has_reached_accepting_state()
+
+def test_mrtask_dfa_complex_specification_kitchen():
+    specification = '((((!egg & !coffeemachine) U plate) | ((!egg & !coffeemachine) U bowl)) & (!coffeemachine U egg)) & (F coffeemachine)'
+    dfa = DFAManager(specification)
+
+    assert 'egg' in dfa.get_useful_props()
+    assert 'bowl' in dfa.get_useful_props()
+    assert 'plate' in dfa.get_useful_props()
+    assert 'coffeemachine' in dfa.get_useful_props()
+
+    assert not dfa.does_transition_state(('coffeemachine',))
+    assert not dfa.does_transition_state(('egg', ))
+    assert dfa.does_transition_state(('plate', ))
+    assert dfa.does_transition_state(('bowl', ))
+
+    dfa.advance(('plate', ))
+    assert not dfa.does_transition_state(('coffeemachine',))
+    assert not dfa.does_transition_state(('bowl', ))
+    assert dfa.does_transition_state(('egg', ))
+    dfa.advance(('egg', ))
+    assert dfa.does_transition_state(('coffeemachine',))
+    assert not dfa.does_transition_state(('bowl', ))
+    assert not dfa.does_transition_state(('egg', ))
+    dfa.advance(('coffeemachine',))
+    assert dfa.has_reached_accepting_state()

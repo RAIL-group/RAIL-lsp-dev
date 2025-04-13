@@ -36,7 +36,6 @@ class BaseMRTaskPlanner(object):
         if self.verbose:
             print('---------------------------')
             print(f'Task: {self.specification}')
-            print(f'Objects found: {objects_found}')
             print(f'Objects to find: {self.objects_to_find}, DFA state: {self.dfa_planner.state}')
 
 
@@ -47,6 +46,23 @@ class BaseMRTaskPlanner(object):
 class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
     def __init__(self, args, specification, verbose=True):
         super(OptimisticMRTaskPlanner, self).__init__(args, specification, verbose)
+        self.known_container_idx = []
+        self.useful_known_containers = []
+        self.useful_known_containers_props = []
+
+    def update(self, observations, robot_poses, explored_container_nodes, unexplored_container_nodes, objects_found):
+        super().update(
+            observations, robot_poses, explored_container_nodes, unexplored_container_nodes, objects_found)
+        for container in explored_container_nodes:
+            if container.name not in self.known_container_idx:
+                self.known_container_idx.append(container.name)
+                # see if the container is useful in the future
+                if set(self.objects_to_find) & set(objects_found):
+                    self.useful_known_containers.append(container)
+                    self.useful_known_containers_props.extend([o for o in objects_found])
+                    if self.verbose:
+                        print("Found useful container:", container.name, " location:", container.location, " objects", objects_found)
+
 
     def compute_joint_action(self):
         if self.dfa_planner.has_reached_accepting_state():
@@ -55,18 +71,20 @@ class OptimisticMRTaskPlanner(BaseMRTaskPlanner):
         robot_nodes = [RobotNode(Node(location=(r_pose.x, r_pose.y)))
                        for r_pose in self.robot_poses]
         # For optimistic planner, we assume that the objects are present in the containers.
-
         containers = [Node(location=node.location, name=node.name, is_subgoal=False)
                        for node in self.unexplored_container_nodes]
+        # if terminal state can be reached by exploring explored containers, then just go to them.
+        planner = copy.copy(self.dfa_planner)
+        print("tuple of useful_known_containers_props", tuple(self.useful_known_containers_props))
+        planner.advance(tuple(self.useful_known_containers_props))
+        if planner.has_reached_accepting_state():
+            containers = self.useful_known_containers
+
         distances = mr_task.utils.get_inter_distances_nodes(
             containers, robot_nodes, observed_map=self.observed_map)
         # To make sure that this function returns action object
         cost_dictionary = [None for _ in range(len(self.robot_poses))]
         for i in range(len(self.robot_poses)):
-            # cost_dictionary[i] = {
-            #     container: distances[(robot_nodes[i].start, container)]
-            #     for container in containers
-            # }
             cost_dictionary[i] = {
                 container: distances[(robot_nodes[i].start, container)]
                 for container in containers

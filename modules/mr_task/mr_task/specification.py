@@ -34,7 +34,7 @@ def get_random_specification(objects, seed=1024):
         raise ValueError("At least 1 objects are required to generate a specification")
 
     n = 3 if len(objects) > 3 else len(objects)
-    spec = np.random.choice(specifications_ordering[n])
+    spec = np.random.choice(specifications[n])
     num_objects = spec.__code__.co_argcount
     specs_objects = np.random.choice(objects, num_objects, replace=False)
     print(num_objects, specs_objects)

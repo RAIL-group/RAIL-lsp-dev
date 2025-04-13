@@ -6,3 +6,4 @@ from . import scripts
 from . import planner
 from . import utils
 from . import specification
+from . import plotting

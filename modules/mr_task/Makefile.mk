@@ -2,12 +2,12 @@ MRTASK_BASENAME = mr_task
 MRTASK_SEED_START = 2000
 MRTASK_NUM_EXPERIMENTS = 200
 MRTASK_NUM_ROBOTS = 2
-MRTASK_EXPERIMENT_NAME = dbg_Mar4_$(MRTASK_NUM_ROBOTS)_more_actions_ordering_spec
+MRTASK_EXPERIMENT_NAME = experiment_$(MRTASK_NUM_ROBOTS)_paper_object_search
 define mrlsp_get_seeds
 	$(shell seq $(MRTASK_SEED_START) $$(($(MRTASK_SEED_START)+$(MRTASK_NUM_EXPERIMENTS) - 1)))
 endef
 
-MRTASK_PLANNERS = learned optimistic
+MRTASK_PLANNERS = optimistic learned
 all-targets-mrtask-eval = $(foreach planner, $(MRTASK_PLANNERS), \
 							$(foreach seed, $(call mrlsp_get_seeds), \
 								$(DATA_BASE_DIR)/$(MRTASK_BASENAME)/$(MRTASK_EXPERIMENT_NAME)/mtask_eval_planner_$(planner)_seed_$(seed).png))
@@ -60,3 +60,16 @@ mr-task-vis-net-predictions:
 		--network_file data/$(MRTASK_BASENAME)/raihan_nn/fcnn.pt \
 		--seed 2020 \
 		--resolution 0.05
+
+.PHONY: mr-task-vis-planner
+mr-task-vis-planner: DOCKER_ARGS ?= -it
+mr-task-vis-planner:
+	@$(DOCKER_PYTHON) -m mr_task.scripts.mr_task_eval_procthor_video \
+	 	--save_dir data/$(MRTASK_BASENAME)/ \
+		--num_robots 2 \
+		--planner learned \
+		--seed 2161 \
+		--num_iterations 100000 \
+		--C 10 \
+		--resolution 0.05 \
+		--network_file data/$(MRTASK_BASENAME)/raihan_nn/fcnn.pt
