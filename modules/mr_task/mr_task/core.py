@@ -281,7 +281,7 @@ def _get_robot_that_finishes_first(mrstate):
     all_robots = [robot.copy() for robot in mrstate.robots]
     events = [(robot, *get_next_event_and_time(robot, mrstate.history))
               for robot in all_robots
-              if robot.action.props[0] in useful_props and not robot.is_waiting]
+              if set(robot.action.props) & set(useful_props) and not robot.is_waiting]
     if len(events) == 0:
         pdb.set_trace()
     shortest_event = min(events, key=lambda x: x[2])
@@ -349,7 +349,6 @@ class RobotNode(object):
 
     def advance_time(self, delta_time):
         # The maximum time that can be advanced is the time_remaining. i.e, max_delta_t
-        # pdb.set_trace()
         if not self.is_waiting:
             delta_time = min(delta_time, self._max_delta_t)
             self.info_time -= delta_time
