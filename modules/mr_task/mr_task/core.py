@@ -179,7 +179,7 @@ def filter_actions(dfa_planner, robots, actions, distances=None):
         actions = [action for action in actions if dfa_planner.does_transition_state(action.props)]
     # if there's more than one robot and total actions from that state > total number of robots that need action,
     # remove actions for nodes that are already targeted by other robots
-    if num_robots > 1 and len(actions) > num_robots:
+    if num_robots > 1 and len(actions) >= num_robots:
         # for robot in robots:
             # if robot.needs_action and robot.action is None:
             #     pdb.set_trace()
