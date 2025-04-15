@@ -21,10 +21,11 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
     }
     init_states = [
         '(= (total-cost) 0)',
-        '(restrict-move-to initial_robot_pose)',
         '(hand-is-free)',
         '(rob-at initial_robot_pose)'  # , '(is-fillable coffeemachine)'
     ]
+    if goal_type != 'any3':
+        init_states.append('(restrict-move-to initial_robot_pose)')
     for container in containers:
         cnt_name = container['id']
         cnt_of_interest.append(cnt_name)
