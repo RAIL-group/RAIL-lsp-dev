@@ -139,5 +139,6 @@ tensorboard:
 
 # ==== Includes ====
 include modules/lsp/Makefile.mk
+include modules/lsp_gnn/Makefile.mk
 include modules/procthor/Makefile.mk
 include modules/taskplan/Makefile.mk
