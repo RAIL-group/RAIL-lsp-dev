@@ -1,9 +1,9 @@
 
 SCTP_BASENAME = sctp
-SCTP_SEED_START = 2000
-SCTP_NUM_EXPERIMENTS = 50
+SCTP_SEED_START = 2033
+SCTP_NUM_EXPERIMENTS = 17
 SCTP_NUM_DRONES = 1
-SCTP_EXPERIMENT_NAME = dbg_Mar28_randgraph
+SCTP_EXPERIMENT_NAME = dbg_April15_2
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
@@ -25,7 +25,7 @@ $(all-targets-sctp-eval):
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(planner) \
 		--seed $(seed) \
-		--num_iterations 5000 \
+		--num_iterations 2000 \
 		--C 30 \
 		--resolution 0.05 \
 
@@ -51,7 +51,7 @@ sctp-planning-loop-test:
 		--resolution 0.05 \
 
 .PHONY: sctp-results
-sctp-results: sctp-eval-random-graph
+# sctp-results: sctp-eval-random-graph
 sctp-results:
 	@$(DOCKER_PYTHON) -m sctp.scripts.sctp_results \
 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \

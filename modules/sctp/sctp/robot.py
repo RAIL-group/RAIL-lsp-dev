@@ -22,11 +22,10 @@ class Robot:
             self.edge = []
         self.need_action = True 
         self.action = None
-        # self.on_action = False
         self.remaining_time = 0.0
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
-        # self.ll_node = self.last_node
+        self.visited_vertices = [self.last_node]
         self.pl_vertex = self.last_node
         self.net_time = 0.0
         self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
@@ -46,7 +45,6 @@ class Robot:
             if self.last_node != self.action.target:
                 self.pl_vertex = self.last_node
                 self.last_node = self.action.target
-                # print(f"+++++ Does it go here anytime and change the value of {self.v_vertices}+++++++++")
         else:
             self.at_node = False
             self.edge = [self.last_node, self.action.target]
@@ -63,13 +61,13 @@ class Robot:
         new_robot = Robot(position=self.cur_pose.copy(), cur_node=self.last_node, 
                           at_node=self.at_node, robot_type=self.robot_type, edge=self.edge)
         new_robot.need_action = self.need_action
-        # new_robot.ll_node = self.ll_node
         new_robot.action = self.action
         new_robot.remaining_time = self.remaining_time
         new_robot._cost_to_target = self._cost_to_target
         new_robot.id = self.id
         new_robot.pl_vertex = self.pl_vertex
         new_robot.direction = self.direction.copy()
+        new_robot.visited_vertices = self.visited_vertices.copy()
         return new_robot
 
     def retarget(self, new_action, distance, direction):

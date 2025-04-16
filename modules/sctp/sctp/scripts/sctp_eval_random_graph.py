@@ -4,11 +4,12 @@ from sctp.utils import plotting
 import random
 from sctp import sctp_graphs as graphs
 from sctp.robot import Robot
+from sctp import core
 import matplotlib.pyplot as plt
 from sctp.param import RobotType
 from pathlib import Path
 from sctp.planners import sctp_planner as planner
-from sctp.planners import sctp_planning_loop as plan_loop
+from sctp.planners import sctp_plan_exe as plan_loop
 
 def sgraph_init():
     start, goal, graph = graphs.s_graph_unc()
@@ -34,31 +35,26 @@ def mgraph_init():
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    # start, goal, graph = mgraph_init()
-    start, goal, graph = graphs.random_graph(n_vertex=8)
-
+    start, goal, graph = graphs.random_graph(n_vertex=5)
+    plotGraph = graph.copy()
+    policyGraph = graph.copy()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
-    drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-
     planner_robot = robot.copy()
-    planner_drones = [drone.copy() for drone in drones]
-
     if args.planner == 'base':
-        sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,\
-                                    robot=planner_robot) 
-    
-        planning_loop = plan_loop.SCTPPlanningLoop(robot=robot, goalID=goal.id,\
-                                                   graph=graph, reached_goal=sctpplanner.reached_goal)
-
-    elif args.planner == 'sctp':
-        sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,\
-                                    robot=planner_robot, drones=planner_drones) 
-    
-        planning_loop = plan_loop.SCTPPlanningLoop(robot=robot, drones=drones, goalID=goal.id,\
-                                                   graph=graph, reached_goal=sctpplanner.reached_goal)
-
+        drones = []    
+    elif args.planner =='sctp':
+        drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
+    
+    planner_drones = [drone.copy() for drone in drones]
+
+    sctpplanner = planner.SCTPPlanner(args=args, init_graph=policyGraph, goalID=goal.id,robot=planner_robot, 
+                                        drones=planner_drones,rollout_fn=core.sctp_rollout3) 
+
+    planning_loop = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
+                                                graph=graph, reached_goal=sctpplanner.reached_goal)
+
     
     
     for step_data in planning_loop:
@@ -73,28 +69,16 @@ def _setup(args):
     
     cost = robot.net_time
 
-    fig = plt.figure(figsize=(10, 10), dpi=300)
-    plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
-    plt.text(start.coord[0]-0.5, start.coord[1], 'start', fontsize=9)
-    plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
-    plt.text(goal.coord[0]+0.1, goal.coord[1], 'goal', fontsize=9)
-    plotting.plot_sctpgraph_combine(graph, plt)
-    x = [pose[0] for pose in robot.all_poses]
-    y = [pose[1] for pose in robot.all_poses]
-    plt.scatter(x, y, marker='P', s=4.5, alpha=1.0)
-    plt.plot(x, y, color="green")
-    for i, (x,y) in enumerate(zip(x,y)):
-        xs = [x-0.1, x+0.1]
-        ys = [y-0.1, y+0.15]
-        plt.text(np.random.choice(xs),np.random.choice(ys), f'gs{i+1}', fontsize=8)
+    x_g = [pose[0] for pose in robot.all_poses]
+    y_g = [pose[1] for pose in robot.all_poses]
+    dpaths = []
     for drone in drones:
         x = [pose[0] for pose in drone.all_poses]
         y = [pose[1] for pose in drone.all_poses]
-        plt.plot(x,y, color='yellow', alpha=0.6)
-        plt.scatter(x, y, marker='s', s=4.5)
-        for i, (x,y) in enumerate(zip(x,y)):
-            plt.text(x-0.1,y-0.2, f'ds{i+1}', fontsize=8)
-    plt.title(f'Seed: {args.seed} | Planner: {args.planner} | Cost: {cost:.2f}')
+        dpaths.append([x, y])
+    # assert dpaths == []
+    plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, graph_plot=plotGraph,
+                             start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=True)
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
 
     logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'

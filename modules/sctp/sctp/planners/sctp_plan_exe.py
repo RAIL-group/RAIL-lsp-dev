@@ -2,7 +2,7 @@ import numpy as np
 import sctp
 from sctp.param import VEL_RATIO
 
-class SCTPPlanningLoop(object):
+class SCTPPlanExecution(object):
     def __init__(self, graph, reached_goal, goalID, robot, drones=[], verbose=True):
         self.robot = robot
         self.drones = drones
@@ -10,13 +10,14 @@ class SCTPPlanningLoop(object):
         self.counter = 0
         self.verbose = verbose
         self.goalID = goalID
-        # self.ordering = []
         self.goal_reached_fn = reached_goal
         self.action_cost = 0.0
+        self.max_counter = 50
+        self.counter = 0
 
 
     def __iter__(self):
-        counter = 0
+        # counter = 0
         vertices_status = {}
         while True:
             
@@ -38,7 +39,10 @@ class SCTPPlanningLoop(object):
                     print(f"Drone position: ", [drone.cur_pose for drone in self.drones])
                 print(f"Robot position: {self.robot.cur_pose}")
                 break
-
+            if self.counter >self.max_counter:
+                print("Robot failed to find path to goal")
+                break
+            
             # # Compute the trajectory from robot's pose to the target node for each robot
             vertices_status.clear()
             self.robot.advance_time(self.action_cost)
@@ -48,6 +52,7 @@ class SCTPPlanningLoop(object):
                 v = [node for node in self.graph.pois if node.id == vertex_id]
                 if v:
                     vertices_status[vertex_id] = v[0].block_status
+                    v[0].block_prob = v[0].block_status
             # # move the drones
             for i, drone in enumerate(self.drones):
                 if drone.at_node and drone.last_node ==self.goalID:
@@ -58,6 +63,7 @@ class SCTPPlanningLoop(object):
                     v = [node for node in self.graph.pois if node.id == vertex_id]
                     if v:
                         vertices_status[vertex_id] = v[0].block_status
+                        v[0].block_prob = v[0].block_status
             #Reset the robot and drones
             self.robot.need_action = True
             self.robot.remaining_time = 0.0
@@ -65,7 +71,8 @@ class SCTPPlanningLoop(object):
                 drone.need_action = True 
                 drone.remaining_time = 0.0        
 
-            counter += 1
+            self.counter += 1
+            
             
 
 

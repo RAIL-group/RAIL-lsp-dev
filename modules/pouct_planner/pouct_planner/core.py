@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import pdb
+import sctp
 
 class POUCTNode(object):
     def __init__(self, state, parent=None, action=None, cost=None):
@@ -39,11 +40,24 @@ class POUCTNode(object):
 
 def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
     root = POUCTNode(state)
+    assert len(root.unexplored_actions) > 0
     for i in range(n_iterations):
+        # print(f"################################## Root Node - number of visit: {root.total_n} #######################")
         leaf = traverse(root, C=C)
+
+        # print(f"Node - robot at vertex: {leaf.state.robot.last_node}- num of visit {leaf.total_n} with actions {[act.target for act in leaf.unexplored_actions]}")
+        # action5 = sctp.core.Action(target=5)
+        # action6 = sctp.core.Action(target=6)
+        # action7 = sctp.core.Action(target=7)
+        # action8 = sctp.core.Action(target=8)
+        # print(f"POI5: {leaf.state.history.get_action_outcome(action5)}, POI6: {leaf.state.history.get_action_outcome(action6)}, POI7: {leaf.state.history.get_action_outcome(action7)}, POI8: {leaf.state.history.get_action_outcome(action8)}")
         simulation_result = rollout(leaf, rollout_fn=rollout_fn)
+        # print(f"At vertex: {leaf.state.robot.last_node}, the heuristic: {simulation_result:.2f} with this history {leaf.state.robot.visited_vertices}")
+        # print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        leaf.total_n += 1
         backpropagate(leaf, simulation_result)
     best_action, cost = get_best_action(root)
+    # print("----------------- Separate -----------------------------")
     path_ordering, cost_ordering = get_best_path(root)
     return best_action, cost, [path_ordering, cost_ordering]
 
@@ -68,8 +82,8 @@ def traverse(node, C=1.0):
 
 def rollout(node, rollout_fn=None):
     if rollout_fn is not None:
-        # return node.cost + rollout_fn(node.state)
-        return rollout_fn(node)
+        return node.cost + rollout_fn(node.state)
+        # return rollout_fn(node)
     else:
         # do a random rollout
         rollout_cost = 0.0
@@ -86,11 +100,10 @@ def backpropagate(node, result):
         backpropagate(node.parent, result)
 
 def get_best_action(node):
-    actions = list(node.action_n.keys())    # print(f"The number of visits for each action: {action_n}")    
-
+    actions = list(node.action_n.keys())
     action_values = [node.action_values[a] for a in actions]
     action_n = [node.action_n[a] for a in actions]
-
+    # print(f"The action numbers: {action_n}")
     # get all index with highest action_n
     max_n = np.max(action_n)
     best_action_idxs = [i for i, n in enumerate(action_n) if n == max_n]
@@ -124,16 +137,16 @@ def get_best_path(root):
     paths = []
     costs = []
     node = root
-    # print(f"the depth is {node.state.depth}")
     while not node.is_terminal_node():
-        if node.total_n == 0:
+        if node.total_n <= 1:
             break
         best_action, cost = get_best_action(node)
+        # if cost ==0.0:
+        #     break
         paths.append(best_action)
         costs.append(cost)
         children = list(node.action_outcomes[best_action].keys())
-        node = max(children, key=lambda x: x.total_n)
-        # print(f"the depth is {node.state.depth}")
+        node = max(children, key=lambda x: x.total_n)        
         # pdb.set_trace()
     return paths, costs
 

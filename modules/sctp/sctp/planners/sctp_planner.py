@@ -1,21 +1,19 @@
-import copy
 import numpy as np
-# import torch
 import pouct_planner
 import sctp
-# from sctp import robot
 from sctp.core import Action
 from sctp.param import RobotType
 
 
 class SCTPPlanner(object):
-    def __init__(self, args, init_graph, goalID, robot, drones=[], verbose=False):
+    def __init__(self, args, init_graph, goalID, robot, drones=[], rollout_fn = None, verbose=False):
         self.args = args
         self.verbose = verbose
         self.observed_graph = init_graph
         self.robot = robot 
         self.drones = drones 
         self.goalID = goalID
+        self.rollout_fn = rollout_fn
     
     def reached_goal(self):
         if not self.robot.at_node:
@@ -56,12 +54,15 @@ class SCTPPlanner(object):
             drones = []
         else:
             drones = [drone.copy() for drone in self.drones]
+        
+        # vertex = [poi for poi in self.observed_graph.pois if poi.id==6][0]
+        # assert [v for v in self.observed_graph.pois if v.id == 5] != []
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
-                                        drones=drones
-                                    )
+                                        drones=drones)
+        
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
-            sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, rollout_fn=sctp.core.sctp_rollout2)
+            sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, rollout_fn=self.rollout_fn)
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]

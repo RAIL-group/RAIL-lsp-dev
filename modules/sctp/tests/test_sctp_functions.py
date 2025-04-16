@@ -2,8 +2,9 @@ import pytest
 from sctp import sctp_graphs as graphs
 from sctp import core
 from sctp.robot import Robot
-from sctp.param import RobotType, VEL_RATIO
-from sctp.param import EventOutcome
+from sctp.param import RobotType, VEL_RATIO, EventOutcome
+from sctp.utils import plotting, paths
+import matplotlib.pyplot as plt
 
 def test_sctp_actions():
     start_node = graphs.Vertex(coord=(0.0, 0.0))
@@ -417,4 +418,111 @@ def test_sctp_gateway_splitting_sametime_dg():
     assert state10.robot.at_node == True and state10.robot.need_action == True 
     assert state10.uavs[0].at_node == True and state10.uavs[0].need_action == False 
     assert state10.is_goal_state == True
+
+def test_sctp_get_poi_value_dg():
+    start, goal, graph = graphs.disjoint_unc()
+    poi_value = graphs.get_poi_value(graph=graph, poiID=7, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(3.31, 0.02)
+    graph.pois[3].block_prob = 1.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=7, startID=start.id, goalID=goal.id)
+    assert poi_value < 0.0
+        
+
+def test_sctp_get_poi_value_sg():
+    start, goal, graph = graphs.s_graph_unc()
+    poi_value = graphs.get_poi_value(graph=graph, poiID=8, startID=start.id, goalID=goal.id)
+    assert poi_value == 0.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=9, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(3.31, 0.02)
+    graph.pois[1].block_prob = 1.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=8, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(2.34, 0.02)
+    poi_value = graphs.get_poi_value(graph=graph, poiID=5, startID=start.id, goalID=goal.id)
+    assert poi_value < 0.0
+
+def test_sctp_get_poi_value_mg():
+    start, goal, graph = graphs.m_graph_unc()
+    poi_value = graphs.get_poi_value(graph=graph, poiID=13, startID=start.id, goalID=goal.id)
+    assert poi_value == 0.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=14, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(1.66, 0.02)
+    poi_value = graphs.get_poi_value(graph=graph, poiID=16, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(0.0, 0.02)
     
+    graph.pois[8].block_prob = 1.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=17, startID=start.id, goalID=goal.id)
+    assert poi_value == pytest.approx(5.66, 0.02)
+    graph.pois[9].block_prob = 1.0
+    poi_value = graphs.get_poi_value(graph=graph, poiID=18, startID=start.id, goalID=goal.id)
+    assert poi_value < 0.0
+
+def test_sctp_remove_pois_mg():
+    start, goal, graph = graphs.m_graph_unc()
+
+    pois_remove = [11,12,16]
+    new_graph = graphs.remove_pois(graph=graph, poiIDs=pois_remove)
+    assert 11 not in new_graph.vertices[1].neighbors
+    assert 11 not in new_graph.vertices[4].neighbors
+    assert 12 not in new_graph.vertices[1].neighbors
+    assert 12 not in new_graph.vertices[5].neighbors
+    assert 16 not in new_graph.vertices[3].neighbors
+    assert 16 not in new_graph.vertices[6].neighbors
+    assert len(new_graph.pois) == 9
+    assert len(new_graph.edges) == 18
+    
+    plt.figure(figsize=(10, 10), dpi=300)
+    plotting.plot_sctpgraph(graph=new_graph, plt=plt)
+    plt.show()
+
+def test_sctp_reachable_dg():
+    start, goal, graph = graphs.disjoint_unc()
+    pois_remove = [6,7]
+    new_graph = graphs.remove_pois(graph=graph, poiIDs=pois_remove)
+    is_connected = paths.is_reachable(new_graph, start.id, goal.id)
+    assert is_connected == False
+
+def test_sctp_reachable_mg_at_start():
+    start, goal, graph = graphs.m_graph_unc()
+    pois_remove = [16,17,18]
+    new_graph = graphs.remove_pois(graph=graph, poiIDs=pois_remove)
+    is_connected = paths.is_reachable(new_graph, start.id, goal.id)
+    assert is_connected == False
+    is_connected = paths.is_reachable(new_graph, start.id, graph.vertices[5].id)
+    # plt.figure(figsize=(10, 10), dpi=300)
+    # plotting.plot_sctpgraph(graph=new_graph, plt=plt, verbose=True)
+    # plt.show()
+    assert is_connected == True
+
+def test_sctp_start_goal_connected_mg_at_start():
+    start, goal, graph = graphs.m_graph_unc()
+    
+    robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
+    drones =[]
+    init_state = core.SCTPState(graph=graph, robot=robot, drones=drones, goalID=goal.id)
+    pois_remove = [16,17,18]
+    for i in range(len(pois_remove)):
+        init_state.history.add_history(core.Action(target=pois_remove[i]), EventOutcome.BLOCK)
+
+    assert init_state.history.get_data_length() == 3 + 7 #vertices
+    robot_edge = [start.id, start.id]
+    is_connected = core._is_robot_goal_connected(graph=init_state.graph, \
+                                                history=init_state.history, redge=robot_edge, goalID=goal.id)    
+    assert is_connected == False
+
+def test_sctp_start_goal_connected_mg_middle():
+    start, goal, graph = graphs.m_graph_unc()
+    poi = graph.pois[1]
+    
+    # robot = Robot(position=[poi.coord[0], poi.coord[1]], cur_node=poi.id, at_node=True)
+    robot = Robot(position=[poi.coord[0], poi.coord[1]], cur_node=poi.id, edge=[1,9])
+    drones =[]
+    init_state = core.SCTPState(graph=graph, robot=robot, drones=drones, goalID=goal.id)
+    pois_remove = [9, 18]
+    for i in range(len(pois_remove)):
+        init_state.history.add_history(core.Action(target=pois_remove[i]), EventOutcome.BLOCK)
+
+    assert init_state.history.get_data_length() == len(pois_remove) + 7 #vertices
+    robot_edge = [start.id, poi.id]
+    is_connected = core._is_robot_goal_connected(graph=init_state.graph, \
+                                                history=init_state.history, redge=robot_edge, goalID=goal.id)    
+    assert is_connected == True

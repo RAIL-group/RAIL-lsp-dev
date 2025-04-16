@@ -1,6 +1,7 @@
 import numpy as np
-from sctp.utils import paths
+from sctp.utils import paths, plotting
 from scipy.spatial import Delaunay, distance
+from sctp.param import TRAV_LEVEL
 
 
 
@@ -50,9 +51,14 @@ class Graph():
                 pois[0].block_prob = float(pois[0].block_status)
     
     def copy(self):
-        new_graph = Graph(vertices=self.vertices)
-        new_graph.pois = [poi.copy() for poi in self.pois]
-        new_graph.edges = self.edges
+        new_vertices = [vertex.copy() for vertex in self.vertices]
+        new_pois = [poi.copy() for poi in self.pois]
+        # edges = []
+        # for edge in self.edges:
+        #     vs = [v for v in new_vertices+new_pois if v.id == edge.v1.id or v.id == edge.v2.id]
+        #     edges.append(Edge(vs[0], vs[1]))
+        new_graph = Graph(vertices=new_vertices, edges=self.edges.copy())
+        new_graph.pois = new_pois
         return new_graph
 
 class Vertex:
@@ -78,6 +84,7 @@ class Vertex:
         new_vertex.neighbors = self.neighbors.copy()
         new_vertex.heur2goal = self.heur2goal 
         new_vertex.block_status = self.block_status
+        new_vertex.block_prob = self.block_prob
         return new_vertex
 
     def __eq__(self, other):
@@ -106,7 +113,145 @@ class Edge:
 
     def __hash__(self):
         return hash(self.v1) + hash(self.v2)
-        
+    # def copy(self, ref_v1, ref_v2):
+    #     return Edge(ref_v1, ref_v2)
+
+
+def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
+    points = []
+    attempts = 0
+    max_attempts = 5000
+    while len(points) < n and attempts < max_attempts:
+        point = np.array([np.random.uniform(xmin, xmax), np.random.uniform(ymin, ymax)])
+        if not points:
+            points.append(point)
+            point = np.array([np.random.uniform(point[0]+1.5, point[0]+2.0), np.random.uniform(point[1]+1.5, point[1]+2.0)])
+            points.append(point)
+            continue
+        dists = distance.cdist(np.array([point]), np.array(points)).flatten()
+        if np.all(dists >= min_dist) and np.sum(dists <= max_dist) >= 2:
+            points.append(point)
+        attempts +=1
+    
+    if len(points) < n:
+        raise ValueError("Cannot get enough vertices")
+    return points
+
+
+def random_graph(n_vertex=8, xmin=0, ymin=0):
+    """Generate a random graph with Delaunay triangulation and weighted edges."""    
+    size = 7.0 * (np.sqrt(n_vertex)-1.0)
+    max_edge_length = 9.0
+    min_edge_length = 3.0
+    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
+                                         min_dist=min_edge_length, max_dist=max_edge_length)
+    tri = Delaunay(np.array(points))
+    graph = Graph(vertices=[Vertex(coord=point) for point in points])
+    graph.edges.clear()
+    edge_count = {}
+
+    # Use a set to avoid duplicate edges
+    edges = set()    
+    for simplex in tri.simplices:
+        edges.update(tuple(sorted((simplex[i], simplex[j]))) for i in range(3) for j in range(i + 1, 3))    
+        for i, j in [(0, 1), (0, 2), (1, 2)]:
+            edge = tuple(sorted((simplex[i], simplex[j])))
+            edge_count[edge] = edge_count.get(edge, 0) + 1
+    boundary_edges = [edge for edge, count in edge_count.items() if count == 1]
+    # Add edges to the graph with random weights
+    for i, j in edges:
+        dist = np.linalg.norm(np.array(graph.vertices[i].coord) - np.array(graph.vertices[j].coord))
+        if dist > max_edge_length:
+            continue
+        if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >max_edge_length-1.2:
+            continue
+
+        if np.random.random() <TRAV_LEVEL: # control level of blockage in the graph
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.15, 0.6))
+        else:
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.7, 0.90))
+    startId = min(enumerate(points), key=lambda p: p[1][0])[0]
+    start_pos = points[startId]
+    goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
+    goal = graph.vertices[goalId]
+    start = graph.vertices[startId]
+    paths.dijkstra(graph=graph, goal=goal)
+    trav_path = paths.get_random_path(graph, start=start.id, goal=goal.id)
+    assert len(trav_path) > 1
+    for vertex in graph.pois:
+        if vertex.id in trav_path:
+            vertex.block_status = int(0)
+    return start, goal, graph
+
+def remove_blockEdges(graph):
+    graph_copy = graph.copy()
+    block_pois = []
+    for poi in graph_copy.pois:
+        if poi.block_prob == 1.0:
+            block_pois.append(poi.id)
+    graph_copy.edges = [edge for edge in graph_copy.edges \
+                    if edge.v1.id not in block_pois and edge.v2.id not in block_pois]
+    graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in block_pois]
+    for vertex in graph_copy.vertices:
+        vertex.neighbors = [nei for nei in vertex.neighbors if nei not in block_pois]
+    return graph_copy
+
+def remove_poi(graph, poiID):
+    graph_copy = graph.copy() #remove_blockEdges(graph=graph)
+    graph_copy.pois = [poi for poi in graph_copy.pois if poi.id!=poiID]
+    graph_copy.edges = [edge for edge in graph_copy.edges if edge.v1.id!=poiID and edge.v2.id!=poiID]
+    count = 0
+    for vertex in graph_copy.vertices:
+        if poiID in vertex.neighbors:
+            count += 1
+            vertex.neighbors = [nei for nei in vertex.neighbors if nei != poiID]
+            if count >=2:
+                break
+    return graph_copy
+
+def remove_pois(graph, poiIDs=[]):
+    graph_copy = graph.copy() #remove_blockEdges(graph=graph)
+    graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in poiIDs]
+    graph_copy.edges = [edge for edge in graph_copy.edges if edge.v1.id not in poiIDs and edge.v2.id not in poiIDs]
+    for vertex in graph_copy.vertices:
+        if any(poi in poiIDs for poi in vertex.neighbors):
+            vertex.neighbors = [nei for nei in vertex.neighbors if nei not in poiIDs]
+    return graph_copy
+
+def modify_graph(graph, robot_edge, poiIDs=[]):
+    new_poiIDs = [poiID for poiID in poiIDs if poiID not in robot_edge]
+    new_graph = remove_pois(graph=graph, poiIDs=new_poiIDs)
+    if len(poiIDs) == len(new_poiIDs):
+        return new_graph 
+    else:
+        poi_robot = [poi for poi in robot_edge if poi in poiIDs][0]
+        other_side = robot_edge[0] if poi_robot == robot_edge[1] else robot_edge[1]
+        p = [poi for poi in graph.pois if poi.id == poi_robot][0]
+        assert len(p.neighbors) == 2
+        block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
+        new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
+                                                                    or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
+        for vertex in new_graph.vertices:
+            if vertex.id == block_side:
+                vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
+                break 
+        for poi in new_graph.pois:
+            if poi.id == poi_robot:
+                poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
+                break
+        return new_graph
+
+
+def get_poi_value(graph, poiID, startID, goalID):
+    graphw = remove_blockEdges(graph)
+    sp_wpoi = paths.get_shortestPath_cost(graphw, start=startID, goal=goalID)
+    if sp_wpoi < 0.0:
+        return -1.0  # No way to goal on with this graph, should not take this action
+    graphwo = remove_poi(graphw, poiID)
+    sp_wopoi = paths.get_shortestPath_cost(graphwo, start=startID, goal=goalID)
+    if sp_wopoi<0.0: # without this edge/action, no way to goal - should check first
+        return 10.0
+    return sp_wopoi - sp_wpoi
 
 
 def linear_graph_unc():
@@ -207,69 +352,32 @@ def m_graph_unc():
     return node1, node7, graph
 
 
+def graph_stuck():
+    """Generate a simple graph for testing purposes."""
+    nodes = []
+    node1 = Vertex(coord=(0.0, 0.0)) # start node
+    nodes.append(node1)
+    # node2 = Vertex(coord=(0.2, 5.0))
+    # node2 = Vertex(coord=(0.2, 1.0))
+    node2 = Vertex(coord=(0.0, 2.5))
+    nodes.append(node2)
+    node3 = Vertex(coord=(8.0, 2.5))
+    nodes.append(node3)
+    node4 = Vertex(coord=(12.0, 1.0))
+    nodes.append(node4)
+    node5 = Vertex(coord=(8.0, 0.0))
+    nodes.append(node5)
 
-def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
-    points = []
-    attempts = 0
-    max_attempts = 5000
-    while len(points) < n and attempts < max_attempts:
-        point = np.array([np.random.uniform(xmin, xmax), np.random.uniform(ymin, ymax)])
-        if not points:
-            points.append(point)
-            point = np.array([np.random.uniform(point[0]+1.5, point[0]+2.0), np.random.uniform(point[1]+1.5, point[1]+2.0)])
-            points.append(point)
-            continue
-        dists = distance.cdist(np.array([point]), np.array(points)).flatten()
-        if np.all(dists >= min_dist) and np.sum(dists <= max_dist) >= 2:
-            points.append(point)
-        attempts +=1
-    
-    if len(points) < n:
-        raise ValueError("Cannot get enough vertices")
-    return points
-
-
-def random_graph(n_vertex=8, xmin=0, ymin=0):
-    """Generate a random graph with Delaunay triangulation and weighted edges."""    
-    size = 7.0 * (np.sqrt(n_vertex)-1.0)
-    max_edge_length = 9.0
-    min_edge_length = 3.0
-    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
-                                         min_dist=min_edge_length, max_dist=max_edge_length)
-    tri = Delaunay(np.array(points))
-    graph = Graph(vertices=[Vertex(coord=point) for point in points])
+    graph = Graph(nodes)
     graph.edges.clear()
-    edge_count = {}
 
-    # Use a set to avoid duplicate edges
-    edges = set()    
-    for simplex in tri.simplices:
-        edges.update(tuple(sorted((simplex[i], simplex[j]))) for i in range(3) for j in range(i + 1, 3))    
-        for i, j in [(0, 1), (0, 2), (1, 2)]:
-            edge = tuple(sorted((simplex[i], simplex[j])))
-            edge_count[edge] = edge_count.get(edge, 0) + 1
-    boundary_edges = [edge for edge, count in edge_count.items() if count == 1]
-    # Add edges to the graph with random weights
-    for i, j in edges:
-        dist = np.linalg.norm(np.array(graph.vertices[i].coord) - np.array(graph.vertices[j].coord))
-        if dist > max_edge_length:
-            continue
-        if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >max_edge_length-1.2:
-            continue
+    # add edges
+    graph.add_edge(node1, node2, 0.25) #6
+    graph.add_edge(node2, node3, 0.15) #7
+    graph.add_edge(node3, node4, 0.84) #8
+    # graph.add_edge(node3, node5, 0.88) #9
+    graph.add_edge(node4, node5, 0.86) #10
+    graph.add_edge(node1, node5, 0.77) #11
+    paths.dijkstra(graph=graph, goal=node4)
+    return node1, node4, graph
 
-        if np.random.random() <0.85: # control level of blockage in the graph
-            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.15, 0.6))
-        else:
-            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.7, 0.90))
-    startId = min(enumerate(points), key=lambda p: p[1][0])[0]
-    start_pos = points[startId]
-    goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
-    goal = graph.vertices[goalId]
-    start = graph.vertices[startId]
-    paths.dijkstra(graph=graph, goal=goal)
-    trav_path = paths.get_random_path(graph, start=start.id, goal=goal.id)
-    assert len(trav_path) > 1
-    for vertex in graph.pois:
-        if vertex.id in trav_path:
-            vertex.block_status = int(0)
-    return start, goal, graph

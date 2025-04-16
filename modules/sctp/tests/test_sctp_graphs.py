@@ -231,6 +231,73 @@ def test_sctp_rangraph_unblockPath():
     np.random.seed(seed)
     random.seed(seed)
     start, goal, ran_graph = graphs.random_graph(n_vertex=8)
-    plotting.plot_sctpgraph(graph=ran_graph, startID=start.id, goalID=goal.id, seed=seed)
+    plotting.plot_graph_path(graph=ran_graph, startID=start.id, goalID=goal.id, 
+                            seed=seed, verbose=True)
 
    
+def test_sctp_rm_blockedges_dg():
+    start, goal, graph = graphs.disjoint_unc()
+    graph.pois[0].block_prob = 1.0
+    new_graph = graphs.remove_blockEdges(graph)
+    plotting.plot_sctpgraph(graph=new_graph, startID=start.id, goalID=goal.id)
+
+def test_sctp_rm_blockedges_sg():
+    start, goal, graph = graphs.s_graph_unc()
+    graph.pois[0].block_prob = 1.0
+    graph.pois[3].block_prob = 1.0
+    new_graph = graphs.remove_blockEdges(graph)
+    assert new_graph != graph
+    assert new_graph.pois !=graph.pois
+    assert len(new_graph.pois) != len(graph.pois)
+    assert len(graph.edges) != len(new_graph.edges)
+    assert graph.vertices[0].neighbors != new_graph.vertices[0].neighbors
+    assert new_graph.vertices[0].neighbors == [6]
+    assert new_graph.vertices[1].neighbors == [7]
+    assert new_graph.vertices[3].neighbors == [9]
+    # plotting.plot_sctpgraph(graph=new_graph, startID=start.id, goalID=goal.id)
+
+def test_sctp_rm_blockedges_mg():
+    start, goal, graph = graphs.m_graph_unc()
+    graph.pois[0].block_prob = 1.0
+    graph.pois[5].block_prob = 1.0
+    graph.pois[8].block_prob = 1.0
+    new_graph = graphs.remove_blockEdges(graph)
+    
+    assert new_graph.vertices[3].neighbors == [15]
+    assert graph.vertices[3].neighbors == [13,15,16]
+    assert len(new_graph.vertices) == len(graph.vertices)
+    assert len(new_graph.pois) == 9
+    assert len(graph.pois) == 12
+    assert len(graph.edges) == 24
+    assert len(new_graph.edges) == 18
+    # assert graph.vertices[3].neighbors == [9]
+    plotting.plot_sctpgraph(graph=new_graph, startID=start.id, goalID=goal.id)
+
+def test_sctp_rm_poi_sg():
+    start, goal, graph = graphs.s_graph_unc()
+    new_graph = graphs.remove_poi(graph, 5)
+    assert graph.vertices[0].neighbors == [5,6]
+    assert new_graph.vertices[0].neighbors == [6]
+    assert len(graph.vertices) == len(new_graph.vertices)
+    assert len(graph.pois) == len(new_graph.pois) + 1
+    assert len(graph.edges) == len(new_graph.edges) + 2
+    assert graph.vertices[1].neighbors == [5,7,8]
+    assert new_graph.vertices[1].neighbors == [7,8]
+    
+    plotting.plot_graph_path(graph=new_graph, startID=start.id, goalID=goal.id)
+
+
+
+def test_sctp_rm_poi_mg():
+    start, goal, graph = graphs.m_graph_unc()
+    new_graph = graphs.remove_poi(graph, 14)
+    assert graph.vertices[2].neighbors == [9,10,13,14]
+    assert new_graph.vertices[2].neighbors == [9,10,13]
+    assert len(graph.vertices) == len(new_graph.vertices)
+    assert len(graph.pois) == len(new_graph.pois) + 1
+    assert len(graph.edges) == len(new_graph.edges) + 2
+
+    assert graph.vertices[4].neighbors == [11,14,15,17,19]
+    assert new_graph.vertices[4].neighbors == [11,15,17,19]
+    
+    plotting.plot_graph_path(graph=new_graph, startID=start.id, goalID=goal.id)

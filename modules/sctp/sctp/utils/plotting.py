@@ -1,66 +1,131 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from matplotlib.colors import LinearSegmentedColormap
 from sctp.param import RobotType
 from scipy.stats import gaussian_kde
 
-def plot_sctpgraph(graph, name="Testing Graph", path=None, 
-               startID=None, goalID=None, seed=None):
+def plot_plan_exec(graph, plt, name="Graph", gpath=[], dpaths = [], graph_plot=None,
+               start_coord=None, goal_coord=None, seed=None, cost=0.0, verbose=False):
     """Plot graph using matplotlib."""
-    plt.figure(figsize=(10, 10))
-
-    # Plot edges
-    for edge in graph.edges:
-        x_values = [edge.v1.coord[0], edge.v2.coord[0]]
-        y_values = [edge.v1.coord[1], edge.v2.coord[1]]
-        plt.plot(x_values, y_values, 'b-', alpha=0.7)
-        # Display block probability
-        mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
-        mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
-        costs = f"{edge.cost:.1f}"
-        plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=8)
-
-    # Plot nodes
-    for node in graph.vertices:
-        plt.scatter(node.coord[0], node.coord[1], color='blue', s=60)
-        plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=10)
+    fig, ax = plt.subplots(1,2,figsize=(12,6))
+    if graph_plot is not None:
+        ax[0].scatter(start_coord[0], start_coord[1], marker='o', color='r')
+        ax[0].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=12)
+        ax[0].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
+        ax[0].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=12)
+        box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose)
+        ax[0].set_aspect('equal', adjustable='box')
+        ax[0].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
+        ax[0].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
+        ax[0].set_title(f'Seed: {seed} | Initial Graph')
+        
+    ax[1].scatter(start_coord[0], start_coord[1], marker='o', color='r')
+    ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=12)
+    ax[1].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
+    ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=12)
+    box = plot_sctpgraph(graph, ax[1], verbose=verbose)
+    if len(gpath[0]) > 1: 
+        g_colors = ['orange', 'green']
+        ax[1].scatter(gpath[0], gpath[1], marker='P', s=4.5, alpha=1.0)
+        plot_path_fromPoints(ax=ax[1], xy=gpath, colors=g_colors)
+    if dpaths != []:
+        for path in dpaths:
+            d_colors = ['blue', 'purple']
+            ax[1].scatter(path[0],path[1], marker='s', s=4.5)
+            plot_path_fromPoints(ax=ax[1], xy=path, colors=d_colors)
+    ax[1].set_aspect('equal', adjustable='box')
+    ax[1].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
+    ax[1].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
+    ax[1].set_title(f'Seed: {seed} | Planner: {name} | Cost: {cost:.2f}')
+    # plt.title(f'Seed: {seed} | Planner: {name} | Cost: {cost:.2f}')
+    
+def plot_policy(graph, name="Policy", actions=[], 
+               startID=None, goalID=None, seed=None, verbose=False):
+    fig, ax = plt.subplots()
+    count = 0
+    for node in graph.vertices+graph.pois:
         if startID is not None:
             if node.id == startID:
-                plt.text(node.coord[0] - 0.2, node.coord[1] - 0.5, "S", color='blue', fontsize=15)
+                count += 1
+                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=12)
         if goalID is not None:
             if node.id == goalID:
-                plt.text(node.coord[0] + 0.4, node.coord[1] - 0.4, "G", color='red', fontsize=15)
+                count += 1
+                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=12) 
 
-    for poi in graph.pois:
-        plt.scatter(poi.coord[0], poi.coord[1], color='red', s=60)
-        if poi.block_status == 1:
-            plt.scatter(poi.coord[0], poi.coord[1], color='black', s=35)
-        plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=9)
-        
-    
-    if path is not None:
-        x_robot = []
-        y_robot = []
-        x_drone = []
-        y_drone = []
-        for a in path:
-            if a.rtype == RobotType.Ground:
-                x_robot.append(a.start_pose[0])
-                y_robot.append(a.start_pose[1])
-            elif a.rtype == RobotType.Drone:
-                x_drone.append(a.start_pose[0])
-                y_drone.append(a.start_pose[1])
-        plt.plot(x_robot, y_robot, color='orange', linewidth=2)
-        plt.scatter(x_robot, y_robot, color='orange',s=20)
-        plt.plot(x_drone, y_drone, color='purple', linewidth=2)
-    plt.title(name+f' | seed = {seed}')
-    plt.xlabel("X-coordinate")
-    plt.ylabel("Y-coordinate")
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.axis("equal")
+    box = plot_sctpgraph(graph, ax, verbose=verbose)
+    g_cost = 0.0
+    if actions != []:
+        d_colors = ['yellow', 'purple']
+        g_colors = ['orange', 'green']
+        g_cost, x_drone = plot_path_fromActions(ax, graph=graph, actions=actions, dcolors=d_colors, gcolors=g_colors)
+    ax.set_aspect('equal', adjustable='box')
+    ax.set_xlim(box[0][0]-1.0, box[1][0]+1.0)
+    ax.set_ylim(box[0][1]-0.5, box[1][1]+0.5)
+
+    plt.title(name+f' | seed = {seed} | cost = {g_cost:.2f}')
+    if x_drone == []:
+        planner = 'base'
+    else:
+        planner = 'sctp'
+    plt.savefig(f'/data/sctp/sctp_eval_planner_{planner}_seed_{seed}.png')
     plt.show()
 
-def plot_sctpgraph_combine(graph, plt, verbose=False):
+    
+def plot_path_fromPoints(ax, xy, colors):
+    dist = 0.0
+    rev = 0.2
+    x = xy[0]
+    y = xy[1]
+    for i in range(len(x)-1):
+        dist += np.linalg.norm(np.array([x[i],y[i]]) - np.array(np.array([x[i+1],y[i+1]])))
+    plot_lines_varyWidthColor(ax, [x, y], dist, rev, colors)
 
+def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
+    g_cost = 0.0
+    d_dist = 0.0
+    rev = 0.2
+    x_robot = []
+    y_robot = []
+    x_drone = []
+    y_drone = []
+    last_robot_action = None
+    last_drone_action = None
+    for a in actions:
+        if a.rtype == RobotType.Ground:
+            if x_robot != []:
+                g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(a.start_pose))
+            x_robot.append(a.start_pose[0])
+            y_robot.append(a.start_pose[1])
+            last_robot_action = a
+        elif a.rtype == RobotType.Drone:
+            if x_drone != []:
+                d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(a.start_pose))
+            x_drone.append(a.start_pose[0])
+            y_drone.append(a.start_pose[1])
+            last_drone_action = a
+    last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
+    g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(last_vertex.coord))
+    x_robot.append(last_vertex.coord[0])
+    y_robot.append(last_vertex.coord[1])
+    plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
+    if x_drone != []:
+        last_vertex = [vertex for vertex in graph.vertices if vertex.id == last_drone_action.target][0]
+        x_drone.append(last_vertex.coord[0])
+        y_drone.append(last_vertex.coord[1])
+        plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
+    return g_cost, x_drone
+
+
+
+def plot_sctpgraph(graph, plt, verbose=False):
+    x_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
+    x_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
+    y_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
+    y_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
+    # print(f"The box is: {x_min}, {y_min}, {x_max}, {y_max}")
+    
     # Plot edges
     for edge in graph.edges:
         x_values = [edge.v1.coord[0], edge.v2.coord[0]]
@@ -70,23 +135,24 @@ def plot_sctpgraph_combine(graph, plt, verbose=False):
         if verbose:
             mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
             mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
-            costs = f"{edge.cost:.1f}"
-            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=6)
+            costs = f"{edge.cost:.2f}"
+            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=10)
 
     # Plot nodes
     for node in graph.vertices:
         plt.scatter(node.coord[0], node.coord[1], color='green', s=25)
         if verbose:
-            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=6)
+            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=10)
 
     for poi in graph.pois:
         plt.scatter(poi.coord[0], poi.coord[1], color='red', s=25)
         if poi.block_status == 1:
             plt.scatter(poi.coord[0], poi.coord[1], color='black', s=18)
         if verbose:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"POI{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=6)
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=10)
         else:
-            plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=6)
+            plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=10)
+    return [[x_min, y_min], [x_max, y_max]]
         
 
 def make_scatter_plot_with_box(data_x, data_y, max_val=None, xlabel='Baseline', ylabel='SCTP'):
@@ -136,15 +202,29 @@ def make_scatter_plot(ax, cost_x, cost_y, max_val):
     ax.set_ylim(0, max_val)
 
 
-def print_graph(nodes, edges, show_edge=False, show_node=False):
-    """Print the graph details."""
-    if show_node:
-        for node in nodes:
-            print(f"Node {node.id}: ({node.coord[0]:.2f}, {node.coord[1]:.2f}) with neighbors: {node.neighbors}")
-            print(f"The neighbors features:")
-            for n in node.neighbors:
-                edge = [edge for edge in edges if ((edge.v1.id == node.id and edge.v2.id == n) or (edge.v1.id == n and edge.v2.id == node.id))][0]
-                print(f"edge {edge.id}: block prob {edge.block_prob:.2f}, block status {edge.block_status}, cost {edge.cost}")
-    if show_edge:
-        for edge in edges:
-            print(f"Edge {edge.id}: block prob {edge.block_prob:.2f}, block status {edge.block_status}, cost {edge.cost}")
+def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange', 'green']):
+    n_points = int(total_dist/rev)
+    counter = 0
+    # Define color gradient (red to blue)
+    colors = np.linspace(0, 1, n_points)
+    cmap = LinearSegmentedColormap.from_list('custom', color_pair)
+    
+    for i in range(len(xy[0])-1):
+        dist = np.linalg.norm(np.array([xy[0][i],xy[1][i]]) - np.array([xy[0][i+1],xy[1][i+1]]))
+        seg_points = int(dist/rev)
+        x = np.linspace(xy[0][i], xy[0][i+1], seg_points)
+        y = np.linspace(xy[1][i], xy[1][i+1], seg_points)
+
+        # Create array of linewidths
+        linewidths = np.linspace(8, 1, seg_points)
+
+        # Create points array for LineCollection
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        # Create LineCollection with varying linewidths and colors
+        color_range = colors[counter:counter+seg_points+1]
+        lc = LineCollection(segments, linewidths=linewidths, colors=cmap(color_range))
+        ax.add_collection(lc)
+        counter += seg_points
+    ax.scatter(x, y, marker='P', color='orange',s=10)
