@@ -37,12 +37,12 @@ def prepare_lspllm_input(graph, subgoals, target_obj_info):
 
 def compute_node_features(nodes):
     """Get node features for all nodes."""
-    features = []
-    for node in nodes.values():
+    features = {}
+    for idx, node in nodes.items():
         node_feature = np.concatenate((
             get_sbert_embedding(node['name']), node['type']
         ))
-        features.append(node_feature)
+        features[idx] = node_feature
     return features
 
 
