@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class FCNN(nn.Module):
-    name = 'FCNNforObjectSearch'
+    name = 'FCNNObjectSearch'
 
     def __init__(self, args=None):
         super(FCNN, self).__init__()
@@ -84,6 +84,8 @@ class FCNN(nn.Module):
     def preprocess_data(_, datum):
         data = datum.copy()
         data['node_feats'] = torch.tensor(data['node_feats'], dtype=torch.float)
+        if 'labels' in data:
+            data['labels'] = torch.tensor(data['labels'], dtype=torch.float)
         return data
 
     @classmethod
