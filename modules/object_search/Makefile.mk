@@ -49,7 +49,7 @@ $(object-search-eval-seeds): $(object-search-train-file)
 		--image_filename object_search_$(seed).png
 
 object-search-results:
-	@$(DOCKER_PYTHON) -m object_search.scripts.object_search_results \
+	@$(DOCKER_PYTHON) -m lsp.scripts.vis_lsp_plotting \
 		--data_file /data/$(OBJECT_SEARCH_BASENAME)/results/$(OBJECT_SEARCH_EXPERIMENT_NAME)/costs_log.txt \
 		--output_image_file /data/$(OBJECT_SEARCH_BASENAME)/results/results_$(OBJECT_SEARCH_EXPERIMENT_NAME).png
 
@@ -57,6 +57,7 @@ object-search-results:
 object-search-data-gen: $(object-search-data-gen-seeds)
 object-search-train: $(object-search-train-file)
 object-search-eval: $(object-search-eval-seeds)
+
 
 
 env_image_seeds = $(shell for seed in $$(seq 1000 1100); \
