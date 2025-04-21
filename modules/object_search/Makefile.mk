@@ -48,43 +48,13 @@ $(object-search-eval-seeds): $(object-search-train-file)
 	 	--current_seed $(seed) \
 		--image_filename object_search_$(seed).png
 
+.PHONY: object-search-results
 object-search-results:
 	@$(DOCKER_PYTHON) -m lsp.scripts.vis_lsp_plotting \
 		--data_file /data/$(OBJECT_SEARCH_BASENAME)/results/$(OBJECT_SEARCH_EXPERIMENT_NAME)/costs_log.txt \
 		--output_image_file /data/$(OBJECT_SEARCH_BASENAME)/results/results_$(OBJECT_SEARCH_EXPERIMENT_NAME).png
 
-.PHONY: object-search-data-gen object-search-train object-search-eval object-search-results object-search
+.PHONY: object-search-data-gen object-search-train object-search-eval object-search-results
 object-search-data-gen: $(object-search-data-gen-seeds)
 object-search-train: $(object-search-train-file)
 object-search-eval: $(object-search-eval-seeds)
-
-
-
-env_image_seeds = $(shell for seed in $$(seq 1000 1100); \
-						do echo "$(DATA_BASE_DIR)/$(OBJECT_SEARCH_BASENAME)/procthor_images/env_image_$${seed}.png"; done)
-
-.PHONY: procthor-env-image
-procthor-env-image: $(env_image_seeds)
-$(env_image_seeds): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
-$(env_image_seeds):
-	@echo $@
-	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_BASENAME)/procthor_images
-	@$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m object_search.scripts.procthor_env_image \
-		$(CORE_ARGS) \
-		--save_dir /data/$(OBJECT_SEARCH_BASENAME)/procthor_images \
-	 	--current_seed $(seed) \
-		--orthographic
-
-
-.PHONY: object-search-demo
-object-search-demo: seed = 13
-object-search-demo:
-	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_BASENAME)/object_search/$(OBJECT_SEARCH_EXPERIMENT_NAME)
-	@$(call xhost_activate)
-	@$(DOCKER_PYTHON) -m object_search.scripts.object_search \
-		$(CORE_ARGS) \
-		--save_dir /data/$(OBJECT_SEARCH_BASENAME)/object_search/$(OBJECT_SEARCH_EXPERIMENT_NAME) \
-	 	--current_seed $(seed) \
-	 	--logfile_name combined_logfile.txt \
-		--network_file /data/$(OBJECT_SEARCH_BASENAME)/logs/$(OBJECT_SEARCH_EXPERIMENT_NAME)/gnn.pt
