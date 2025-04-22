@@ -76,6 +76,10 @@ COPY modules/unitybridge modules/unitybridge
 COPY modules/environments modules/environments
 COPY modules/procthor modules/procthor
 COPY modules/taskplan modules/taskplan
+COPY modules/mrlsp modules/mrlsp
+COPY modules/lsp_select modules/lsp_select
+COPY modules/mrlsp_select modules/mrlsp_select
+
 RUN uv pip install modules/*
 
 
