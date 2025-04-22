@@ -15,7 +15,7 @@ endif
 # Paths and Key File Names
 EXPERIMENT_NAME ?= dbg
 RAIL_SIM_VERSION ?= 1.0.0
-RAIL_SIM_DIR ?= $(shell pwd)/resources/unity/
+RAIL_SIM_DIR ?= $(shell pwd)/resources/unity
 RAIL_SIM_BASENAME ?= rail_sim
 
 # Docker args
@@ -142,3 +142,5 @@ include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
 include modules/taskplan/Makefile.mk
 include modules/mrlsp/Makefile.mk
+include modules/lsp_select/Makefile.mk
+include modules/mrlsp_select/Makefile.mk
