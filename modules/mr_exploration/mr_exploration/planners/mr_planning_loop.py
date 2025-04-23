@@ -25,12 +25,6 @@ class MRPlanningLoop():
         self.paths = [None for _ in range(self.num_robots)]
         self.timestamp = 0  # This keeps track of timestamp of data
 
-    # def _goal_reached(self):
-    #     self.goal_reached = [not (np.abs(robot.pose.x - goal.x) >= 3 *
-    #                          self.args.step_size or np.abs(robot.pose.y - goal.y)
-    #                          >= 3 * self.args.step_size) for robot, goal in zip(self.robots, self.goals)]
-    #     return any(self.goal_reached)
-
     def __iter__(self):
         counter = 0
         count_since_last_turnaround = [100 for _ in range(self.num_robots)]

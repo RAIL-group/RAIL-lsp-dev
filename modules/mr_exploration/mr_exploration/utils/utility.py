@@ -244,3 +244,39 @@ def find_robots_within_range(robots, communication_range):
     for i in range(len(robot_poses)):
         robot_teams.add(tuple(np.where(distance_array[i] <= communication_range)[0]))
     return robot_teams
+
+
+def get_subgoal_areas(subgoals, global_occupancy_grid, known_map, inflation_radius):
+    # Find the connected unexplored regions that are free space
+    unobserved_free_space = np.logical_and(global_occupancy_grid == UNOBSERVED_VAL, known_map == FREE_VAL)
+    labels, num_labels = scipy.ndimage.label(unobserved_free_space)
+
+    # Create a binary mask for subgoal centroids
+    subgoal_mask = np.zeros_like(global_occupancy_grid, dtype=np.uint8)
+    for subgoal in subgoals:
+        x, y = map(int, subgoal.centroid[:2])
+        subgoal_mask[x, y] = 1
+
+    # Inflate subgoal locations to help find touching regions
+    expanded_frontiers = scipy.ndimage.maximum_filter(subgoal_mask, size=2*inflation_radius)
+
+    # Get labels that intersect with the expanded frontier regions
+    explorable_labels = np.unique(labels[(expanded_frontiers == 1) & (labels >= 0)])
+
+    # Measure the area (number of free cells) for each explorable region
+    explorable_regions = {}
+    for label_id in explorable_labels:
+        region_size = np.sum(labels == label_id)
+        explorable_regions[label_id] = region_size
+
+    # Link each subgoal to its corresponding region label (if valid)
+    subgoal_to_label = {}
+    for subgoal in subgoals:
+        x, y = map(int, subgoal.centroid[:2])
+        label_id = labels[x, y]
+        if label_id in explorable_regions:
+            subgoal_to_label[subgoal] = label_id
+        else:
+            subgoal_to_label[subgoal] = None  # Assign None if subgoal doesn't match any explorable region
+
+    return explorable_regions, labels, subgoal_to_label
