@@ -107,8 +107,8 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
 
                                 # check if the find cost has already been calculated for this object for
                                 # these room pairs
-                                if (child_name, from_room_coords, to_room_coords) in pre_compute:
-                                    intermediate_d = pre_compute[(child_name, from_room_coords, to_room_coords)]
+                                if (gen_name_child, from_room_coords, to_room_coords) in pre_compute:
+                                    intermediate_d = pre_compute[(gen_name_child, from_room_coords, to_room_coords)]
                                 else:
                                     intermediate_d, pred_sub = get_expected_cost_of_finding(
                                         learned_data['partial_map'],
@@ -118,7 +118,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                         to_room_coords,  # destination_pose
                                         learned_data['learned_net'],
                                         pred_sub)
-                                    pre_compute[(child_name, from_room_coords, to_room_coords)] = intermediate_d
+                                    pre_compute[(gen_name_child, from_room_coords, to_room_coords)] = intermediate_d
                                 if (from_coord, from_room_coords) in grid_cost:
                                     part_from = grid_cost[(from_coord, from_room_coords)]
                                 else:
