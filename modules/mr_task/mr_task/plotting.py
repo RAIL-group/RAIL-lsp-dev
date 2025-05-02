@@ -37,7 +37,7 @@ def make_robot_video(known_grid, start, top_down_image, robot_team, video_file_n
         writer.grab_frame()
     writer.finish()
 
-def plot_graph_on_grid(known_grid, known_graph, start_pose, image_filename):
+def plot_and_save_graph_on_grid(known_grid, known_graph, start_pose, image_filename):
     fig = plt.figure(figsize=(10, 10), dpi=600)
     procthor.plotting.plot_graph_on_grid(known_grid, known_graph)
     plt.scatter(start_pose.x, start_pose.y, marker='o', color='r')
@@ -64,3 +64,16 @@ def plot_and_save_result(args, known_grid, known_graph, start_pose, robot_team, 
     if image_filename is None:
         image_filename = f'{args.save_dir}/mtask_eval_planner_{args.planner}_seed_{args.seed}_result.png'
     plt.savefig(image_filename)
+
+
+def plot_robot_trajectory_on_grid(known_grid, known_graph, start_pose, robot_team):
+    plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(known_grid))
+    plt.imshow(plotting_grid)
+    plt.scatter(start_pose.x, start_pose.y, marker='o', color='r')
+    plt.text(start_pose.x, start_pose.y, 'start', fontsize=16)
+    for i, robot in enumerate(robot_team):
+        path = np.array(robot.all_paths)
+        plt.plot(path[0], path[1], color=colors[i])
+        x = [pose.x for pose in robot.all_poses]
+        y = [pose.y for pose in robot.all_poses]
+        plt.scatter(x, y, marker='x', alpha=0.5, color=colors[i])

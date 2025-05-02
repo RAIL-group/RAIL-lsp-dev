@@ -80,6 +80,7 @@ def test_mrtask_dfa_complex_specification_fire():
     dfa.advance(('alarm',))
     assert dfa.has_reached_accepting_state()
 
+
 def test_mrtask_dfa_complex_specification_kitchen():
     specification = '((((!egg & !coffeemachine) U plate) | ((!egg & !coffeemachine) U bowl)) & (!coffeemachine U egg)) & (F coffeemachine)'
     dfa = DFAManager(specification)

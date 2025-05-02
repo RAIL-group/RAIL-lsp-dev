@@ -1,3 +1,3 @@
 from .mrtask_planner import LearnedMRTaskPlanner
-from .planner import OptimisticMRTaskPlanner, BaseMRTaskPlanner
+from .planner import OptimisticMRTaskPlanner, BaseMRTaskPlanner, LearnedGreedyMRTaskPlanner
 from .task_planning_loop import MRTaskPlanningLoop

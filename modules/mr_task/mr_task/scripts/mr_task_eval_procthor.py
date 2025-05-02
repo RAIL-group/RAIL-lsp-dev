@@ -7,24 +7,27 @@ import matplotlib.pyplot as plt
 from common import Pose
 from pathlib import Path
 
+
 def _setup(args):
     thor_interface = procthor.ThorInterface(args)
-    known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses(num_objects=3)
+    known_graph, known_grid, robot_pose, target_objs_info = thor_interface.gen_map_and_poses(num_objects=4)
     robot_team = [mr_task.robot.Robot(robot_pose) for _ in range(args.num_robots)]
 
     specification = mr_task.specification.get_random_specification(objects=[obj['name'] for obj in target_objs_info],
                                                                    seed=args.current_seed)
     print(specification)
-
     if args.planner == 'optimistic':
         mrtask_planner = mr_task.planner.OptimisticMRTaskPlanner(args, specification)
     elif args.planner == 'learned':
         mrtask_planner = mr_task.planner.LearnedMRTaskPlanner(args, specification)
+    elif args.planner == 'learnedgreedy':
+        mrtask_planner = mr_task.planner.LearnedGreedyMRTaskPlanner(args, specification)
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 
     simulator = SceneGraphSimulator(args=args, known_graph=known_graph,
-                    target_objs_info=target_objs_info, known_grid=known_grid, thor_interface=thor_interface)
+                                    target_objs_info=target_objs_info,
+                                    known_grid=known_grid, thor_interface=thor_interface)
 
     planning_loop = mr_task.planner.MRTaskPlanningLoop(
         robot_team, simulator, mrtask_planner.dfa_planner.has_reached_accepting_state)
@@ -51,24 +54,25 @@ def _setup(args):
 
     cost = min([robot.net_motion for robot in robot_team])
 
-    fig = plt.figure(figsize=(10, 10), dpi=300)
-    ax1 = plt.subplot(121)
+    fig = plt.figure(figsize=(10, 10), dpi=1000)
+    plt.subplot(221)
+    procthor.plotting.plot_graph(plt.gca(), known_graph.nodes, known_graph.edges)
+
+    plt.subplot(222)
     procthor.plotting.plot_graph_on_grid(known_grid, known_graph)
-    plt.scatter(robot_pose.x, robot_pose.y, marker='o', color='r')
-    plt.text(robot_pose.x, robot_pose.y, 'start', fontsize=8)
-    for robot in robot_team:
-        path = np.array(robot.all_paths)
-        plt.plot(path[0], path[1])
-        x = [pose.x for pose in robot.all_poses]
-        y = [pose.y for pose in robot.all_poses]
-        ax1.scatter(x, y, marker='x', alpha=0.5)
+
+    plt.subplot(223)
     plt.title(f'Seed: {args.seed} | Planner: {args.planner} | Cost: {cost:.2f}')
-    ax2 = plt.subplot(122)
-    procthor.plotting.plot_graph(ax2, known_graph.nodes, known_graph.edges)
-    plt.suptitle(f'Specification: {specification}', fontweight="bold")
+    mr_task.plotting.plot_robot_trajectory_on_grid(known_grid, known_graph, robot_pose, robot_team)
+
+    plt.subplot(224)
+    plt.imshow(thor_interface.get_top_down_image())
+    plt.axis('off')
+
+    plt.suptitle(f'Specification: {specification}', wrap=True)
     ordering = str(', '.join([str(node) for node in planning_loop.ordering.values()]))
     fig.supxlabel(f'Visit order: {ordering}', wrap=True)
-    plt.savefig(f'{args.save_dir}/mtask_eval_planner_{args.planner}_seed_{args.seed}.png')
+    plt.savefig(f'{args.save_dir}/mtask_eval_planner_{args.planner}_n_{args.num_robots}_seed_{args.seed}.png', dpi=400)
 
     logfile = Path(args.save_dir) / f'log_{args.num_robots}.txt'
     with open(logfile, "a+") as f:
