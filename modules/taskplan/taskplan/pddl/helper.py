@@ -5,43 +5,51 @@ import taskplan
 from taskplan.planners.planner import LearnedPlanner
 
 
-def generate_pddl_problem(domain_name, problem_name, objects, init_states,
-                          goal_states):
-    """
-    Generates a PDDL problem file content.
-
-    :param domain_name: Name of the PDDL domain.
-    :param problem_name: Name of the PDDL problem.
-    :param objects: Dictionary of objects, where keys are types and values are lists of object names.
-    :param init_states: List of strings representing the initial states.
-    :param goal_states: List of strings representing the goal states.
-    :return: A string representing the content of a PDDL problem file.
-    """
+def generate_pddl_problem_from_struct(struct):
+    '''struck has keys: 'domain_name', 'problem_name', 'objects', 
+    'init_predicates', 'init_fluents', 'goal_states', 'metric'
+    init_predicates is a list of strings but init fluents is a dictionary
+    '''
     # Start the problem definition
-    problem_str = f"(define (problem {problem_name})\n"
-    problem_str += f"    (:domain {domain_name})\n"
+    problem_str = f"(define (problem {struct['problem_name']})\n"
+    problem_str += f"    (:domain {struct['domain_name']})\n"
 
     # Define objects
     problem_str += "    (:objects\n"
-    for obj_type, obj_names in objects.items():
+    for obj_type, obj_names in struct['objects'].items():
         problem_str += "        " + " ".join(obj_names) + " - " + obj_type + "\n"
     problem_str += "    )\n"
 
-    # Define initial state
+    # Define states
+    # Define initial predicates first
     problem_str += "    (:init\n"
-    for state in init_states:
-        problem_str += "        " + state + "\n"
+    for predicate in struct['init_predicates']:
+        if predicate[0] == 'not':
+            str_predicate = 'not (' + ' '.join(predicate[1:]) + ')'
+        elif predicate[0] == 'obj-type':
+            str_predicate = f'obj-type-{predicate[1]} {predicate[2]}'
+        else:
+            str_predicate = ' '.join(predicate)
+        problem_str += f"        ({str_predicate})\n"
+    # Define initial fluents next
+    for fluent, values in struct['init_fluents'].items():
+        str_fluent = ' '.join(fluent)
+        problem_str += f"        (= ({str_fluent}) {values})\n"
     problem_str += "    )\n"
 
     # Define goal state
     problem_str += "    (:goal\n"
     problem_str += "        (and\n"
-    for state in goal_states:
+    for state in struct['goal_states']:
         problem_str += "            " + state + "\n"
     problem_str += "        )\n"
     problem_str += "    )\n"
 
-    problem_str += "    (:metric minimize (total-cost))\n"
+    # Define metric
+    if 'metric' in struct:
+        problem_str += f"    (:metric {struct['metric']})\n"
+    else:
+        problem_str += "    (:metric minimize (total-cost))\n"
 
     # Close the problem definition
     problem_str += ")\n"
