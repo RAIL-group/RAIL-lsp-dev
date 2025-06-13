@@ -1,5 +1,4 @@
-from taskplan.pddl.helper import generate_pddl_problem, goal_provider, \
-    get_expected_cost_of_finding
+from taskplan.pddl.helper import get_expected_cost_of_finding, goal_provider
 from taskplan.utilities.utils import get_robots_room_coords, get_action_costs
 from procthor.utils import get_generic_name, get_cost
 
@@ -19,13 +18,15 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
     objects = {
         'init_r': ['initial_robot_pose']
     }
-    init_states = [
-        '(= (total-cost) 0)',
-        '(hand-is-free)',
-        '(rob-at initial_robot_pose)'  # , '(is-fillable coffeemachine)'
+    init_predicates = [
+        ('rob-at', 'initial_robot_pose'),
+        ('hand-is-free',),
     ]
+    init_fluents = {
+        ('total-cost',): 0,
+    }
     if goal_type != 'any3':
-        init_states.append('(restrict-move-to initial_robot_pose)')
+        init_predicates.append(('restrict-move-to', 'initial_robot_pose'))
     for container in containers:
         cnt_name = container['id']
         cnt_of_interest.append(cnt_name)
@@ -51,7 +52,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                 pred_sub = None
                 if cnt_name in unvisited:
                     # Object is in the unknown space
-                    init_states.append(f"(not (is-located {child_name}))")
+                    init_predicates.append(('not', 'is-located', child_name))
 
                     # The expected find cost needs to be computed via the
                     # model later on. But here we use the optimistic find cost
@@ -132,13 +133,13 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                                     grid_cost[(to_coord, to_room_coords)] = part_to
                                 d = costs['find'] + part_from + intermediate_d + part_to
 
-                            init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
+                            init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
                     # or else we can optimistically assume the object is in the nearest
                     # undiscovered location from the to-loc [WILL work on it later!!]
                 else:
                     # Object is in the known space
-                    init_states.append(f"(is-located {child_name})")
-                    init_states.append(f"(is-at {child_name} {cnt_name})")
+                    init_predicates.append(('is-located', child_name))
+                    init_predicates.append(('is-at', child_name, cnt_name))
 
                     # The expected find cost should be sum of the cost to
                     # cnt_name from the from_loc and then the cost to to_loc
@@ -148,42 +149,44 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                             d1 = map_data.known_cost[from_loc][cnt_name]
                             d2 = map_data.known_cost[cnt_name][to_loc]
                             d = d1 + d2
-                            init_states.append(f"(= (find-cost {child_name} {from_loc} {to_loc}) {d})")
+                            init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
 
-    #             if 'pickable' in child and child['pickable'] == 1:
-                init_states.append(f"(is-pickable {child_name})")
-                init_states.append(f"(obj-type-{gen_name_child} {child_name})")
+                init_predicates.append(('is-pickable', child_name))
+                init_predicates.append(('obj-type', gen_name_child, child_name))
                 if gen_name_child == 'egg':
-                    init_states.append(f"(is-boilable {child_name})")
+                    # init_predicates.append(f"(is-boilable {child_name})")
+                    init_predicates.append(('is-boilable', child_name))
                 if gen_name_child in ['pot', 'kettle']:
-                    init_states.append(f"(is-boiler {child_name})")
+                    # init_predicates.append(f"(is-boiler {child_name})")
+                    init_predicates.append(('is-boiler', child_name))
                 if gen_name_child in ['apple', 'tomato', 'potato']:
-                    init_states.append(f"(is-peelable {child_name})")
+                    # init_predicates.append(f"(is-peelable {child_name})")
+                    init_predicates.append(('is-peelable', child_name))
                 if gen_name_child == 'knife':
-                    init_states.append(f"(is-peeler {child_name})")
+                    # init_predicates.append(f"(is-peeler {child_name})")
+                    init_predicates.append(('is-peeler', child_name))
                 if gen_name_child == 'bread':
-                    init_states.append(f"(is-toastable {child_name})")
+                    # init_predicates.append(f"(is-toastable {child_name})")
+                    init_predicates.append(('is-toastable', child_name))
                 if gen_name_child == 'toaster':
-                    init_states.append(f"(is-toaster {child_name})")
+                    # init_predicates.append(f"(is-toaster {child_name})")
+                    init_predicates.append(('is-toaster', child_name))
                 if gen_name_child in ['pot', 'kettle', 'coffeemachine']:
-                    init_states.append(f"(is-coffeemaker {child_name})")
+                    init_predicates.append(('is-coffeemaker', child_name))
                 if gen_name_child in ['cup', 'mug', 'pot', 'kettle', 'coffeemachine']:
-                    init_states.append(f"(is-fillable {child_name})")
+                    init_predicates.append(('is-fillable', child_name))
                 if gen_name_child == 'waterbottle':
-                    init_states.append(f"(filled-with-water {child_name})")
+                    init_predicates.append(('filled-with-water', child_name))
                 if gen_name_child == 'coffeegrinds':
-                    init_states.append(f"(is-coffeeingredient {child_name})")
+                    init_predicates.append(('is-coffeeingredient', child_name))
 
     for c1 in map_data.known_cost:
         for c2 in map_data.known_cost[c1]:
             if c1 == c2:
                 continue
             val = map_data.known_cost[c1][c2]
-            init_states.append(
-                f"(= (known-cost {c1} {c2}) {val})"
-            )
+            init_fluents[('known-cost', c1, c2)] = round(val, 4)
 
-    # task = get_goals(seed, cnt_of_interest, obj_of_interest)
     task = goal_provider(seed, cnt_of_interest, obj_of_interest,
                          objects, goal_type)
 
@@ -191,11 +194,14 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
         return None, None
     print(f'Goal: {task}')
     goal = [task]
-    PROBLEM_PDDL = generate_pddl_problem(
-        domain_name='indoor',
-        problem_name='pick-place-problem',
-        objects=objects,
-        init_states=init_states,
-        goal_states=goal
-    )
-    return PROBLEM_PDDL, task
+    # Instead of constructing and returning a PDDL string, make it return a Python dictionary representing the problem components.
+    struct = {
+        'domain_name': 'indoor',
+        'problem_name': 'pick-place-problem',
+        'objects': objects,
+        'init_predicates': init_predicates,  # List of tuples/strings for non-numeric facts
+        'init_fluents': init_fluents,  # Dictionary for numeric fluents
+        'goal_states': goal,
+        'metric': 'minimize (total-cost)'
+    }
+    return struct, task
