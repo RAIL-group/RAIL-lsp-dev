@@ -72,7 +72,7 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # initialize pddl related contents
     pddl = {}
     pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
-    pddl['problem'], pddl['goal'] = taskplan.pddl.problem.get_problem(
+    pddl['problem_struct'], pddl['goal'] = taskplan.pddl.problem.get_problem(
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
         goal_type=args.goal_type, learned_data=learned_data)
