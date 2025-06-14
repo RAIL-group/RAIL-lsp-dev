@@ -26,8 +26,8 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # (filled-with-water ?pour_to)
                 # (not (filled-with-water ?pour_from))
                 # (not (ban-move))
-                pddl['problem'] = taskplan.pddl.helper.update_problem_pourwater(
-                    pddl['problem'], pour_from, pour_to)
+                taskplan.pddl.helper.update_problem_pourwater(
+                    pddl['problem_struct'], pour_from, pour_to)
             elif action.name == 'pour-coffee':
                 pour_from = action.args[0]
                 pour_to = action.args[1]
@@ -35,16 +35,16 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # (filled-with-coffee ?pour_to)
                 # (not (filled-with-coffee ?pour_from))
                 # (not (ban-move))
-                pddl['problem'] = taskplan.pddl.helper.update_problem_pourcoffee(
-                    pddl['problem'], pour_from, pour_to)
+                taskplan.pddl.helper.update_problem_pourcoffee(
+                    pddl['problem_struct'], pour_from, pour_to)
             elif action.name == 'make-coffee':
                 receptacle = action.args[1]
                 # Update problem for make-coffee action.
                 # (filled-with-coffee ?receptacle)
                 # (not (filled-with-water ?receptacle))
                 # (not (ban-move))
-                pddl['problem'] = taskplan.pddl.helper.update_problem_makecoffee(
-                    pddl['problem'], receptacle)
+                taskplan.pddl.helper.update_problem_makecoffee(
+                    pddl['problem_struct'], receptacle)
             elif action.name == 'move':
                 move_start = action.args[0]
                 ms_pose = get_container_pose(move_start, partial_map)
@@ -58,8 +58,8 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # Update problem for move action.
                 # (rob-at move_end)
                 robot_poses.append(me_pose)
-                pddl['problem'] = taskplan.pddl.helper.update_problem_move(
-                    pddl['problem'], move_end)
+                taskplan.pddl.helper.update_problem_move(
+                    pddl['problem_struct'], move_end)
             elif action.name == 'pick':
                 object_name = action.args[0]
                 pick_at = action.args[1]
@@ -70,8 +70,8 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # (not (hand-is-free))
                 # (not (is-at object location))
                 # (is holding object)
-                pddl['problem'] = taskplan.pddl.helper.update_problem_pick(
-                    pddl['problem'], object_name, pick_at)
+                taskplan.pddl.helper.update_problem_pick(
+                    pddl['problem_struct'], object_name, pick_at)
             elif action.name == 'place':
                 object_name = action.args[0]
                 place_at = action.args[1]
@@ -82,26 +82,26 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # (hand-is-free)
                 # (is-at object location)
                 # (not (is holding object))
-                pddl['problem'] = taskplan.pddl.helper.update_problem_place(
-                    pddl['problem'], object_name, place_at)
+                taskplan.pddl.helper.update_problem_place(
+                    pddl['problem_struct'], object_name, place_at)
             elif action.name == 'boil':
                 obj1_name = action.args[0]
                 # Update problem for boil action.
                 # (is-boiled obj1_name)
-                pddl['problem'] = taskplan.pddl.helper.update_problem_boil(
-                    pddl['problem'], obj1_name)
+                taskplan.pddl.helper.update_problem_boil(
+                    pddl['problem_struct'], obj1_name)
             elif action.name == 'peel':
                 obj1_name = action.args[0]
                 # Update problem for peel action.
                 # (is-peeled obj1_name)
-                pddl['problem'] = taskplan.pddl.helper.update_problem_peel(
-                    pddl['problem'], obj1_name)
+                taskplan.pddl.helper.update_problem_peel(
+                    pddl['problem_struct'], obj1_name)
             elif action.name == 'toast':
                 obj1_name = action.args[0]
                 # Update problem for toast action.
                 # (is-toasted obj1_name)
-                pddl['problem'] = taskplan.pddl.helper.update_problem_toast(
-                    pddl['problem'], obj1_name)
+                taskplan.pddl.helper.update_problem_toast(
+                    pddl['problem_struct'], obj1_name)
             elif action.name == 'find':
                 obj_name = action.args[0]
                 obj_idx = partial_map.idx_map[obj_name]
@@ -174,8 +174,10 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 #                   (is-at obj found_at)
                 # add all the contents of that container in the known space [set as located and where]
                 robot_poses.append(partial_map.container_poses[explored_loc])
-                pddl['problem'] = taskplan.pddl.helper.update_problem_find(
-                    pddl['problem'], found_objects, found_at)
+                taskplan.pddl.helper.update_problem_find(
+                    pddl['problem_struct'], found_objects, found_at, find_start)
+                pddl['problem'] = taskplan.pddl.helper.\
+                    generate_pddl_problem_from_struct(pddl['problem_struct'])
 
                 # Finally replan
                 print('Replanning .. .. ..')
