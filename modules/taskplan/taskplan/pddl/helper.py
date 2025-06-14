@@ -111,262 +111,148 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
 
 
 def update_problem_move(problem, end):
-    x = '(rob-at '
-    y = '(not (ban-move))'
-    w = '(not (ban-find))'
-    insert_z = None
-    replaced = False
-    replaced_w = False
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if x in line:
-            line = '        ' + x + f'{end})'
-            lines[line_idx] = line
-            insert_z = line_idx + 1
-        if y in line:
-            line = '        (ban-move)'
-            replaced = True
-        if w in line:
-            line = '        (ban-find)'
-            replaced_w = True
-    if not replaced:
-        lines.insert(insert_z, '        (ban-move)')
-    if not replaced_w:
-        lines.insert(insert_z, '        (ban-find)')
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred[0] == 'rob-at':
+            continue
+        # if pred == ('not', 'ban-move'):
+        #     continue
+        # if pred == ('not', 'ban-find'):
+        #     continue
+        init_preds.append(pred)
+    init_preds.append(('rob-at', end))
+
+    if ('ban-move',) not in problem['init_predicates']:
+        init_preds.append(('ban-move',))
+    if ('ban-find',) not in problem['init_predicates']:
+        init_preds.append(('ban-find',))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pick(problem, obj, loc):
-    v = '        (ban-find)'
-    w = '        (ban-move)'
-    x = f'        (is-holding {obj})'
-    insert_x = None
-    y = '        (hand-is-free)'
-    z = f'        (is-at {obj} {loc})'
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif y in line:
-            line = '        ' + f'(not (hand-is-free))'
-            lines[line_idx] = line
-        elif z in line:
-            line = '        ' + f'(not (is-at {obj} {loc}))'
-            lines[line_idx] = line
-            insert_x = line_idx + 1
-    if insert_x:
-        lines.insert(insert_x, x)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('hand-is-free',):
+            continue
+        if pred == ('is-at', obj, loc):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('ban-find',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-holding', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_place(problem, obj, loc):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = '(not (hand-is-free))'
-    y = f'(not (is-at {obj} '
-    z = f'(is-holding {obj})'
-    delete_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            line = '        ' + '(hand-is-free)'
-            lines[line_idx] = line
-        elif y in line:
-            line = '        ' + f'(is-at {obj} {loc})'
-            lines[line_idx] = line
-        elif z in line:
-            line = '        ' + f'(not {z})'
-            delete_z = line_idx
-    if delete_z:
-        del lines[delete_z]
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('not', 'hand-is-free'):
+            continue
+        if pred == ('is-holding', obj):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('ban-find',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('hand-is-free',))
+    init_preds.append(('is-at', obj, loc))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pourwater(problem, p_from, p_to):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-water {p_from})'
-    y = f'        (is-located {p_to})'
-    z = f'        (filled-with-water {p_to})'
-    delete_x = None
-    insert_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            delete_x = line_idx
-        elif y in line:
-            insert_z = line_idx + 1
-    if delete_x < insert_z:
-        lines.insert(insert_z, z)
-        del lines[delete_x]
-    else:
-        del lines[delete_x]
-        lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-water', p_from):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-water', p_to))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pourcoffee(problem, p_from, p_to):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-coffee {p_from})'
-    y = f'        (is-located {p_to})'
-    z = f'        (filled-with-coffee {p_to})'
-    delete_x = None
-    insert_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            delete_x = line_idx
-        elif y in line:
-            insert_z = line_idx + 1
-    if delete_x < insert_z:
-        lines.insert(insert_z, z)
-        del lines[delete_x]
-    else:
-        del lines[delete_x]
-        lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-coffee', p_from):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-coffee', p_to))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_makecoffee(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-water {obj})'
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            line = '        ' + f'(filled-with-coffee {obj})'
-            lines[line_idx] = line
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-water', obj):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-coffee', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_boil(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-boilable {obj})'
-    y = f'(is-boiled {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-boiled', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_peel(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-peelable {obj})'
-    y = f'(is-peeled {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-peeled', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_toast(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-toastable {obj})'
-    y = f'(is-toasted {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-toasted', obj))
+    problem['init_predicates'] = init_preds
 
 
-def update_problem_find(problem, objs, loc):
-    v = '(rob-at '
-    w = '        (ban-move)'
-    # first just update v and w in the lines
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        ' + v + f'{loc})'
-            lines[line_idx] = line
-        if w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-
-    # then update the objects
+def update_problem_find(problem, objs, loc, prev_rob):
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('rob-at', prev_rob):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('rob-at', loc))
     for obj in objs:
-        y = f'(not (is-located {obj}))'
-        z = f'        (is-at {obj} {loc})'
-        insert_z = None
-        for line_idx, line in enumerate(lines):
-            if y in line:
-                line = f'        (is-located {obj})'
-                lines[line_idx] = line
-                insert_z = line_idx + 1
-        if insert_z:
-            lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+        init_preds.append(('is-located', obj))
+        init_preds.append(('is-at', obj, loc))
+    problem['init_predicates'] = init_preds
 
 
 def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
