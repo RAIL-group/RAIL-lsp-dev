@@ -52,7 +52,6 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                 pred_sub = None
                 if cnt_name in unvisited:
                     # Object is in the unknown space
-                    init_predicates.append(('not', 'is-located', child_name))
 
                     # The expected find cost needs to be computed via the
                     # model later on. But here we use the optimistic find cost
