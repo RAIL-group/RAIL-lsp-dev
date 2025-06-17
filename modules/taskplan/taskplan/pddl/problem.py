@@ -12,6 +12,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
     costs = get_action_costs()
     obj_of_interest = []
     cnt_of_interest = []
+    missing_objects = []
     containers = map_data.containers
     robot_room_coord = get_robots_room_coords(
         map_data.occupancy_grid, map_data.get_robot_pose(), map_data.rooms)
@@ -52,6 +53,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
                 pred_sub = None
                 if cnt_name in unvisited:
                     # Object is in the unknown space
+                    missing_objects.append(child_name)
 
                     # The expected find cost needs to be computed via the
                     # model later on. But here we use the optimistic find cost
@@ -198,6 +200,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
         'domain_name': 'indoor',
         'problem_name': 'pick-place-problem',
         'objects': objects,
+        'missing_objects': missing_objects,
         'init_predicates': init_predicates,  # List of tuples/strings for non-numeric facts
         'init_fluents': init_fluents,  # Dictionary for numeric fluents
         'goal_states': goal,
