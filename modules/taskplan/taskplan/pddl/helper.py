@@ -111,6 +111,72 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
     return round(exp_cost, 4), sub_pred
 
 
+def update_find_costs(struct, partial_map, network_file,
+                      subgoals, init_r, init_room_coord):
+    ''' This function updates the costs of finding objects in the problem structure
+    based on the initial robot pose and the learned network file.
+    '''
+    costs = get_action_costs()
+    pre_compute = {}
+    grid_cost = {}
+    cnt_names = ['initial_robot_pose']
+    idx2assetID = {partial_map.idx_map[assetID]: assetID
+                   for assetID in partial_map.idx_map}
+    for idx in partial_map.cnt_node_idx:
+        cnt_names.append(idx2assetID[idx])
+
+    for obj in struct['missing_objects']:
+        pred_sub = None
+        for from_loc in cnt_names:
+            for to_loc in cnt_names:
+                if from_loc == 'initial_robot_pose':
+                    from_coord = init_r
+                    from_room_coords = init_room_coord
+                else:
+                    from_coord = partial_map.node_coords[partial_map.idx_map[from_loc]]
+                    from_cnt_idx = partial_map.idx_map[from_loc]
+                    room_idx_pos = partial_map.org_edge_index[1].index(from_cnt_idx)
+                    room_idx = partial_map.org_edge_index[0][room_idx_pos]
+                    from_room_coords = partial_map.node_coords[room_idx]
+
+                if to_loc == 'initial_robot_pose':
+                    to_coord = init_r
+                    to_room_coords = init_room_coord
+                else:
+                    to_coord = partial_map.node_coords[partial_map.idx_map[to_loc]]
+                    to_cnt_idx = partial_map.idx_map[to_loc]
+                    room_idx_pos = partial_map.org_edge_index[1].index(to_cnt_idx)
+                    room_idx = partial_map.org_edge_index[0][room_idx_pos]
+                    to_room_coords = partial_map.node_coords[room_idx]
+
+                gen_obj_name = get_generic_name(obj)
+                if (gen_obj_name, from_room_coords, to_room_coords) in pre_compute:
+                    intermediate_d = pre_compute[(gen_obj_name, from_room_coords, to_room_coords)]
+                else:
+                    intermediate_d, pred_sub = get_expected_cost_of_finding(
+                        partial_map,
+                        subgoals,
+                        obj,
+                        from_room_coords,  # robot_pose
+                        to_room_coords,  # destination_pose
+                        network_file,
+                        pred_sub)
+                    pre_compute[(gen_obj_name, from_room_coords, to_room_coords)] = intermediate_d
+                if (from_coord, from_room_coords) in grid_cost:
+                    part_from = grid_cost[(from_coord, from_room_coords)]
+                else:
+                    part_from = get_cost(partial_map.grid, from_coord, from_room_coords)
+                    grid_cost[(from_coord, from_room_coords)] = part_from
+
+                if (to_coord, to_room_coords) in grid_cost:
+                    part_to = grid_cost[(to_coord, to_room_coords)]
+                else:
+                    part_to = get_cost(partial_map.grid, to_coord, to_room_coords)
+                    grid_cost[(to_coord, to_room_coords)] = part_to
+                d = costs['find'] + part_from + intermediate_d + part_to
+                struct['init_fluents'][('find-cost', obj, from_loc, to_loc)] = round(d, 4)
+
+
 def update_problem_move(problem, end):
     init_preds = []
     for pred in problem['init_predicates']:
