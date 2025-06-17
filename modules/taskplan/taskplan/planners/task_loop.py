@@ -176,6 +176,18 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 robot_poses.append(partial_map.container_poses[explored_loc])
                 taskplan.pddl.helper.update_problem_find(
                     pddl['problem_struct'], found_objects, found_at, find_start)
+                # call the next update only for learned cost_type to update
+                # the new find costs after exploring a container
+                if args.cost_type == 'learned':
+                    pddl['problem_struct']['missing_objects'] = [
+                        obj for obj in pddl['problem_struct']['missing_objects']
+                        if obj not in found_objects
+                    ]
+                    taskplan.pddl.helper.update_find_costs(
+                        pddl['problem_struct'], partial_map,
+                        args.network_file, pddl['subgoals'],
+                        init_robot_pose, args.robot_room_coord
+                    )
                 pddl['problem'] = taskplan.pddl.helper.\
                     generate_pddl_problem_from_struct(pddl['problem_struct'])
 
