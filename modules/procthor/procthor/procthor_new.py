@@ -7,6 +7,8 @@ from common import Pose
 from ai2thor.controller import Controller
 from . import utils
 from .scenegraph import SceneGraph
+import pickle
+from pathlib import Path
 
 IGNORE_CONTAINERS = [
     'baseballbat', 'basketBall', 'boots', 'desklamp', 'painting',
@@ -21,6 +23,14 @@ class ThorInterface:
         self.args = args
         self.seed = args.current_seed
         random.seed(self.seed)
+
+        self.cached_data = self.load_cache()
+        if self.cached_data is not None:
+            print("-----------Using cached procthor data-----------")
+            self.occupancy_grid = self.cached_data['occupancy_grid']
+            self.scene_graph = self.cached_data['scene_graph']
+            self.robot_pose = self.cached_data['robot_pose']
+            return
 
         self.grid_resolution = args.resolution
         self.scene = self.load_scene()
@@ -56,6 +66,29 @@ class ThorInterface:
         self.scene_graph = self.get_scene_graph()
         self.robot_pose = self.get_robot_pose()
         self.known_cost = self.get_known_costs()
+        self.save_cache()
+
+    def save_cache(self, path='/resources/procthor-cache'):
+        """Save the scene data"""
+        data = {
+            'occupancy_grid': self.occupancy_grid,
+            'scene_graph': self.scene_graph,
+            'robot_pose': self.robot_pose,
+            'image': self.get_top_down_image()
+        }
+        save_dir = Path(path)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        with open(save_dir / f'scene_{self.args.current_seed}.pkl', 'wb') as f:
+            pickle.dump(data, f)
+
+    def load_cache(self, path='/resources/procthor-cache'):
+        """Load the cached scene data."""
+        cache_file = Path(path) / f'scene_{self.args.current_seed}.pkl'
+        if not cache_file.exists():
+            return None
+        with open(cache_file, 'rb') as f:
+            data = pickle.load(f)
+        return data
 
     def gen_map_and_poses(self, num_objects=1):
         """Returns scene graph, grid, initial robot pose and target object info."""
@@ -273,6 +306,8 @@ class ThorInterface:
         return known_cost
 
     def get_top_down_image(self, orthographic=True):
+        if self.cached_data is not None:
+            return self.cached_data['image']
         # Setup top down camera
         event = self.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
         pose = copy.deepcopy(event.metadata["actionReturn"])
