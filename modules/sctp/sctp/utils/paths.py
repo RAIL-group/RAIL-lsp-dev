@@ -1,7 +1,7 @@
 import numpy as np
 import heapq
 from collections import defaultdict, deque # find shortest path
-
+import sctp.sctp_graphs as graphs
 
 # helper functions
 def dijkstra(graph, goal):
@@ -99,8 +99,50 @@ def get_shortestPath_cost(graph, start, goal):
                 costs[nei] = new_path_cost
                 new_path = path + [nei]
                 heapq.heappush(queue, (new_path_cost, nei, new_path))
-    ValueError("Found no path - error")
+    # raise ValueError("Found no path - error")
     return -1.0
+
+
+def get_shortest_path_with_blocknode(graph, start, goal, redge = [], block_nodes = []):
+    block_pen = 500.0
+    new_graph = graphs.remove_edge(graph, redge)
+    queue = [(0.0, start, [start])]
+    visited = set()
+    costs = {start: 0.0}
+    while queue:
+        (path_cost, current_node, path) = heapq.heappop(queue)
+        if current_node in visited:
+            continue
+        visited.add(current_node)
+        if current_node == goal:
+            return costs[current_node]
+        
+        # Explore neighbors
+        vertices = [v for v in new_graph.vertices+new_graph.pois if v.id == current_node]
+        if len(vertices) == 0: # the start node was removed
+            return -1.0
+        if len(vertices) > 1:
+            print("The node id is not unique - the graph is wrong")
+            return -2.0
+        for nei in vertices[0].neighbors:
+            step_cost = 0.0
+            for edge in new_graph.edges:
+                if (edge.v1.id == nei and edge.v2.id== current_node) or \
+                        (edge.v1.id == current_node and edge.v2.id==nei):
+                    step_cost = edge.dist
+                    if  nei in block_nodes:
+                        step_cost += block_pen
+                    break
+                ValueError("Not find an edge")
+            new_path_cost = path_cost + step_cost
+            # If we found a shorter path to neighbor
+            if nei not in costs or new_path_cost < costs[nei]:
+                costs[nei] = new_path_cost
+                new_path = path + [nei]
+                heapq.heappush(queue, (new_path_cost, nei, new_path))
+    return -1.0
+
+
 
 def is_reachable(graph, start, goal):
     if start == goal:

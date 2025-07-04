@@ -14,18 +14,21 @@ class SCTPPlanner(object):
         self.drones = drones 
         self.goalID = goalID
         self.rollout_fn = rollout_fn
-    
+        self.goalNeighbors = []
+        
     def reached_goal(self):
         if not self.robot.at_node:
             return False
-        return self.robot.last_node == self.goalID
-
+        return self.robot.last_node == self.goalID    
+    
     def update(self, observations, robot_data, drone_data=None):
         if observations:
             self.observed_graph.update(observations)
         self.robot.cur_pose = np.array([robot_data[0][0],robot_data[0][1]])
         self.robot.at_node = robot_data[1]
         self.robot.edge = robot_data[2].copy()
+        # if self.robot.at_node:
+        #     assert self.robot.edge == []
         self.robot.last_node = robot_data[3]
         self.robot.pl_vertex = robot_data[4]
         self.robot.remaining_time = 0.0
@@ -42,7 +45,7 @@ class SCTPPlanner(object):
         if self.verbose:
             print('------------robots poses after updating ---------------')
             if self.drones != []:
-                print(f"Drones: ", [drone.cur_pose for drone in self.drones])
+                print(f"Drones: ", [(drone.cur_pose, drone.at_node) for drone in self.drones])
             print(f"Robot: {self.robot.cur_pose} at node? {self.robot.at_node} /on edge? {self.robot.edge}/ last node: {self.robot.last_node}")
         
     
@@ -55,12 +58,9 @@ class SCTPPlanner(object):
         else:
             drones = [drone.copy() for drone in self.drones]
         
-        # vertex = [poi for poi in self.observed_graph.pois if poi.id==6][0]
-        # assert [v for v in self.observed_graph.pois if v.id == 5] != []
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
                                         drones=drones)
-        
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
             sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, rollout_fn=self.rollout_fn)
         # because replanning, so just take some first n+1 action
@@ -68,5 +68,4 @@ class SCTPPlanner(object):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]
         if self.verbose:
             print("action ordering=", [f"{action}" for action in ordering[:1+len(self.drones)]])
-        # print("costs=", costs)
-        return ordering[:1+len(self.drones)], sum(costs[:1+len(self.drones)])
+        return ordering, costs

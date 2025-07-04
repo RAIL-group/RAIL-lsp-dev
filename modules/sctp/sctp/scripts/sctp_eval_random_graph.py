@@ -35,7 +35,7 @@ def mgraph_init():
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=5)
+    start, goal, graph = graphs.random_graph(n_vertex=args.v_num)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
@@ -52,20 +52,20 @@ def _setup(args):
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=policyGraph, goalID=goal.id,robot=planner_robot, 
                                         drones=planner_drones,rollout_fn=core.sctp_rollout3) 
 
-    planning_loop = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
-                                                graph=graph, reached_goal=sctpplanner.reached_goal)
+    planning_exe = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
+                                                graph=graph, reached_goal=sctpplanner.reached_goal, verbose=False)
 
     
     
-    for step_data in planning_loop:
+    for step_data in planning_exe:
         sctpplanner.update(
             step_data['observed_pois'],
             step_data['robot'],
             step_data['drones']
         )
         
-        joint_action, cost = sctpplanner.compute_joint_action()
-        planning_loop.update_joint_action(joint_action, cost)
+        joint_actions, cost = sctpplanner.compute_joint_action()
+        planning_exe.save_joint_actions(joint_actions, cost)
     
     cost = robot.net_time
 
@@ -76,14 +76,13 @@ def _setup(args):
         x = [pose[0] for pose in drone.all_poses]
         y = [pose[1] for pose in drone.all_poses]
         dpaths.append([x, y])
-    # assert dpaths == []
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, graph_plot=plotGraph,
                              start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=True)
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
 
     logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
     with open(logfile, "a+") as f:
-        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f}\n")
+        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f} | SUCC : {int(planning_exe.success)}\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -91,8 +90,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1024)
     parser.add_argument('--planner', type=str, default='sctp')
     parser.add_argument('--num_drones', type=int, default=1)
-    parser.add_argument('--num_iterations', type=int, default=2000)
+    parser.add_argument('--num_iterations', type=int, default=1000)
     parser.add_argument('--C', type=int, default=50)
+    parser.add_argument('--v_num', type=int, default=6)
     parser.add_argument('--resolution', type=float, default=0.05)
     args = parser.parse_args()
     args.current_seed = args.seed

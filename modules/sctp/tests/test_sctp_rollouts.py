@@ -1,10 +1,12 @@
 import pytest
+import numpy as np
 from sctp import sctp_graphs as graphs
 from sctp import core
 from sctp.robot import Robot
-from sctp.param import RobotType, VEL_RATIO
+from sctp.param import RobotType, VEL_RATIO, EventOutcome, STUCK_COST
 # from sctp.param import EventOutcome
 from pouct_planner import core as pomcp
+
   
 def test_sctp_rollout_integrating_dgraph():
     start, goal, d_graph, robots = graphs.disjoint_unc()
@@ -79,4 +81,26 @@ def test_sctp_drone_rollout_dg():
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
     init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+
+
+def test_rollout_state_with_history():
+    start, goal, graph = graphs.graph_stuck()
+    robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
+    drones = []
+    init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
     
+    rollout_value = core.sctp_rollout3(init_state)
+    assert rollout_value == pytest.approx(8 + np.linalg.norm(np.array([12, 1.0])-np.array([8,0])), abs=0.001)
+
+
+    action9 = core.Action(target=9)
+    init_state.history.add_history(action9, EventOutcome.BLOCK)
+        
+    rollout_value_history = core.sctp_rollout3(init_state)
+    assert rollout_value_history == pytest.approx((8 + 2.5 + np.linalg.norm(np.array([12, 1.0])-np.array([8,2.5]))), abs=0.001)
+
+    action8 = core.Action(target=8)
+    init_state.history.add_history(action8, EventOutcome.BLOCK)
+        
+    rollout_value_history = core.sctp_rollout3(init_state)
+    assert rollout_value_history == pytest.approx(STUCK_COST, abs=0.001)

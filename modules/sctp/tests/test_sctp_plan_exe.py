@@ -23,11 +23,11 @@ def _get_args():
     parser.add_argument('--resolution', type=float, default=0.05)
 
     args = parser.parse_args(['--save_dir', ''])
-    args.seed = 2000
+    args.seed = 2007
     args.save_dir = '/data/sctp'
     args.planner = 'sctp'
     args.num_drones = 1
-    args.num_iterations = 2000
+    args.num_iterations = 1000
     args.C = 30
     args.resolution = 0.05
     args.current_seed = args.seed
@@ -290,8 +290,8 @@ def test_sctp_plan_exec_mg():
 def test_sctp_plan_exec_rg():
     args = _get_args()
     args.planner = 'sctp'
-    args.seed = 2060
-    args.num_iterations = 5000
+    args.seed = 2007
+    args.num_iterations = 1000
     random.seed(args.seed)
     np.random.seed(args.seed)
     start, goal, graph = graphs.random_graph()
@@ -547,12 +547,12 @@ def test_baseline_plan_exec_mg():
 
 def test_baseline_plan_exec_rg():
     args = _get_args()
-    args.planner = 'sctp'
-    args.seed = 2032
+    args.planner = 'base'
+    args.seed = 2012
     args.num_iterations = 2000
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=5)
+    start, goal, graph = graphs.random_graph(n_vertex=10)
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     if args.planner == 'base':
         drones = []
@@ -575,8 +575,8 @@ def test_baseline_plan_exec_rg():
             step_data['drones']
         )
         
-        joint_action, cost = sctpplanner.compute_joint_action()
-        plan_exec.update_joint_action(joint_action, cost)
+        joint_actions, cost = sctpplanner.compute_joint_action()
+        plan_exec.save_joint_actions(joint_actions, cost)
     
     cost = robot.net_time
     x_g = [pose[0] for pose in robot.all_poses]

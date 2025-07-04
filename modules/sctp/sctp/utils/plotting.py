@@ -29,7 +29,7 @@ def plot_plan_exec(graph, plt, name="Graph", gpath=[], dpaths = [], graph_plot=N
         g_colors = ['orange', 'green']
         ax[1].scatter(gpath[0], gpath[1], marker='P', s=4.5, alpha=1.0)
         plot_path_fromPoints(ax=ax[1], xy=gpath, colors=g_colors)
-    if dpaths != []:
+    if dpaths != [] and len(dpaths[0][0]) >1:
         for path in dpaths:
             d_colors = ['blue', 'purple']
             ax[1].scatter(path[0],path[1], marker='s', s=4.5)
@@ -56,6 +56,7 @@ def plot_policy(graph, name="Policy", actions=[],
 
     box = plot_sctpgraph(graph, ax, verbose=verbose)
     g_cost = 0.0
+    x_drone = []
     if actions != []:
         d_colors = ['yellow', 'purple']
         g_colors = ['orange', 'green']
@@ -69,7 +70,40 @@ def plot_policy(graph, name="Policy", actions=[],
         planner = 'base'
     else:
         planner = 'sctp'
-    plt.savefig(f'/data/sctp/sctp_eval_planner_{planner}_seed_{seed}.png')
+    plt.savefig(f'/data/sctp/sctp_eval_policy_{planner}_seed_{seed}.png')
+    plt.show()
+
+def plot_firstAction(graph, action, name="First Action", 
+               startID=None, goalID=None, seed=None, verbose=False):
+    fig, ax = plt.subplots()
+    count = 0
+    for node in graph.vertices+graph.pois:
+        if startID is not None:
+            if node.id == startID:
+                count += 1
+                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=12)
+        if goalID is not None:
+            if node.id == goalID:
+                count += 1
+                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=12) 
+
+    box = plot_sctpgraph(graph, ax, verbose=verbose)
+    g_cost = 0.0
+    x_drone = []
+    # if actions != []:
+    d_colors = ['yellow', 'purple']
+    g_colors = ['orange', 'green']
+    g_cost, x_drone = plot_path_fromActions(ax, graph=graph, actions=[action], dcolors=d_colors, gcolors=g_colors)
+    ax.set_aspect('equal', adjustable='box')
+    ax.set_xlim(box[0][0]-1.0, box[1][0]+1.0)
+    ax.set_ylim(box[0][1]-0.5, box[1][1]+0.5)
+
+    plt.title(name+f' | seed = {seed} | cost = {g_cost:.2f}')
+    if x_drone == []:
+        planner = 'base'
+    else:
+        planner = 'sctp'
+    plt.savefig(f'/data/sctp/sctp_eval_policy_{planner}_seed_{seed}.png')
     plt.show()
 
     
@@ -111,7 +145,7 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
     y_robot.append(last_vertex.coord[1])
     plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
     if x_drone != []:
-        last_vertex = [vertex for vertex in graph.vertices if vertex.id == last_drone_action.target][0]
+        last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_drone_action.target][0]
         x_drone.append(last_vertex.coord[0])
         y_drone.append(last_vertex.coord[1])
         plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)

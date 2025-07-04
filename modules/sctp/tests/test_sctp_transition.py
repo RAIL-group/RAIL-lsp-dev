@@ -3,6 +3,9 @@ from sctp import sctp_graphs as graphs
 from sctp import core
 from sctp.param import EventOutcome, RobotType
 import numpy as np
+import random
+from sctp.robot import Robot
+from sctp.utils import plotting
 
 def test_sctp_transition_lg_noblock():
     start, goal, l_graph, robots = graphs.linear_graph_unc()
@@ -257,6 +260,79 @@ def test_sctp_transition_dg_noblock():
 
 
 
-def test_sctp_transition_dg_prob():
-    # when you test transition, we focus on the number of children state, prob, and cost
-    pass
+def test_sctp_transition_graph_stuck1():
+    seed = 2001
+    np.random.seed(seed)
+    random.seed(seed)
+    exp_param=30.0
+    num_iters = 2000
+    start, goal, graph = graphs.graph_stuck()
+    drones = []
+    v2 = [v for v in graph.vertices if v.id==2][0]
+    s = v2
+    robot = Robot(position=[s.coord[0],s.coord[1]], cur_node=s.id, at_node=True)
+    init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+
+    actions = init_state.get_actions()
+    assert len(actions) == 2
+    assert actions[0].target == 6
+    assert actions[1].target == 7
+
+    # Taking action 7
+    state_prob_cost = init_state.transition(action=actions[1])
+    assert len(state_prob_cost) == 2
+    prob_cost = list(state_prob_cost.values())
+    assert prob_cost[0][0] == 0.85
+    assert prob_cost[0][1] == 4.0
+    assert prob_cost[1][0] == 0.15
+    assert prob_cost[1][1] == 4.0    
+    states7 = list(state_prob_cost.keys())
+    assert states7[0].history.get_action_outcome(core.Action(target=7)) == EventOutcome.TRAV
+    assert states7[1].history.get_action_outcome(core.Action(target=7)) == EventOutcome.BLOCK
+    assert states7[0].history.get_action_outcome(core.Action(target=6)) == EventOutcome.CHANCE
+    assert states7[1].history.get_action_outcome(core.Action(target=6)) == EventOutcome.CHANCE
+
+
+    # Taking action 6
+    state_prob_cost = init_state.transition(action=actions[0])
+    assert len(state_prob_cost) == 2
+    prob_cost = list(state_prob_cost.values())
+    assert prob_cost[0][0] == 0.75
+    assert prob_cost[0][1] == 1.25
+    assert prob_cost[1][0] == 0.25
+    assert prob_cost[1][1] == 1.25    
+    states6 = list(state_prob_cost.keys())
+    assert states6[0].history.get_action_outcome(core.Action(target=6)) == EventOutcome.TRAV
+    assert states6[1].history.get_action_outcome(core.Action(target=6)) == EventOutcome.BLOCK
+    assert states6[0].history.get_action_outcome(core.Action(target=7)) == EventOutcome.CHANCE
+    assert states6[1].history.get_action_outcome(core.Action(target=7)) == EventOutcome.CHANCE
+    actions = states6[0].get_actions()
+    assert len(actions) == 1
+    assert actions[0].target == 1
+    actions = states6[1].get_actions()
+    assert len(actions) == 1
+    assert actions[0].target == 2
+    # select TRAV state at P6, going to V1
+    state_prob_cost = states6[0].transition(states6[0].get_actions()[0])
+    assert len(state_prob_cost) == 1
+    prob_cost = list(state_prob_cost.values())
+    assert prob_cost[0][0] == 1.0
+    assert prob_cost[0][1] == 1.25
+    states = list(state_prob_cost.keys())
+    actions = states[0].get_actions()
+    assert len(actions) == 1
+    assert actions[0].target == 10
+    state_prob_cost = states[0].transition(states[0].get_actions()[0])
+    assert len(state_prob_cost) == 2
+    states = list(state_prob_cost.keys())
+    assert states[0].robot.at_node == True 
+    assert states[0].robot.last_node == 10
+    prob_cost = list(state_prob_cost.values())
+    assert states[0].history.get_action_outcome(core.Action(target=10)) == EventOutcome.TRAV
+    assert states[1].history.get_action_outcome(core.Action(target=10)) == EventOutcome.BLOCK
+    prob_cost[0][0] == 0.23
+    prob_cost[0][1] == 4.0
+    prob_cost[1][0] == 0.77
+    prob_cost[1][1] == 4.0
+    plotting.plot_policy(graph, actions=[], startID=s.id, \
+                               goalID=goal.id, seed=seed, verbose=True)

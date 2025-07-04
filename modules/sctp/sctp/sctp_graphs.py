@@ -53,11 +53,12 @@ class Graph():
     def copy(self):
         new_vertices = [vertex.copy() for vertex in self.vertices]
         new_pois = [poi.copy() for poi in self.pois]
-        # edges = []
-        # for edge in self.edges:
-        #     vs = [v for v in new_vertices+new_pois if v.id == edge.v1.id or v.id == edge.v2.id]
-        #     edges.append(Edge(vs[0], vs[1]))
-        new_graph = Graph(vertices=new_vertices, edges=self.edges.copy())
+        edges = []
+        for edge in self.edges:
+            vs = [v for v in new_vertices+new_pois if v.id == edge.v1.id or v.id == edge.v2.id]
+            edges.append(Edge(vs[0], vs[1]))
+        # new_graph = Graph(vertices=new_vertices, edges=self.edges.copy())
+        new_graph = Graph(vertices=new_vertices, edges=edges)
         new_graph.pois = new_pois
         return new_graph
 
@@ -137,8 +138,42 @@ def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
         raise ValueError("Cannot get enough vertices")
     return points
 
+def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
+    size = 7.0 * (np.sqrt(n_vertex)-1.0)
+    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
+                                         min_dist=min_edge_len, max_dist=max_edge_len)
+    tri = Delaunay(np.array(points))
+    graph = Graph(vertices=[Vertex(coord=point) for point in points])
+    graph.edges.clear()
+    edge_count = {}
+    # Use a set to avoid duplicate edges
+    edges = set()    
+    for simplex in tri.simplices:
+        edges.update(tuple(sorted((simplex[i], simplex[j]))) for i in range(3) for j in range(i + 1, 3))    
+        for i, j in [(0, 1), (0, 2), (1, 2)]:
+            edge = tuple(sorted((simplex[i], simplex[j])))
+            edge_count[edge] = edge_count.get(edge, 0) + 1
+    boundary_edges = [edge for edge, count in edge_count.items() if count == 1]
+    # Add edges to the graph with random weights
+    for i, j in edges:
+        dist = np.linalg.norm(np.array(graph.vertices[i].coord) - np.array(graph.vertices[j].coord))
+        if dist > max_edge_len:
+            continue
+        if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >max_edge_len-1.2:
+            continue
 
-def random_graph(n_vertex=8, xmin=0, ymin=0):
+        if np.random.random() <TRAV_LEVEL: # control level of blockage in the graph
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.15, 0.6))
+        else:
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.7, 0.90))
+    startId = min(enumerate(points), key=lambda p: p[1][0])[0]
+    start_pos = points[startId]
+    goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
+    goal = graph.vertices[goalId]
+    start = graph.vertices[startId]
+    return start, goal, graph
+
+def random_graph_old(n_vertex=8, xmin=0, ymin=0):
     """Generate a random graph with Delaunay triangulation and weighted edges."""    
     size = 7.0 * (np.sqrt(n_vertex)-1.0)
     max_edge_length = 9.0
@@ -183,6 +218,29 @@ def random_graph(n_vertex=8, xmin=0, ymin=0):
             vertex.block_status = int(0)
     return start, goal, graph
 
+
+def random_graph(n_vertex=8, xmin=0, ymin=0):
+    """Generate a random graph with Delaunay triangulation and weighted edges."""    
+    max_edge_length = 9.0
+    min_edge_length = 3.0
+    valid_graph = False
+    for _ in range(1000):
+        start, goal, graph = generate_random_graph(n_vertex=n_vertex, xmin=xmin, ymin=ymin,max_edge_len=max_edge_length,\
+                                         min_edge_len=min_edge_length)
+        valid_graph = check_graph_valid(startID=start.id, goalID=goal.id, graph=graph)
+        if valid_graph:
+            break
+    paths.dijkstra(graph=graph, goal=goal)
+    return start, goal, graph
+
+def check_graph_valid(startID, goalID, graph):
+    block_pois = []
+    for poi in graph.pois:
+        if poi.block_status ==1:
+            block_pois.append(poi.id)
+    new_graph = remove_pois(graph=graph, poiIDs=block_pois)
+    return paths.is_reachable(graph=new_graph, start=startID, goal=goalID)
+
 def remove_blockEdges(graph):
     graph_copy = graph.copy()
     block_pois = []
@@ -194,6 +252,15 @@ def remove_blockEdges(graph):
     graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in block_pois]
     for vertex in graph_copy.vertices:
         vertex.neighbors = [nei for nei in vertex.neighbors if nei not in block_pois]
+    return graph_copy
+
+def remove_edge(graph, redge =[]):
+    graph_copy = graph.copy()
+    graph_copy.edges = [edge for edge in graph_copy.edges \
+                    if not (edge.v1.id in redge and edge.v2.id in redge)]
+    for vertex in graph_copy.vertices+graph_copy.pois:
+        if vertex.id in redge:  
+            vertex.neighbors = [nei for nei in vertex.neighbors if nei not in redge]
     return graph_copy
 
 def remove_poi(graph, poiID):
@@ -214,14 +281,14 @@ def remove_pois(graph, poiIDs=[]):
     graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in poiIDs]
     graph_copy.edges = [edge for edge in graph_copy.edges if edge.v1.id not in poiIDs and edge.v2.id not in poiIDs]
     for vertex in graph_copy.vertices:
-        if any(poi in poiIDs for poi in vertex.neighbors):
-            vertex.neighbors = [nei for nei in vertex.neighbors if nei not in poiIDs]
+        # if any(poi in poiIDs for poi in vertex.neighbors):
+        vertex.neighbors = [nei for nei in vertex.neighbors if nei not in poiIDs]
     return graph_copy
 
 def modify_graph(graph, robot_edge, poiIDs=[]):
     new_poiIDs = [poiID for poiID in poiIDs if poiID not in robot_edge]
     new_graph = remove_pois(graph=graph, poiIDs=new_poiIDs)
-    if len(poiIDs) == len(new_poiIDs):
+    if len(poiIDs) == len(new_poiIDs): # if GV is not on a removed POI
         return new_graph 
     else:
         poi_robot = [poi for poi in robot_edge if poi in poiIDs][0]
@@ -358,7 +425,7 @@ def graph_stuck():
     node1 = Vertex(coord=(0.0, 0.0)) # start node
     nodes.append(node1)
     # node2 = Vertex(coord=(0.2, 5.0))
-    # node2 = Vertex(coord=(0.2, 1.0))
+    # node2 = Vertex(coord=(2.0, 2.5))
     node2 = Vertex(coord=(0.0, 2.5))
     nodes.append(node2)
     node3 = Vertex(coord=(8.0, 2.5))
