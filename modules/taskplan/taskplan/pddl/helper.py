@@ -4,6 +4,7 @@ import taskplan
 from taskplan.planners.planner import LearnedPlanner
 from taskplan.utilities.utils import get_action_costs
 from procthor.utils import get_generic_name, get_cost
+from taskplan.planners.planner import NUM_MAX_FRONTIERS
 
 
 def generate_pddl_problem_from_struct(struct):
@@ -106,7 +107,7 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
             partial_map,
             robot_pose,
             destination,
-            num_frontiers_max=8,
+            num_frontiers_max=NUM_MAX_FRONTIERS,
             alternate_sampling=True))
     return round(exp_cost, 4), sub_pred
 
