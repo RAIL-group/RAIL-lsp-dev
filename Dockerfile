@@ -46,13 +46,13 @@ RUN cd pddlstream\
 ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
 
 
-FROM base AS spot
+# FROM base AS spot
 # Install spot (for LTL specifications and PO-TLP)
-RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
-    tar xvzf spot-2.12.tar.gz && rm spot-2.12.tar.gz && \
-    cd spot-2.12 && \
-    ./configure && \
-    make -j8 2>&1 | tee make.log && make install
+# RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
+#     tar xvzf spot-2.12.tar.gz && rm spot-2.12.tar.gz && \
+#     cd spot-2.12 && \
+#     ./configure && \
+#     make -j8 2>&1 | tee make.log && make install
 
 
 FROM base AS pkg-lsp
@@ -96,10 +96,10 @@ COPY --from=pkg-lsp /opt/.venv/lib/ /opt/.venv/lib/
 COPY --from=pkg-lsp /modules /modules
 
 # Migrate files from spot
-COPY --from=spot /usr/local/lib/*spot* /opt/.venv/lib
-COPY --from=spot /usr/local/lib/*bdd* /opt/.venv/lib
-COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/spot
-COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/
+# COPY --from=spot /usr/local/lib/*spot* /opt/.venv/lib
+# COPY --from=spot /usr/local/lib/*bdd* /opt/.venv/lib
+# COPY --from=spot /usr/local/lib/python3.10/site-packages/spot /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/spot
+# COPY --from=spot /usr/local/lib/python3.10/site-packages/*buddy* /opt/.venv/lib/python${PYTHON_VERSION}/site-packages/
 
 # Set up the starting point for running the code
 COPY entrypoint.sh /entrypoint.sh

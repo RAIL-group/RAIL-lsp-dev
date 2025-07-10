@@ -7,7 +7,7 @@ APP_NAME ?= rail-plan-uncertain
 NUM_BUILD_CORES ?= $(shell grep -c ^processor /proc/cpuinfo)
 
 # Handle Optional GPU
-USE_GPU ?= true
+USE_GPU ?= false
 ifeq ($(USE_GPU),true)
 	DOCKER_GPU_ARG = --gpus all
 endif

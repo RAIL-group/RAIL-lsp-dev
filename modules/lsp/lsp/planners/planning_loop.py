@@ -56,6 +56,7 @@ class PlanningLoop():
                 'robot_grid': robot_grid,
                 'robot_pose': self.robot.pose,
                 'visibility_mask': visibility_mask,
+                'planned_path': self.current_path,
             }
 
             if self.chosen_subgoal is None:
@@ -77,6 +78,7 @@ class PlanningLoop():
             did_plan, path = get_path([self.robot.pose.x, self.robot.pose.y],
                                       do_sparsify=True, do_flip=True)
             self.current_path = path
+            print(self.current_path)
 
             # Move the robot
             motion_primitives = self.robot.get_motion_primitives()
