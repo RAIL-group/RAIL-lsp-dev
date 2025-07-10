@@ -50,7 +50,8 @@ class PlanningLoop():
             # Move robot to chosen subgoal pose
             chosen_subgoal_position = self.graph.get_node_position_by_idx(self.chosen_subgoal)
             self.robot.move(Pose(*chosen_subgoal_position[:2]))
-
+            print(str(Pose(*chosen_subgoal_position[:2])))
+            print(str(chosen_subgoal_position[:2]))
             counter += 1
             count_since_last_turnaround += 1
             if self.verbose:

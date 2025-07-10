@@ -1,6 +1,5 @@
 import random
 
-
 class SceneGraphSimulator:
     def __init__(self,
                  known_graph,

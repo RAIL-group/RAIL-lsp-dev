@@ -1,15 +1,14 @@
-from planner import Planner
+from .planner import Planner
+from optimistic_planner import OptimisticPlanner
+
 
 class DummyPlanner(Planner):
-    """Dummy planner that does nothing."""
-    
-    def __init__(self, target_obj_info, args, verbose=True, stateDict=None):
-        super().__init__(target_obj_info, args, verbose)
-        self.stateDict = stateDict if stateDict is not None else {}
-        self.coords = [(0, 0), (100, 100)]  # Example coordinates for subgoals
+    '''This planner optimistically explores the nearest container to search the target object.'''
+    def __init__(self, target_obj_info, args, destination=None, verbose=True):
+        super.__init__(target_obj_info, args, verbose)
+        self.destination = destination
 
     def compute_selected_subgoal(self):
-        """Returns the first subgoal in the list."""
-        if self.new_subgoals:
-            return self.new_subgoals[0]
-        return None
+        thing = self.subgoals[0]
+        self.subgoals = self.subgoals[1:]
+        return thing

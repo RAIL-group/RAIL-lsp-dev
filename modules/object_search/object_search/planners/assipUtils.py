@@ -15,13 +15,15 @@ class State():
     
 class Container():
     """Container with a list of objects in it."""
-    def __init__(self, name, location, objects):
+    def __init__(self, id, name, location, objects=None):
+        self.id = id
         self.name = name
         self.location = location
-        self.objects = objects
+        self.objects = objects if objects is not None else []
     
     def __repr__(self):
         return f"Container({self.name}, {self.objects})"
     
     def __str__(self):
         return f"Container: {self.name} with objects: {self.objects}"
+
