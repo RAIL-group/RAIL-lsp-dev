@@ -63,3 +63,6 @@ class SceneGraphSimulator:
             observed_graph.add_edge(chosen_container_idx, o_idx)
 
         return observed_graph, observed_grid, unexplored_containers
+    
+    def get_containers(self, graph, chosen_subgoal):
+        return [s for s in graph.get_containers if s != chosen_container_idx]
