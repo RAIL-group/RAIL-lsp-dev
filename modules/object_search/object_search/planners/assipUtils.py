@@ -1,29 +1,74 @@
-
-from modules.procthor.procthor.scenegraph import SceneGraph
-
+import math
+from fluent import Fluent
+# from modules.procthor.procthor.scenegraph import SceneGraph
+     
+class Condition():
+    def __init__(self, objectOne, objectTwo, robot_pose, graph, visited):
+        self.graph = graph
+        self.objectOne = self.get_node_info(objectOne) if objectOne != 'robot' else robot_pose
+        self.objectTwo = self.get_node_info(objectTwo)
+        self.robot_pose = robot_pose
+        self.visitedPos = visited
+    def check(self, fType):
+        # print(fType)
+        if fType == 'near':
+            return self.isNear()
+        elif fType == 'visited':
+            return self.visited()
+        
+    def isNear(self):
+        # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
+        if self.objectTwo[0]['name'] == 'diningtable': print(self.objectTwo)
+        return math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2) <= 20
+    def visited(self):
+        
+        return self.objectTwo[0]['name'] in self.visitedPos
+    
+    def get_node_info(self, node_name: str) -> tuple[dict, int]:
+        
+        for node_id in self.graph:
+            info = self.graph[node_id]
+            if info['name'] == node_name:
+                return (info, node_id)
+        return (None, -1)
+    
 
 class State():
     """Position of robot and dictionary of containers mapped to what’s in them) """
-    def __init__(self, robot_pose, containers, graph):
+    def __init__(self, robot_pose, graph, visited, fluents:set[Fluent]):
         self.robot_pose:tuple[int] = robot_pose
-        self.containers:list[Container] = containers
-        self.actions = self.getActions(graph)
-    #get_graph from procthor.py
+        # self.containers:list[Container] = containers
+        self.graph = graph
+        self.visited = visited
+        self.fluents:set[Fluent] = self.updateFluents(fluents)
 
-    def getActions(self, graph:SceneGraph):
-        # containers = {}
-        # for idx in graph.nodes:
-        #     if graph.nodes[idx]['type'] == [0, 0, 1, 0]:
-        #         containers[idx] = graph.nodes[idx]['name'] 
-        return [v for v in graph.nodes.values() if v['type'] == [0, 0, 1, 0]]
+    def updateFluents(self, fluents):
+        for idx in range(len(fluents)):
+            parameters = fluents[idx].args
+            # print(parameters, fluent.name)
+            nodeOne = parameters[0]
+            nodeTwo = parameters[1]
+            fType = fluents[idx].name
+
+            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.visited)
+
+            if condition.check(fType):
+                if fluents[idx].negated:
+                    fluents[idx] = ~fluents[idx]
+                else:
+                    pass
+            elif not fluents[idx].negated:
+                fluents[idx] = ~fluents[idx]
+                
+        return [fluent for fluent in fluents if not fluent.negated]
+
+    # def getListOfContainerLocations(self):
+    #     """Returns a list of all container locations."""
+    #     return {container.name : container.location for container in self.containers}
     
-    def getListOfContainerLocations(self):
-        """Returns a list of all container locations."""
-        return {container.name : container.location for container in self.containers}
-    
-    def getListOfKnownObjects(self):
-        """Returns a list of all objects in all containers."""
-        return [obj for container in self.containers for obj in container.objects]
+    # def getListOfKnownObjects(self):
+    #     """Returns a list of all objects in all containers."""
+    #     return [obj for container in self.containers for obj in container.objects]
     
 class Container():
     """Container with a list of objects in it."""

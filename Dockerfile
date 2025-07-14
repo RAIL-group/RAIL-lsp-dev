@@ -18,9 +18,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 # Install VirtualGL
 RUN curl -sSL https://github.com/VirtualGL/virtualgl/releases/download/"${VIRTUALGL_VERSION}"/virtualgl_"${VIRTUALGL_VERSION}"_amd64.deb -o virtualgl_"${VIRTUALGL_VERSION}"_amd64.deb && \
-	dpkg -i virtualgl_*_amd64.deb && \
-	/opt/VirtualGL/bin/vglserver_config -config +s +f -t && \
-	rm virtualgl_*_amd64.deb
+    dpkg -i virtualgl_*_amd64.deb && \
+    /opt/VirtualGL/bin/vglserver_config -config +s +f -t && \
+    rm virtualgl_*_amd64.deb
 
 # Install uv & Initialize python setup
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -37,12 +37,12 @@ RUN uv pip install sknw
 
 # Install PDDLStream
 RUN git clone https://github.com/caelan/pddlstream.git \
-	&& cd pddlstream && ls -a && cat .gitmodules\
-	&& sed -i 's/ss-pybullet/pybullet-planning/' .gitmodules \
-	&& sed -i 's/git@github.com:caelan\/downward.git/https:\/\/github.com\/caelan\/downward/' .gitmodules \
-	&& git submodule update --init --recursive
+    && cd pddlstream && ls -a && cat .gitmodules\
+    && sed -i 's/ss-pybullet/pybullet-planning/' .gitmodules \
+    && sed -i 's/git@github.com:caelan\/downward.git/https:\/\/github.com\/caelan\/downward/' .gitmodules \
+    && git submodule update --init --recursive
 RUN cd pddlstream\
-	&& ./downward/build.py
+    && ./downward/build.py
 ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
 
 
