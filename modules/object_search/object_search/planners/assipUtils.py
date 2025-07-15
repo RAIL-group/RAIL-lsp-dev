@@ -3,43 +3,42 @@ from fluent import Fluent
 # from modules.procthor.procthor.scenegraph import SceneGraph
      
 class Condition():
-    def __init__(self, objectOne, objectTwo, robot_pose, graph, visited):
+    def __init__(self, objectOne, objectTwo, robot_pose, graph, holding):
         self.graph = graph
         self.objectOne = self.get_node_info(objectOne) if objectOne != 'robot' else robot_pose
         self.objectTwo = self.get_node_info(objectTwo)
         self.robot_pose = robot_pose
-        self.visitedPos = visited
+        self.holding = holding
     def check(self, fType):
-        # print(fType)
         if fType == 'near':
             return self.isNear()
-        elif fType == 'visited':
-            return self.visited()
+        elif fType == 'holding':
+            return self.isHolding()
         
     def isNear(self):
         # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
-        if self.objectTwo[0]['name'] == 'diningtable': print(self.objectTwo)
+        # if self.objectTwo[0]['id'] == 'diningtable': print(self.objectTwo)
         return math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2) <= 20
-    def visited(self):
-        
-        return self.objectTwo[0]['name'] in self.visitedPos
+    def isHolding(self):
+        # print(self.objectTwo[0]['id'], self.holding)
+        return self.objectTwo[0]['id'] in self.holding
     
     def get_node_info(self, node_name: str) -> tuple[dict, int]:
         
         for node_id in self.graph:
             info = self.graph[node_id]
-            if info['name'] == node_name:
+            if info['id'] == node_name:
                 return (info, node_id)
         return (None, -1)
     
 
 class State():
     """Position of robot and dictionary of containers mapped to what’s in them) """
-    def __init__(self, robot_pose, graph, visited, fluents:set[Fluent]):
+    def __init__(self, robot_pose, graph, holding, fluents:set[Fluent]):
         self.robot_pose:tuple[int] = robot_pose
         # self.containers:list[Container] = containers
         self.graph = graph
-        self.visited = visited
+        self.holding = holding
         self.fluents:set[Fluent] = self.updateFluents(fluents)
 
     def updateFluents(self, fluents):
@@ -50,7 +49,7 @@ class State():
             nodeTwo = parameters[1]
             fType = fluents[idx].name
 
-            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.visited)
+            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.holding)
 
             if condition.check(fType):
                 if fluents[idx].negated:
