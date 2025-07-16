@@ -1,15 +1,16 @@
 import math
-from fluent import Fluent
+from .fluent import Fluent
 # from modules.procthor.procthor.scenegraph import SceneGraph
      
 class Condition():
-    def __init__(self, objectOne, objectTwo, robot_pose, graph, holding, isFree=False):
+    def __init__(self, objectOne, objectTwo, robot_pose, graph, holding, probs, isFree=False):
         self.graph = graph
         self.free = isFree
         self.objectOne = self.get_node_info(objectOne) if objectOne != 'robot' else robot_pose
         self.objectTwo = self.get_node_info(objectTwo) if objectTwo != None else ({}, 0)
         self.robot_pose = robot_pose
         self.holding = holding
+        self.probs = probs
     def check(self, fType):
         if fType == 'near':
             return self.isNear()
@@ -26,14 +27,16 @@ class Condition():
         return math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2) <= 20
     def isHolding(self):
         # print(self.objectTwo[0]['id'], self.holding)
-        return self.objectTwo in self.holding
+        if isinstance(self.objectOne[0], str):
+            return self.objectTwo[0] in self.holding
+        elif isinstance(self.objectOne[0], dict):
+            return self.objectTwo[0]['id'] in self.holding
     def isAt(self):
-        # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
-        # if self.objectTwo[0]['id'] == 'diningtable': print(self.objectTwo)
+       
         if isinstance(self.objectOne[0], int):
             return self.objectOne[0] == self.objectTwo[0]['position'][0] and self.objectOne[1] == self.objectTwo[0]['position'][1]
         elif isinstance(self.objectOne[0], str):
-            return predictor(self.objectOne[0])
+            return self.predictor(self.objectOne[0], self.objectTwo[0]['id']) == 1
         elif isinstance(self.objectOne[0], dict):
             return self.objectOne[0]['position'] == self.objectTwo[0]['position']
         
@@ -47,15 +50,20 @@ class Condition():
             if info['id'] == node_name:
                 return (info, node_id)
         return (node_name, -1)
-       
+    
+    def predictor(self, id1, id2):
+        #id2 is the container, id1 is the object
+        if self.probs[id2].get(id1) is not None:
+            return self.probs[id2][id1]
 
 class State():
     """Position of robot and dictionary of containers mapped to what’s in them) """
-    def __init__(self, robot_pose, graph, holding, fluents:list[Fluent], isFree=False):
+    def __init__(self, robot_pose, graph, holding, fluents:list[Fluent], probs, isFree=False):
         self.robot_pose:tuple[int] = robot_pose
         self.isFree = isFree
         self.graph = graph
         self.holding = holding
+        self.probs = probs
         self.fluents:list[Fluent] = self.updateFluents(fluents)
 
     def updateFluents(self, fluents):
@@ -65,7 +73,7 @@ class State():
             nodeOne = parameters[0]
             fType = fluents[idx].name
             nodeTwo = parameters[1] if len(parameters) >= 2 else None
-            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.holding, self.isFree)
+            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.holding,self.probs, self.isFree)
            
             if condition.check(fType):
                 if fluents[idx].negated:
