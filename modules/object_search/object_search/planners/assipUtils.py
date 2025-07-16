@@ -14,6 +14,8 @@ class Condition():
             return self.isNear()
         elif fType == 'holding':
             return self.isHolding()
+        elif fType == 'at':
+            return self.isAt()
         
     def isNear(self):
         # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
@@ -22,6 +24,11 @@ class Condition():
     def isHolding(self):
         # print(self.objectTwo[0]['id'], self.holding)
         return self.objectTwo[0]['id'] in self.holding
+    def isAt(self):
+        # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
+        # if self.objectTwo[0]['id'] == 'diningtable': print(self.objectTwo)
+        return self.objectOne[0] == self.objectTwo[0]['position'][0] and self.objectOne[1]==self.objectTwo[0]['position'][1]
+   
     
     def get_node_info(self, node_name: str) -> tuple[dict, int]:
         
