@@ -16,6 +16,12 @@ graph = {0: {'id': 'Apartment|0', 'name': 'apartment', 'position': (0, 0),  'typ
              33: {'id': 'pillow|surface|6|14', 'name': 'pillow', 'position': (229, 25), 'type': [0, 0, 0, 1]}
     }
 
+predictor = {'bed|4|0|0':{'plate|surface|8|15':0, 'mug|surface|8|17':0, 'pencil|surface|8|23':0, 'bowl|surface|9|24':0, 'dish|surface|9|27':0, 'pillow|surface|6|14':1},
+            'sink|5|1|0':{'plate|surface|8|15':0, 'mug|surface|8|17':0, 'pencil|surface|8|23':0, 'bowl|surface|9|24':0, 'dish|surface|9|27':1, 'pillow|surface|6|14':0},
+            'fridge|8|2': {'plate|surface|8|15':1, 'mug|surface|8|17':0, 'pencil|surface|8|23':0, 'bowl|surface|9|24':1, 'dish|surface|9|27':0, 'pillow|surface|6|14':1},
+            'countertop|8|0':{'plate|surface|8|15':0, 'mug|surface|8|17':1, 'pencil|surface|8|23':1, 'bowl|surface|9|24':0, 'dish|surface|9|27':0, 'pillow|surface|6|14':0}
+             }
+
 robot_pos = (31, 183)
 locations = ["countertop|8|0", "sink|5|1|0", "bed|4|0|0", "fridge|8|2"]
 objects = ["plate|surface|8|15", "bowl|surface|9|24", "pencil|surface|8|23", 'dish|surface|9|27',  'mug|surface|8|17','pillow|surface|6|14']

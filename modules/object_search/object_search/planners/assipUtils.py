@@ -26,21 +26,27 @@ class Condition():
         return math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2) <= 20
     def isHolding(self):
         # print(self.objectTwo[0]['id'], self.holding)
-        return self.objectTwo[0]['id'] in self.holding
+        return self.objectTwo in self.holding
     def isAt(self):
         # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
         # if self.objectTwo[0]['id'] == 'diningtable': print(self.objectTwo)
-        return self.objectOne[0] == self.objectTwo[0]['position'][0] and self.objectOne[1]==self.objectTwo[0]['position'][1]
+        if isinstance(self.objectOne[0], int):
+            return self.objectOne[0] == self.objectTwo[0]['position'][0] and self.objectOne[1] == self.objectTwo[0]['position'][1]
+        elif isinstance(self.objectOne[0], str):
+            return predictor(self.objectOne[0])
+        elif isinstance(self.objectOne[0], dict):
+            return self.objectOne[0]['position'] == self.objectTwo[0]['position']
+        
     def isFree(self):
         return self.free
     
-    def get_node_info(self, node_name: str) -> tuple[dict, int]:
+    def get_node_info(self, node_name: str):
         
         for node_id in self.graph:
             info = self.graph[node_id]
             if info['id'] == node_name:
                 return (info, node_id)
-        return (None, -1)
+        return (node_name, -1)
        
 
 class State():
