@@ -20,7 +20,8 @@ robot_pos = (31, 183)
 locations = ["countertop|8|0", "sink|5|1|0", "bed|4|0|0", "fridge|8|2"]
 objects = ["plate|surface|8|15", "bowl|surface|9|24", "pencil|surface|8|23", 'dish|surface|9|27',  'mug|surface|8|17','pillow|surface|6|14']
 #Inital Fluents, will be defined elsewhere
-fluents = [Fluent("at robot countertop|8|0"),Fluent("near robot countertop|8|0"), ~Fluent("near robot sink|5|1|0"),
+fluents = [Fluent("free robot"), Fluent("at robot countertop|8|0"),
+           Fluent("near robot countertop|8|0"), ~Fluent("near robot sink|5|1|0"),
            ~Fluent("near robot bed|4|0|0"), ~Fluent("near robot fridge|8|2"),
            ~Fluent("holding robot plate|surface|8|15"), ~Fluent("holding robot bowl|surface|9|24"),
            ~Fluent("holding robot pillow|surface|6|14"), ~Fluent("holding robot pencil|surface|8|23"),
@@ -29,20 +30,27 @@ fluents = [Fluent("at robot countertop|8|0"),Fluent("near robot countertop|8|0")
 holdingObjects = set()
 #Inital state
 print('___Inital state___')
-state = State(robot_pos, ourNodes, holdingObjects, fluents)
+state = State(robot_pos, ourNodes, holdingObjects, fluents, True)
 print(state.fluents)
 #Robot now drives near the sink
 print('___Robot drives near the sink___')
 robot_pos = (110, 85)
-new_state = State(robot_pos, ourNodes, holdingObjects, fluents)
+new_state = State(robot_pos, ourNodes, holdingObjects, fluents, False)
 print(new_state.fluents)
 #Grabs the plate
 print('___Robot grabs the plate___')
 holdingObjects.add('dish|surface|9|27')
-new_state = State(robot_pos, ourNodes, holdingObjects, fluents)
+new_state = State(robot_pos, ourNodes, holdingObjects, fluents, False)
+print(new_state.fluents)
+print("___Robot is not moving___")
+new_state = State(robot_pos, ourNodes, holdingObjects, fluents, True)
+print(new_state.fluents)
+print('___Robot grabs the plate___')
+holdingObjects.add('dish|surface|9|27')
+new_state = State(robot_pos, ourNodes, holdingObjects, fluents, False)
 print(new_state.fluents)
 #Robot drives away from sink toward bed
 print('___Robot drives away from sink toward bed___')
 robot_pos = (220, 20)
-new_state = State(robot_pos, ourNodes, holdingObjects, fluents)
+new_state = State(robot_pos, ourNodes, holdingObjects, fluents, False)
 print(new_state.fluents)
