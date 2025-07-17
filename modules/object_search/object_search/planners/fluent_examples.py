@@ -20,8 +20,7 @@ robot_pos = (31, 183)
 locations = ["countertop|8|0", "sink|5|1|0", "bed|4|0|0", "fridge|8|2"]
 objects = ["plate|surface|8|15", "bowl|surface|9|24", "pencil|surface|8|23", 'dish|surface|9|27',  'mug|surface|8|17','pillow|surface|6|14']
 #Inital Fluents, will be defined elsewhere
-#add fluent for testing "at" Fluent("at robot countertop|8|0") --> should be true at the start
-fluents = [Fluent("at robot countertop|8|0"), Fluent("near robot countertop|8|0"), ~Fluent("near robot sink|5|1|0"),
+fluents = [Fluent("near robot countertop|8|0"), ~Fluent("near robot sink|5|1|0"),
            ~Fluent("near robot bed|4|0|0"), ~Fluent("near robot fridge|8|2"),
            ~Fluent("holding robot plate|surface|8|15"), ~Fluent("holding robot bowl|surface|9|24"),
            ~Fluent("holding robot pillow|surface|6|14"), ~Fluent("holding robot pencil|surface|8|23"),
