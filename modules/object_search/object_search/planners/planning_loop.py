@@ -67,5 +67,6 @@ class PlanningLoop():
             print("TOTAL TIME: ", time.time() - fn_start_time)
 
     def set_chosen_subgoal(self, new_chosen_subgoal):
+        
         self.chosen_subgoal = new_chosen_subgoal
         print(f"Searching in container: {self.graph.get_node_name_by_idx(self.chosen_subgoal)}")

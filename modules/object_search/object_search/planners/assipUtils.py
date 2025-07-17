@@ -3,13 +3,14 @@ from .fluent import Fluent
 # from modules.procthor.procthor.scenegraph import SceneGraph
      
 class Condition():
-    def __init__(self, objectOne, objectTwo, robot_pose, graph, holding, probs, isFree=False):
+    def __init__(self, objectOne, objectTwo, robot_pose, graph, holding, visited, probs, isFree=False):
         self.graph = graph
         self.free = isFree
         self.objectOne = self.get_node_info(objectOne) if objectOne != 'robot' else robot_pose
         self.objectTwo = self.get_node_info(objectTwo) if objectTwo != None else ({}, 0)
         self.robot_pose = robot_pose
         self.holding = holding
+        self.visited = visited
         self.probs = probs
     def check(self, fType):
         if fType == 'near':
@@ -22,8 +23,7 @@ class Condition():
             return self.isFree()
         
     def isNear(self):
-        # print("This is the distance: " + str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
-        # if self.objectTwo[0]['id'] == 'diningtable': print(self.objectTwo)
+        print("this is the near distance: ", str(math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2)))
         return math.sqrt((self.objectOne[0]-self.objectTwo[0]['position'][0])**2) + math.sqrt((self.objectOne[1]-self.objectTwo[0]['position'][1])**2) <= 20
     def isHolding(self):
         # print(self.objectTwo[0]['id'], self.holding)
@@ -36,6 +36,8 @@ class Condition():
         if isinstance(self.objectOne[0], int):
             return self.objectOne[0] == self.objectTwo[0]['position'][0] and self.objectOne[1] == self.objectTwo[0]['position'][1]
         elif isinstance(self.objectOne[0], str):
+            if self.objectTwo[0]['id'] in self.visited:
+                return False
             return self.predictor(self.objectOne[0], self.objectTwo[0]['id']) == 1
         elif isinstance(self.objectOne[0], dict):
             return self.objectOne[0]['position'] == self.objectTwo[0]['position']
@@ -58,11 +60,12 @@ class Condition():
 
 class State():
     """Position of robot and dictionary of containers mapped to what’s in them) """
-    def __init__(self, robot_pose, graph, holding, fluents:list[Fluent], probs, isFree=False):
+    def __init__(self, robot_pose, graph, holding, visited, fluents:list[Fluent], probs, isFree=False):
         self.robot_pose:tuple[int] = robot_pose
         self.isFree = isFree
         self.graph = graph
         self.holding = holding
+        self.visited = visited
         self.probs = probs
         self.fluents:list[Fluent] = self.updateFluents(fluents)
 
@@ -73,7 +76,7 @@ class State():
             nodeOne = parameters[0]
             fType = fluents[idx].name
             nodeTwo = parameters[1] if len(parameters) >= 2 else None
-            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.holding,self.probs, self.isFree)
+            condition = Condition(nodeOne, nodeTwo, self.robot_pose, self.graph, self.holding,self.visited,self.probs, self.isFree)
            
             if condition.check(fType):
                 if fluents[idx].negated:
@@ -84,14 +87,6 @@ class State():
                 fluents[idx] = ~fluents[idx]     
 
         return [fluent for fluent in fluents if not fluent.negated]
-
-    # def getListOfContainerLocations(self):
-    #     """Returns a list of all container locations."""
-    #     return {container.name : container.location for container in self.containers}
-    
-    # def getListOfKnownObjects(self):
-    #     """Returns a list of all objects in all containers."""
-    #     return [obj for container in self.containers for obj in container.objects]
     
 class Container():
     """Container with a list of objects in it."""
@@ -103,3 +98,14 @@ class Container():
     
     def __repr__(self):
         return f"Container({self.name}, {self.objects})"
+    
+
+def graphToFluents(graph):
+    fluents = []
+    for x in graph:
+        if graph[x]["type"] == [0, 0, 1, 0]:
+            string = "near robot " + graph[x]["id"]
+            stringTwo = "at robot " + graph[x]["id"]
+            fluents.append(~Fluent(string))
+            fluents.append(~Fluent(stringTwo))
+    return fluents
