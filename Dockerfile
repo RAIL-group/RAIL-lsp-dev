@@ -75,6 +75,7 @@ COPY modules/environments modules/environments
 COPY modules/procthor modules/procthor
 COPY modules/taskplan modules/taskplan
 COPY modules/object_search modules/object_search
+COPY modules/mrppddl modules/mrppddl
 RUN uv pip install modules/*
 
 
