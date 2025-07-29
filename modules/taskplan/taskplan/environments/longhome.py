@@ -2,7 +2,7 @@ import numpy as np
 from procthor import utils
 
 
-class Home:
+class LongHome:
     def __init__(self):
         self.occupancy_grid = get_occupancy_grid()
         self.rooms = get_rooms()
@@ -14,7 +14,7 @@ class Home:
         self.plot_extent = [0, self.occupancy_grid.shape[0], 0, self.occupancy_grid.shape[1]]
 
     def get_robot_pose(self):
-        return (500, 150)
+        return (800, 150)
 
     def get_top_down_frame(self):
         return self.occupancy_grid.T
@@ -82,7 +82,7 @@ class Home:
                     nodes[node_count] = {
                         'id': assetId,
                         'name': name,
-                        'pos': object['position'],
+                        'pos': container['position'],
                         'type': [0, 0, 0, 1]
                     }
                     edges.append(tuple([src, node_count]))
@@ -96,8 +96,6 @@ class Home:
             'obj_node_idx': obj_node_idx,  # indices of objects
             'idx_map': assetId_idx_map  # mapping from assedId to graph index position
         }
-        # print(edges)
-        # raise NotImplementedError
 
         if not include_node_embeddings:
             return graph
@@ -139,7 +137,7 @@ class Home:
 
 def get_occupancy_grid():
     # Define the size of the grid
-    grid_width = 600
+    grid_width = 900
     grid_height = 300
     occupied = 1
 
@@ -165,18 +163,22 @@ def get_occupancy_grid():
 
     # Second the bedroom
     # bed
-    set_rectangle(grid, (260, 250), (320, 290), occupied)
+    set_rectangle(grid, (260+300, 250), (320+300, 290), occupied)
     # dresser
-    set_rectangle(grid, (370, 50), (390, 100), occupied)
+    set_rectangle(grid, (370+300, 50), (390+300, 100), occupied)
 
     # Set Second wall
-    set_rectangle(grid, (400, 0), (410, grid_height//2-20), occupied)
-    set_rectangle(grid, (400, grid_height//2+20), (410, grid_height), occupied)
+    set_rectangle(grid, (400+300, 0), (410+300, grid_height//2-20), occupied)
+    set_rectangle(grid, (400+300, grid_height//2+20), (410+300, grid_height), occupied)
 
     # shelf
-    set_rectangle(grid, (420, 270), (460, 290), occupied)
+    set_rectangle(grid, (420+300, 270), (460+300, 290), occupied)
     # table
-    set_rectangle(grid, (480, 270), (520, 290), occupied)
+    set_rectangle(grid, (480+300, 270), (520+300, 290), occupied)
+    # table
+    set_rectangle(grid, (850, 140), (870, 160), occupied)
+    # side table
+    set_rectangle(grid, (720, 60), (760, 80), occupied)
 
     # # Two chairs near the table
     # set_rectangle(grid, (90, 70), (100, 90), occupied)  # Chair 1
@@ -214,7 +216,7 @@ def get_rooms():
     livingroom = {
         'id': 'livingroom|0|3',
         'roomType': 'livingroom',
-        'position': (500, 150)  # (150, 500)
+        'position': (500+300, 150)  # (150, 500)
     }
     rooms = [kitchen, bedroom, livingroom]
     return rooms
@@ -222,69 +224,60 @@ def get_rooms():
 
 def get_objects():
     # list the objects bread, toaster, plate, coffeegrinds, coffeemachine, mug, waterbottle
-    bread = {
-        'id': 'bread|0|1',
-        'position': (51, 260)#(260, 51)
-    }
-    toaster = {
-        'id': 'toaster|0|1',
-        'position': (51, 260)#(260, 51)
-    }
-    plate = {
-        'id': 'plate|0|1',
-        'position': (175, 249)#(120, 111)
-    }
-    coffeegrinds = {
-        'id': 'coffeegrinds|0|1',
-        'position': (500, 269)#(269, 500)
-    }
-    coffeemachine = {
-        'id': 'coffeemachine|0|1',
-        'position': (500, 269)#(269, 500)
-    }
-    mug = {
-        'id': 'mug|0|1',
-        'position': (440, 269)#(269, 440)
-    }
-    waterbottle = {
-        'id': 'waterbottle|0|1',
-        'position': (440, 269)#(269, 440)
-    }
+    bread = {'id': 'bread|0|1'}
+    toaster = {'id': 'toaster|0|1'}
+    plate = {'id': 'plate|0|1'}
+    coffeegrinds = {'id': 'coffeegrinds|0|1'}
+    coffeemachine = {'id': 'coffeemachine|0|1'}
+    mug = {'id': 'mug|0|1'}
+    waterbottle = {'id': 'waterbottle|0|1'}
 
     # list the containers where objects can be found
     sink = {
         'id': 'sink|1|0',
-        'position': (31, 51)  #(51,31)
+        'position': (31, 51),
+        'children': []
     }
     countertop = {
         'id': 'countertop|1|0',
-        'position': (51, 260),  #(260, 51)
+        'position': (51, 260),
         'children': [toaster, bread, plate]
     }
     garbagecan = {
         'id': 'garbagecan|1|0',
-        'position': (175, 249),  #(120, 111)
+        'position': (175, 249),
         'children': []
     }
-    dresser = {
-        'id': 'dresser|2|0',
-        'position': (380, 101)  # (101, 380)
+    dryingrack = {
+        'id': 'dryingrack|2|0',
+        'position': (380+300, 101)
     }
     bed = {
         'id': 'bed|2|0',
-        'position': (290, 249)  # (249, 290)
-    }
-    shelvingunit = {
-        'id': 'shelvingunit|3|0',
-        'position': (440, 269),  #(269, 440)
-        'children': [mug, waterbottle]
+        'position': (290+300, 249)
     }
     diningtable = {
         'id': 'diningtable|3|0',
-        'position': (500, 269),  # (269, 500)
+        'position': (440+300, 269),
+        'children': [waterbottle]
+    }
+    coffeetable = {
+        'id': 'coffeetable|3|0',
+        'position': (500+300, 269),
         'children': [coffeegrinds, coffeemachine]
     }
-    objects = [sink, countertop, garbagecan, dresser, bed, shelvingunit, diningtable]
+    desk = {
+        'id': 'desk|3|0',
+        'position': (849, 150),
+        'children': []
+    }
+    sidetable = {
+        'id': 'sidetable|3|0',
+        'position': (740, 81),
+        'children': [mug]
+    }
+    objects = [sink, countertop, garbagecan, dryingrack, bed,
+               diningtable, coffeetable, desk, sidetable]
     return objects
 
 
