@@ -3,16 +3,19 @@ import numpy as np
 from procthor import utils
 
 
-class Breakfast:
+class DeliveryEnvironment:
     def __init__(self):
         self.occupancy_grid = get_occupancy_grid()
         self.rooms = get_rooms()
         self.containers = get_objects()
         self.known_cost = get_known_cost(self.occupancy_grid, self.containers,
                                          self.get_robot_pose())
+        self.plot_offset = [0, 0]
+        self.plot_extent = [0, self.occupancy_grid.shape[0],
+                            0, self.occupancy_grid.shape[1]]
 
     def get_robot_pose(self):
-        return (200, 125)
+        return (200, 125)  # Decide
 
     def get_top_down_frame(self):
         return self.occupancy_grid
@@ -49,10 +52,7 @@ class Breakfast:
         room_edges = set()
         if len(self.rooms) > 1:
             room_edges.add((1, 2))
-        # for i in range(1, len(nodes)):
-        #     for j in range(i + 1, len(nodes)):
-        #         node_1, node_2 = nodes[i], nodes[j]
-        #         if utils.has_edge(self.scene['doors'], node_1['id'], node_2['id']):
+            room_edges.add((2, 3))
         edges.extend(room_edges)
 
         node_keys = list(nodes.keys())
@@ -60,18 +60,17 @@ class Breakfast:
         cnt_node_idx = []
 
         for container in self.containers:
-            cnt_id = utils.get_room_id(container['id'])
-            src = node_ids.index(cnt_id)
             assetId = container['id']
+            room_id = utils.get_room_id(assetId)
             assetId_idx_map[assetId] = node_count
-            name = utils.get_generic_name(container['id'])
+            name = utils.get_generic_name(assetId)
             nodes[node_count] = {
-                'id': container['id'],
+                'id': assetId,
                 'name': name,
                 'pos': container['position'],
                 'type': [0, 0, 1, 0]
             }
-            edges.append(tuple([src, node_count]))
+            edges.append(tuple([room_id, node_count]))
             cnt_node_idx.append(node_count)
             node_count += 1
 
@@ -86,11 +85,11 @@ class Breakfast:
                 for object in connected_objects:
                     assetId = object['id']
                     assetId_idx_map[assetId] = node_count
-                    name = utils.get_generic_name(object['id'])
+                    name = utils.get_generic_name(assetId)
                     nodes[node_count] = {
-                        'id': object['id'],
+                        'id': assetId,
                         'name': name,
-                        'pos': object['position'],
+                        'pos': container['position'],
                         'type': [0, 0, 0, 1]
                     }
                     edges.append(tuple([src, node_count]))
@@ -161,8 +160,8 @@ def set_rectangle(grid, top_left, bottom_right, value):
 
 def get_occupancy_grid():
     # Define the size of the grid
-    grid_width = 300
-    grid_height = 200
+    grid_width = 1100
+    grid_height = 300
     occupied = 1
 
     # Create a grid initialized with freespace value (0)
@@ -172,95 +171,114 @@ def get_occupancy_grid():
     # Coordinates are (x, y), with origin (0, 0) at the top-left of the grid
 
     # Dining table
-    set_rectangle(grid, (100, 70), (140, 110), occupied)
-
-    # Fridge
-    set_rectangle(grid, (10, 150), (30, 190), occupied)
-
-    # Countertop
-    set_rectangle(grid, (230, 10), (290, 50), occupied)
-
-    # Shelving unit
     set_rectangle(grid, (10, 10), (30, 50), occupied)
 
-    # Garbage can
-    set_rectangle(grid, (270, 180), (290, 200), occupied)
+    # Fridge
+    set_rectangle(grid, (10, 180), (30, 200), occupied)
 
-    # Two chairs near the table
-    set_rectangle(grid, (90, 70), (100, 90), occupied)  # Chair 1
-    set_rectangle(grid, (140, 70), (150, 90), occupied)  # Chair 2
+    # Countertop
+    set_rectangle(grid, (10, 270), (50, 290), occupied)
+
+    # sink
+    set_rectangle(grid, (70, 270), (90, 290), occupied)
+
+    # Garbage can
+    set_rectangle(grid, (360, 260), (380, 280), occupied)
+
+    # wall1
+    set_rectangle(grid, (400, 0), (410, 110), occupied)
+    set_rectangle(grid, (400, 190), (410, 300), occupied)
+
+    # wall2
+    set_rectangle(grid, (800, 0), (810, 110), occupied)
+    set_rectangle(grid, (800, 190), (810, 300), occupied)
+
+    # bed
+    set_rectangle(grid, (820, 10), (840, 50), occupied)
+
+    # tvstand
+    set_rectangle(grid, (820, 270), (850, 290), occupied)
+
+    # sofa
+    set_rectangle(grid, (990, 70), (1000, 90), occupied)
+
+    # desk
+    set_rectangle(grid, (880, 270), (920, 290), occupied)
 
     return grid.T
 
 
 def get_rooms():
-    rooms = []
-    room = {
-        'id': 'kitchen|0|0',
+    kitchen = {
+        'id': 'kitchen|0|1',
         'roomType': 'kitchen',
-        'position': (150, 100)
+        'position': (200, 150)
     }
-    rooms.append(room)
+    livingroom = {
+        'id': 'livingroom|0|2',
+        'roomType': 'livingroom',
+        'position': (600, 150)
+    }
+    bedroom = {
+        'id': 'bedroom|0|3',
+        'roomType': 'bedroom',
+        'position': (950, 150)
+    }
+    rooms = [kitchen, livingroom, bedroom]
     return rooms
 
 
 def get_objects():
-    # list the objects apple, egg, kettle, plate on the containers
-    apple = {
-        'id': 'apple|0|0',
-        'position': (31, 171)
-    }
-    egg = {
-        'id': 'egg|0|0',
-        'position': (31, 171)
-    }
-    kettle = {
-        'id': 'kettle|0|0',
-        'position': (260, 51)
-    }
-    plate = {
-        'id': 'plate|0|0',
-        'position': (31, 30)
-    }
+    # list the objects remotecontrol and mug
+    remotecontrol = {'id': 'remotecontrol|3|0'}
+    mug = {'id': 'mug|1|0'}
 
-    # list the containers that are: diningtable, fridge, countertop,
-    # shelvingunit, garbagecan, chair1, chair2
+    # list the containers that are in kitchen: diningtable, fridge
+    # countertop, sink, garbagecan
     diningtable = {
-        'id': 'diningtable|0|0',
-        'position': (120, 111),
-        'children': []
+        'id': 'diningtable|1|0',
+        'position': (30, 51)
     }
     fridge = {
-        'id': 'fridge|0|0',
-        'position': (31, 171),
-        'children': [apple, egg]
+        'id': 'fridge|1|0',
+        'position': (31, 190)
     }
     countertop = {
-        'id': 'countertop|0|0',
-        'position': (260, 51),
-        'children': [kettle]
+        'id': 'countertop|1|0',
+        'position': (30, 269),
+        'children': [mug]
     }
-    shelvingunit = {
-        'id': 'shelvingunit|0|0',
-        'position': (31, 30),
-        'children': [plate]
+    sink = {
+        'id': 'sink|1|0',
+        'position': (80, 269)
     }
     garbagecan = {
-        'id': 'garbagecan|0|0',
-        'position': (280, 178),
-        'children': []
+        'id': 'garbagecan|1|0',
+        'position': (359, 259)
     }
-    chair1 = {
-        'id': 'chair1|0|0',
-        'position': (88, 80),
-        'children': []
+
+    # list the containers that are in bedroom:
+    # bed, tvstand, sofa, desk
+    bed = {
+        'id': 'bed|3|0',
+        'position': (841, 51)
     }
-    chair2 = {
-        'id': 'chair2|0|0',
-        'position': (151, 80),
-        'children': []
+    tvstand = {
+        'id': 'tvstand|3|0',
+        'position': (835, 269),
+        'children': [remotecontrol]
     }
-    objects = [diningtable, fridge, countertop, shelvingunit, garbagecan, chair1, chair2]
+    sofa = {
+        'id': 'sofa|3|0',
+        'position': (989, 80)
+    }
+    desk = {
+        'id': 'desk|3|0',
+        'position': (879, 280)
+    }
+
+    objects = [diningtable, fridge, countertop, sink, garbagecan,
+               bed, tvstand, sofa, desk]
     return objects
 
 
@@ -288,5 +306,3 @@ def get_known_cost(occupancy_grid, containers, robot_pose):
             known_cost[cnt2_id][cnt1_id] = round(cost, 4)
 
     return known_cost
-
-
