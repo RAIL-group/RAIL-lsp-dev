@@ -48,11 +48,12 @@ ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
 
 FROM base AS spot
 # Install spot (for LTL specifications and PO-TLP)
-RUN wget http://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
+RUN wget https://www.lrde.epita.fr/dload/spot/spot-2.12.tar.gz && \
     tar xvzf spot-2.12.tar.gz && rm spot-2.12.tar.gz && \
     cd spot-2.12 && \
     ./configure && \
-    make -j8 2>&1 | tee make.log && make install
+    make -j8 2>&1 | tee make.log && \
+    make install
 
 
 FROM base AS pkg-lsp
