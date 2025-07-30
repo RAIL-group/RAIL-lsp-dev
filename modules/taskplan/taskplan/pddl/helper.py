@@ -59,10 +59,14 @@ def generate_pddl_problem_from_struct(struct):
     return problem_str
 
 
-def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
+def get_pddl_instance(whole_graph, map_data, args, learned_data=None, goal_for=''):
     # Initialize the environment setting which containers are undiscovered
     if args.cost_type == 'known':
         init_subgoals_idx = []
+    elif goal_for == 'demo':
+        init_subgoals_idx = [4, 5, 6, 7, 9, 10, 11, 12]
+    elif goal_for == 'demo3':
+        init_subgoals_idx = [4, 5, 6, 7, 8, 9, 10, 11, 12]
     else:
         init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
             whole_graph['cnt_node_idx'], args.current_seed)
@@ -77,8 +81,8 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     pddl['problem_struct'], pddl['goal'] = taskplan.pddl.problem.get_problem(
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
-        goal_type=args.goal_type, learned_data=learned_data)
-    pddl['planner'] = 'ff-astar2'  # 'max-astar'
+        goal_type=args.goal_type, learned_data=learned_data, goal_for=goal_for)
+    pddl['planner'] = 'ff-astar1'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
 
