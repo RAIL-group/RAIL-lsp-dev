@@ -20,7 +20,9 @@ def _get_args():
     parser.add_argument('--num_drones', type=int, default=1)
     parser.add_argument('--num_iterations', type=int, default=1000)
     parser.add_argument('--C', type=int, default=100)
-    parser.add_argument('--resolution', type=float, default=0.05)
+    parser.add_argument('--max_depth', type=int, default=500)
+    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--n_vertex', type=int, default=14)
 
     args = parser.parse_args(['--save_dir', ''])
     args.seed = 2007
@@ -29,7 +31,7 @@ def _get_args():
     args.num_drones = 1
     args.num_iterations = 1000
     args.C = 30
-    args.resolution = 0.05
+    args.max_depth = 35
     args.current_seed = args.seed
     
     return args
@@ -290,20 +292,28 @@ def test_sctp_plan_exec_mg():
 def test_sctp_plan_exec_rg():
     args = _get_args()
     args.planner = 'sctp'
-    args.seed = 2007
+    args.seed = 3000
     args.num_iterations = 1000
+    args.n_samples = 400
+    args.n_vertex = 8
+    args.max_depth = 35
+    verbose = True
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph()
+    start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
 
     planner_robot = robot.copy()
+    graph_forPlot = graph.copy()
     planner_drones = [drone.copy() for drone in drones]
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,robot=planner_robot, 
-                                      drones=planner_drones, rollout_fn=core.sctp_rollout3, verbose=True) 
+                                      drones=planner_drones, tree_depth=args.max_depth, 
+                                      n_samples=args.n_samples, rollout_fn=core.sctp_rollout3, verbose=True) 
     plan_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
+        
+    plan_exec.max_counter = 60
     for step_data in plan_exec:
         print("####################### New navigation #######################################")
         sctpplanner.update(
@@ -311,13 +321,11 @@ def test_sctp_plan_exec_rg():
             step_data['robot'],
             step_data['drones']
         )
-        
-        joint_action, cost = sctpplanner.compute_joint_action()
-        plan_exec.update_joint_action(joint_action, cost)
+        joint_actions, cost = sctpplanner.compute_joint_action()
+        plan_exec.save_joint_actions(joint_actions, cost)
     
     cost = robot.net_time
-
-    fig = plt.figure(figsize=(10, 10), dpi=300)
+    # fig = plt.figure(figsize=(10, 10), dpi=300)
     x_g = [pose[0] for pose in robot.all_poses]
     y_g = [pose[1] for pose in robot.all_poses]
     dpaths = []
@@ -325,11 +333,9 @@ def test_sctp_plan_exec_rg():
         x = [pose[0] for pose in drone.all_poses]
         y = [pose[1] for pose in drone.all_poses]
         dpaths.append([x, y])
-    plotting.plot_graph_path(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, 
-                             start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost)
-    
+    plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, graph_plot=graph_forPlot,\
+                             start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=verbose)
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
-
     plt.show()
 
     logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
@@ -548,11 +554,15 @@ def test_baseline_plan_exec_mg():
 def test_baseline_plan_exec_rg():
     args = _get_args()
     args.planner = 'base'
-    args.seed = 2012
-    args.num_iterations = 2000
+    args.seed = 3000
+    args.num_iterations = 10000
+    args.n_samples = 400
+    args.max_depth = 20
+    args.n_vertex = 8
+    verbose = False
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=10)
+    start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     if args.planner == 'base':
         drones = []
@@ -563,7 +573,8 @@ def test_baseline_plan_exec_rg():
     planner_robot = robot.copy()
     planner_drones = [drone.copy() for drone in drones]
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=init_graph, goalID=goal.id,robot=planner_robot, 
-                                      drones=planner_drones, rollout_fn=core.sctp_rollout3,verbose=True) 
+                                      drones=planner_drones, n_samples=args.n_samples, tree_depth=args.max_depth,
+                                      rollout_fn=core.sctp_rollout3,verbose=True) 
     plan_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
     plan_exec.max_counter = 30
@@ -587,7 +598,7 @@ def test_baseline_plan_exec_rg():
         y = [pose[1] for pose in drone.all_poses]
         dpaths.append([x, y])
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, graph_plot=graph_forPlot,\
-                             start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=True)
+                             start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=verbose)
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
     plt.show()
 

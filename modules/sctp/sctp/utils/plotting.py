@@ -11,9 +11,9 @@ def plot_plan_exec(graph, plt, name="Graph", gpath=[], dpaths = [], graph_plot=N
     fig, ax = plt.subplots(1,2,figsize=(12,6))
     if graph_plot is not None:
         ax[0].scatter(start_coord[0], start_coord[1], marker='o', color='r')
-        ax[0].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=12)
+        ax[0].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
         ax[0].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
-        ax[0].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=12)
+        ax[0].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
         box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose)
         ax[0].set_aspect('equal', adjustable='box')
         ax[0].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
@@ -21,9 +21,9 @@ def plot_plan_exec(graph, plt, name="Graph", gpath=[], dpaths = [], graph_plot=N
         ax[0].set_title(f'Seed: {seed} | Initial Graph')
         
     ax[1].scatter(start_coord[0], start_coord[1], marker='o', color='r')
-    ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=12)
+    ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
     ax[1].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
-    ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=12)
+    ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
     box = plot_sctpgraph(graph, ax[1], verbose=verbose)
     if len(gpath[0]) > 1: 
         g_colors = ['orange', 'green']
@@ -48,17 +48,17 @@ def plot_policy(graph, name="Policy", actions=[],
         if startID is not None:
             if node.id == startID:
                 count += 1
-                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=12)
+                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=8)
         if goalID is not None:
             if node.id == goalID:
                 count += 1
-                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=12) 
+                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=8) 
 
     box = plot_sctpgraph(graph, ax, verbose=verbose)
     g_cost = 0.0
     x_drone = []
     if actions != []:
-        d_colors = ['yellow', 'purple']
+        d_colors = ['yellow', 'blue']
         g_colors = ['orange', 'green']
         g_cost, x_drone = plot_path_fromActions(ax, graph=graph, actions=actions, dcolors=d_colors, gcolors=g_colors)
     ax.set_aspect('equal', adjustable='box')
@@ -81,11 +81,11 @@ def plot_firstAction(graph, action, name="First Action",
         if startID is not None:
             if node.id == startID:
                 count += 1
-                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=12)
+                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=8)
         if goalID is not None:
             if node.id == goalID:
                 count += 1
-                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=12) 
+                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=8) 
 
     box = plot_sctpgraph(graph, ax, verbose=verbose)
     g_cost = 0.0
@@ -146,6 +146,7 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
     plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
     if x_drone != []:
         last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_drone_action.target][0]
+        d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(last_vertex.coord))
         x_drone.append(last_vertex.coord[0])
         y_drone.append(last_vertex.coord[1])
         plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
@@ -159,7 +160,8 @@ def plot_sctpgraph(graph, plt, verbose=False):
     y_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
     y_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
     # print(f"The box is: {x_min}, {y_min}, {x_max}, {y_max}")
-    
+    plt.ylim(y_min-0.5, y_max+1.0)
+    plt.xlim(x_min-1.2, x_max+1.0)
     # Plot edges
     for edge in graph.edges:
         x_values = [edge.v1.coord[0], edge.v2.coord[0]]
@@ -170,22 +172,24 @@ def plot_sctpgraph(graph, plt, verbose=False):
             mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
             mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
             costs = f"{edge.cost:.2f}"
-            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=10)
+            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=7)
 
     # Plot nodes
     for node in graph.vertices:
         plt.scatter(node.coord[0], node.coord[1], color='green', s=25)
         if verbose:
-            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=10)
+            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=7)
 
     for poi in graph.pois:
         plt.scatter(poi.coord[0], poi.coord[1], color='red', s=25)
         if poi.block_status == 1:
-            plt.scatter(poi.coord[0], poi.coord[1], color='black', s=18)
-        if verbose:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=10)
+            plt.scatter(poi.coord[0], poi.coord[1], color='black', s=8)
         else:
-            plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=10)
+            plt.scatter(poi.coord[0], poi.coord[1], color='white', s=8)
+        if verbose:
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=7)
+        # else:
+        #     plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=7)
     return [[x_min, y_min], [x_max, y_max]]
         
 

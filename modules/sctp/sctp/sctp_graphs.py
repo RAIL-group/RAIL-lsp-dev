@@ -1,7 +1,8 @@
 import numpy as np
 from sctp.utils import paths, plotting
 from scipy.spatial import Delaunay, distance
-from sctp.param import TRAV_LEVEL
+from sctp.param import TRAV_LEVEL, MAX_EDGE_LENGTH, MIN_EDGE_LENGTH
+import math
 
 
 
@@ -42,6 +43,12 @@ class Graph():
             if (edge.v1.id == id1 and edge.v2.id == id2) or (edge.v1.id == id2 and edge.v2.id == id1):
                 return edge
         raise ValueError("Edge not found in graph.")
+    
+    def get_poi(self, poi_id):
+        for poi in self.pois:
+            if poi.id == poi_id:
+                return poi
+        raise ValueError("POI not found in graph.")
 
     def update(self, observations):
         for key, value in observations.items():
@@ -138,17 +145,42 @@ def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
         raise ValueError("Cannot get enough vertices")
     return points
 
+def calculate_triangle_angles(points, triangle):
+    """Calculate the three angles (in degrees) of a triangle given its vertices."""
+    A, B, C = points[triangle]
+    a = np.linalg.norm(B - C)  # Opposite vertex A
+    b = np.linalg.norm(A - C)  # Opposite vertex B
+    c = np.linalg.norm(A - B)  # Opposite vertex C
+    
+    def angle_cos(a, b, c):
+        cos_val = (b**2 + c**2 - a**2) / (2 * b * c)
+        cos_val = max(min(cos_val, 1.0), -1.0)  # Clamp for numerical stability
+        return math.degrees(math.acos(cos_val))
+    
+    angle_A = angle_cos(a, b, c)
+    angle_B = angle_cos(b, a, c)
+    angle_C = angle_cos(c, a, b)
+    
+    return angle_A, angle_B, angle_C
+
 def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
-    size = 7.0 * (np.sqrt(n_vertex)-1.0)
+    size = 0.5*(max_edge_len+min_edge_len) * (np.sqrt(n_vertex)-1.0)
+    angle_min = 10.0
     points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
                                          min_dist=min_edge_len, max_dist=max_edge_len)
     tri = Delaunay(np.array(points))
+    valid_triangles = []
+    for simplex in tri.simplices:
+        angles = calculate_triangle_angles(np.array(points), simplex)
+        if min(angles) > angle_min:
+            valid_triangles.append(simplex)
+    
     graph = Graph(vertices=[Vertex(coord=point) for point in points])
     graph.edges.clear()
     edge_count = {}
     # Use a set to avoid duplicate edges
     edges = set()    
-    for simplex in tri.simplices:
+    for simplex in valid_triangles:
         edges.update(tuple(sorted((simplex[i], simplex[j]))) for i in range(3) for j in range(i + 1, 3))    
         for i, j in [(0, 1), (0, 2), (1, 2)]:
             edge = tuple(sorted((simplex[i], simplex[j])))
@@ -161,11 +193,10 @@ def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
             continue
         if ((i, j) in boundary_edges or (j, i) in boundary_edges) and dist >max_edge_len-1.2:
             continue
-
         if np.random.random() <TRAV_LEVEL: # control level of blockage in the graph
-            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.15, 0.6))
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.1, 0.6))
         else:
-            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.7, 0.90))
+            graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.6, 0.80))
     startId = min(enumerate(points), key=lambda p: p[1][0])[0]
     start_pos = points[startId]
     goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
@@ -221,16 +252,18 @@ def random_graph_old(n_vertex=8, xmin=0, ymin=0):
 
 def random_graph(n_vertex=8, xmin=0, ymin=0):
     """Generate a random graph with Delaunay triangulation and weighted edges."""    
-    max_edge_length = 9.0
-    min_edge_length = 3.0
-    valid_graph = False
-    for _ in range(1000):
+    max_edge_length = MAX_EDGE_LENGTH
+    min_edge_length = MIN_EDGE_LENGTH
+    count = 0
+    while True:
         start, goal, graph = generate_random_graph(n_vertex=n_vertex, xmin=xmin, ymin=ymin,max_edge_len=max_edge_length,\
                                          min_edge_len=min_edge_length)
-        valid_graph = check_graph_valid(startID=start.id, goalID=goal.id, graph=graph)
-        if valid_graph:
+        if check_graph_valid(startID=start.id, goalID=goal.id, graph=graph):
             break
-    paths.dijkstra(graph=graph, goal=goal)
+        count += 1
+        if count > 10000:
+            print("Cannot find a valid graph, try other seed ranges")
+            raise ValueError("Cannot find a valid graph, try other seed ranges")
     return start, goal, graph
 
 def check_graph_valid(startID, goalID, graph):
@@ -294,18 +327,18 @@ def modify_graph(graph, robot_edge, poiIDs=[]):
         poi_robot = [poi for poi in robot_edge if poi in poiIDs][0]
         other_side = robot_edge[0] if poi_robot == robot_edge[1] else robot_edge[1]
         p = [poi for poi in graph.pois if poi.id == poi_robot][0]
-        assert len(p.neighbors) == 2
-        block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
-        new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
-                                                                    or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
-        for vertex in new_graph.vertices:
-            if vertex.id == block_side:
-                vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
-                break 
-        for poi in new_graph.pois:
-            if poi.id == poi_robot:
-                poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
-                break
+        if len(p.neighbors) == 2:
+            block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
+            new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
+                                                                        or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
+            for vertex in new_graph.vertices:
+                if vertex.id == block_side:
+                    vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
+                    break 
+            for poi in new_graph.pois:
+                if poi.id == poi_robot:
+                    poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
+                    break
         return new_graph
 
 
@@ -448,3 +481,80 @@ def graph_stuck():
     paths.dijkstra(graph=graph, goal=node4)
     return node1, node4, graph
 
+
+def island_sgraph():
+    """Generate a simple graph for testing purposes."""
+    nodes = []
+    node1 = Vertex(coord=(0.0, 0.0)) # start node
+    nodes.append(node1)
+    node2 = Vertex(coord=(4.0, 3.0))
+    nodes.append(node2)
+    node3 = Vertex(coord=(4.0, 0.0))
+    nodes.append(node3)
+    node4 = Vertex(coord=(4.0, -4.0)) 
+    nodes.append(node4)
+    node5 = Vertex(coord=(8.0, -4.0))
+    nodes.append(node5)
+    node6 = Vertex(coord=(8.0, 0.0))
+    nodes.append(node6)
+    node7 = Vertex(coord=(8.0, 3.0))
+    nodes.append(node7)
+    node8 = Vertex(coord=(12.0, 0.0)) # goal node
+    nodes.append(node8)
+    # create a graph object
+    graph = Graph(nodes)
+    
+    graph.edges.clear()
+    # adding edges
+    graph.add_edge(node1, node2, 0.2) #9
+    graph.add_edge(node1, node3, 0.2) #10
+    graph.add_edge(node1, node4, 0.1) #11
+    graph.add_edge(node2, node3, 0.1) #12
+    graph.add_edge(node3, node4, 0.1) #13
+    graph.add_edge(node2, node7, 0.1) #14 - should be the edge with highest value
+    graph.add_edge(node7, node8, 0.1) #15
+    graph.add_edge(node6, node8, 0.1) #16
+    graph.add_edge(node5, node8, 0.1) #17
+    graph.add_edge(node7, node6, 0.1) #18
+    graph.add_edge(node6, node5, 0.1) #19
+    paths.dijkstra(graph=graph, goal=node8)
+    return node1, node8, graph
+
+def island_mgraph():
+    """Generate a simple graph for testing purposes."""
+    nodes = []
+    node1 = Vertex(coord=(0.0, 3.0)) # start node
+    nodes.append(node1)
+    node2 = Vertex(coord=(4.0, 3.0))
+    nodes.append(node2)
+    node3 = Vertex(coord=(4.0, 0.0))
+    nodes.append(node3)
+    node4 = Vertex(coord=(4.0, -4.0)) 
+    nodes.append(node4)
+    node5 = Vertex(coord=(8.0, -4.0))
+    nodes.append(node5)
+    node6 = Vertex(coord=(8.0, 0.0))
+    nodes.append(node6)
+    node7 = Vertex(coord=(8.0, 3.0))
+    nodes.append(node7)
+    node8 = Vertex(coord=(12.0, 0.0)) # goal node
+    nodes.append(node8)
+    # create a graph object
+    graph = Graph(nodes)
+    
+    graph.edges.clear()
+    # adding edges
+    graph.add_edge(node1, node2, 0.1) #9
+    graph.add_edge(node1, node3, 0.1) #10
+    graph.add_edge(node1, node4, 0.1) #11
+    graph.add_edge(node2, node3, 0.1) #12
+    graph.add_edge(node3, node4, 0.1) #13
+    graph.add_edge(node2, node7, 0.5) #14 - should be the edge with highest value
+    graph.add_edge(node7, node8, 0.4) #15
+    graph.add_edge(node6, node8, 0.1) #16
+    graph.add_edge(node5, node8, 0.1) #17
+    graph.add_edge(node7, node6, 0.1) #18
+    graph.add_edge(node6, node5, 0.1) #19
+    graph.add_edge(node4, node5, 0.45) #20
+    paths.dijkstra(graph=graph, goal=node8)
+    return node1, node8, graph

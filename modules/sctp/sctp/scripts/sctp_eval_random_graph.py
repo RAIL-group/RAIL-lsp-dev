@@ -35,7 +35,7 @@ def mgraph_init():
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=args.v_num)
+    start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
@@ -50,8 +50,8 @@ def _setup(args):
     planner_drones = [drone.copy() for drone in drones]
 
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=policyGraph, goalID=goal.id,robot=planner_robot, 
-                                        drones=planner_drones,rollout_fn=core.sctp_rollout3) 
-
+                                        drones=planner_drones, tree_depth=args.max_depth, 
+                                      n_samples=args.n_samples, rollout_fn=core.sctp_rollout3) 
     planning_exe = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                 graph=graph, reached_goal=sctpplanner.reached_goal, verbose=False)
 
@@ -82,7 +82,7 @@ def _setup(args):
 
     logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
     with open(logfile, "a+") as f:
-        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f} | SUCC : {int(planning_exe.success)}\n")
+        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | SUCC : {int(planning_exe.success)} | COST : {cost:0.3f}\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -90,10 +90,12 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1024)
     parser.add_argument('--planner', type=str, default='sctp')
     parser.add_argument('--num_drones', type=int, default=1)
-    parser.add_argument('--num_iterations', type=int, default=1000)
+    parser.add_argument('--num_iterations', type=int, default=6000)
     parser.add_argument('--C', type=int, default=50)
-    parser.add_argument('--v_num', type=int, default=6)
-    parser.add_argument('--resolution', type=float, default=0.05)
+    # parser.add_argument('--v_num', type=int, default=6)
+    parser.add_argument('--max_depth', type=int, default=500)
+    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--n_vertex', type=int, default=14)
     args = parser.parse_args()
     args.current_seed = args.seed
 

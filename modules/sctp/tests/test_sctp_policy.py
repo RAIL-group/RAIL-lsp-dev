@@ -27,14 +27,25 @@ def test_sctp_policy_dg():
     seed = 2000
     np.random.seed(seed)
     random.seed(seed)
-    exp_param=30.0
-    num_iters = 200
+    exp_param=300.0
+    num_iters = 20000
     print("")
     start, goal, graph = graphs.disjoint_unc()
-    graph.pois[0].block_prob = 0.9
-    graph.pois[1].block_prob = 0.5
-    graph.pois[2].block_prob = 0.9
-    graph.pois[3].block_prob = 0.9
+    # graph.pois[0].block_prob = 0.9
+    # graph.pois[1].block_prob = 0.5
+    # graph.pois[2].block_prob = 0.9
+    # graph.pois[3].block_prob = 0.9
+    poi5 = [poi for poi in graph.pois+graph.vertices if poi.id==5][0]
+    poi6 = [poi for poi in graph.pois+graph.vertices if poi.id==6][0]
+    poi7 = [poi for poi in graph.pois+graph.vertices if poi.id==7][0]
+    poi8 = [poi for poi in graph.pois+graph.vertices if poi.id==8][0]
+    
+    poi5.block_prob = 0.9
+    poi6.block_prob = 0.5
+    poi7.block_prob = 0.9
+    poi8.block_prob = 0.9
+    
+    
     # robot = Robot(position=[graph.pois[0].coord[0], graph.pois[0].coord[1]], cur_node=graph.pois[0].id, at_node=True)
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     if baseline:
@@ -42,10 +53,11 @@ def test_sctp_policy_dg():
     else:
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone)]
     init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+    # assert init_state.history.get_data_length() == 4
     assert init_state.robot.need_action == True 
-    
+    tree_depth = 15
     ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
-                                             rollout_fn=core.sctp_rollout3)
+                                    depth=tree_depth, rollout_fn=core.sctp_rollout3)
     # assert pc[0][0].target == 5
     reach_goal = False
     for p in pc[0]:
@@ -55,10 +67,10 @@ def test_sctp_policy_dg():
     if reach_goal:
         pc[0].append(core.Action(target=goal.id, rtype=RobotType.Ground, start_pose=goal.coord))
         print("The ground robot reaches its goal")
-    # plotting.plot_policy(graph, actions=pc[0], startID=start.id, \
-    #                            goalID=goal.id, seed=seed, verbose=True)
-    plotting.plot_firstAction(graph, action=pc[0][0], startID=start.id, \
+    plotting.plot_policy(graph, actions=pc[0], startID=start.id, \
                                goalID=goal.id, seed=seed, verbose=True)
+    # plotting.plot_firstAction(graph, action=pc[0][0], startID=start.id, \
+    #                            goalID=goal.id, seed=seed, verbose=True)
 
 
 def test_sctp_policy_sg():
@@ -221,24 +233,32 @@ def test_sctp_policy_rg_2007():
     plotting.plot_firstAction(graph, action=pc[0][0], startID=s.id, \
                                goalID=goal.id, seed=seed, verbose=True)
 
-def test_sctp_policy_rg_2012():
-    baseline = True
-    seed = 2093
+def test_sctp_policy_rg_3000():
+    baseline = False
+    seed = 3000
     np.random.seed(seed)
     random.seed(seed)
-    exp_param=30.0
-    num_iters = 1000
-    start, goal, graph = graphs.random_graph(n_vertex=8)
-    # poi209 = [poi for poi in graph.pois+graph.vertices if poi.id==209][0]
-    # poi226 = [poi for poi in graph.pois+graph.vertices if poi.id==226][0]
-    # poi227 = [poi for poi in graph.pois+graph.vertices if poi.id==227][0]
-    # poi228 = [poi for poi in graph.pois+graph.vertices if poi.id==228][0]
-    # poi224 = [poi for poi in graph.pois+graph.vertices if poi.id==224][0]
+    exp_param=300.0
+    num_iters = 500
+    heuristic_samples = 400
+    tree_depth = 25
+    n_vertex = 6
+    start, goal, graph = graphs.random_graph(n_vertex=n_vertex)
+    # poi203 = [poi for poi in graph.pois+graph.vertices if poi.id==203][0]
+    # poi185 = [poi for poi in graph.pois+graph.vertices if poi.id==185][0]
+    # poi194 = [poi for poi in graph.pois+graph.vertices if poi.id==194][0]
+    # poi208 = [poi for poi in graph.pois+graph.vertices if poi.id==208][0]
+    # poi193/5 = [poi for poi in graph.pois+graph.vertices if poi.id==224][0]
+    # poi193 = [poi for poi in graph.pois+graph.vertices if poi.id==193][0]
+    # poi196 = [poi for poi in graph.pois+graph.vertices if poi.id==196][0]
         
-    # poi226.block_prob = 0.0
-    # poi227.block_prob = 0.0
-    # poi228.block_prob = 1.0
-    # poi224.block_prob = 1.0
+    
+    # poi185.block_prob = 0.0
+    # poi196.block_prob = 0.0
+    # poi194.block_prob = 1.0
+    # poi208.block_prob = 1.0
+    # poi193.block_prob = 1.0
+    # poi203.block_prob = 1.0
     # v4 = [v for v in graph.vertices if v.id==4][0]
     # v8 = [v for v in graph.pois if v.id==8][0]
     s = start
@@ -246,26 +266,27 @@ def test_sctp_policy_rg_2012():
     if baseline:
         drones = []
     else:
-        drones = [Robot([6.152, 8.16], cur_node=11, robot_type=RobotType.Drone, at_node=True)]
+        drones = [Robot(position=[s.coord[0], s.coord[1]], cur_node=s.id, robot_type=RobotType.Drone, at_node=True)]
     
     init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
     
+    # tree_depth = 50
     ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
-                                             rollout_fn=core.sctp_rollout3)
+                                 depth=tree_depth, rollout_fn=core.sctp_rollout3)
     reach_goal = False
-    # assert pc[0][0] == action21
-    # assert pc[0][1] == action4
     for p in pc[0]:
         print(p)
         if p.rtype==RobotType.Ground and p.target == goal.id:
             reach_goal = True 
+    verbose = True
     if reach_goal:
         print("The ground robot reaches its goal")
         pc[0].append(core.Action(target=goal.id, rtype=RobotType.Ground, start_pose=goal.coord))
-    # plotting.plot_policy(graph, actions=pc[0], startID=s.id, \
+    # print(f"The length of the policy is: {len(pc[0])}")
+    plotting.plot_policy(graph, actions=pc[0], startID=s.id, \
+                               goalID=goal.id, seed=seed, verbose=verbose)
+    # plotting.plot_firstAction(graph, action=pc[0][0], startID=s.id, \
     #                            goalID=goal.id, seed=seed, verbose=True)
-    plotting.plot_firstAction(graph, action=pc[0][0], startID=s.id, \
-                               goalID=goal.id, seed=seed, verbose=True)
 
 
 

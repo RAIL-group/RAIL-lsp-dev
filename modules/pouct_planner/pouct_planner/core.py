@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 import pdb
-from sctp.param import STUCK_COST, EventOutcome
+from sctp.param import STUCK_COST, EventOutcome, RobotType
 from pathlib import Path
 
 class POUCTNode(object):
@@ -39,40 +39,40 @@ class POUCTNode(object):
         uct_values = (-1.0) * action_values/action_n + C*np.sqrt(np.log(self.total_n)/action_n)
         return action[np.argmax(uct_values)]
 
-def po_mcts(state, n_iterations=1000, C=10.0, rollout_fn=None):
-    save_dir='/data/sctp'
-    num_drones = 1
-    logfile = Path(save_dir) / f'debug_{num_drones}.txt'
-    with open(logfile, 'w') as f:
-        pass    
-    total_cost = 0.0
+def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
+    # save_dir='/data/sctp'
+    # num_drones = 1
+    # logfile = Path(save_dir) / f'debug_{num_drones}.txt'
+    # with open(logfile, 'w') as f:
+    #     pass    
+    # total_cost = 0.0
     root = POUCTNode(state)
     assert len(root.unexplored_actions) > 0
     for i in range(n_iterations):
-        leaf, sa = traverse(root, C=C)
+        leaf, sa = traverse(root, C=C, max_depth=depth)
         simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
         
         targets = [a.target for a in sa]
-        if targets[0] == 187:
-        # if targets[0] == 185:
-            total_cost += simulation_result
-            with open(logfile, "a+") as f:
-                f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | RL-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
+        # if targets[0] == 187:
+        # if targets[0] == 5 or targets[0] == 2:
+        # total_cost += simulation_result
+        # with open(logfile, "a+") as f:
+        #     f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | HEU-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
     best_action, cost = get_best_action(root)
     # path_ordering, cost_ordering = get_best_path(root)
     path_ordering, cost_ordering = get_best_path_sctp(root)
     return best_action, cost, [path_ordering, cost_ordering]
 
-def traverse(node, C=1.0):
+def traverse(node, C=1.0, max_depth=100):
     # first_action = True
     save_action = []
     while node.is_fully_expanded() and not node.is_terminal_node():
+        if node.state.depth > max_depth:
+            return node, save_action
         action = node.get_best_uct_action(C=C)
-        # if first_action:
         save_action.append(action) 
-            # first_action = False
         child_node = get_chance_node(node, action)
         if child_node not in node.children:
             node.children.add(child_node)
@@ -83,9 +83,7 @@ def traverse(node, C=1.0):
         return node, save_action
     # 1. pick a new action
     action = node.unexplored_actions.pop()
-    # if first_action:
     save_action.append(action) 
-        # first_action = False  
     # 2. create a new node
     new_child = get_chance_node(node, action)
     # 3. add to the children
@@ -177,7 +175,9 @@ def get_best_path_sctp(root):
     paths = []
     costs = []
     node = root
+    # count =0
     while not node.is_terminal_node():
+        # count +=1
         if node.total_n <5 \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break
@@ -185,6 +185,8 @@ def get_best_path_sctp(root):
         paths.append(best_action)
         costs.append(cost)
         children = list(node.action_outcomes[best_action].keys())
-        node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
-        # pdb.set_trace()
+        if root.state.uavs == []:
+            node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
+        else:
+            node = max(children, key=lambda x: x.total_n)        
     return paths, costs

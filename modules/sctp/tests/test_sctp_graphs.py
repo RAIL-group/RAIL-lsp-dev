@@ -1,6 +1,7 @@
 import copy, random
 import pytest
 import numpy as np
+import matplotlib.pyplot as plt
 from sctp import sctp_graphs as graphs
 from sctp.utils import plotting
 
@@ -301,3 +302,12 @@ def test_sctp_rm_poi_mg():
     assert new_graph.vertices[4].neighbors == [11,15,17,19]
     
     plotting.plot_graph_path(graph=new_graph, startID=start.id, goalID=goal.id)
+    
+
+def test_sctp_random_graph():
+    seed = 3037
+    np.random.seed(seed)
+    random.seed(seed)
+    start, goal, graph = graphs.random_graph(n_vertex=11)
+    plotting.plot_sctpgraph(graph=graph, plt=plt, verbose=True)
+    plt.show()

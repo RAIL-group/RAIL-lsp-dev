@@ -123,6 +123,44 @@ def test_sctp_heuristic_dg():
     state = list(state_prob_cost.keys())[0]
     assert state.heuristic == pytest.approx(4*2.83-0.5*6.32, 0.01)
 
-  
 
+def test_heuristic_sampling_lg():
+    start, goal, graph = graphs.linear_graph_unc()
+    robot_edge = [start.id, start.id]
+    d0 = 0.0
+    d1 = 0.0
+    num_samples = 30000
+    heuristic = core.sampling_rollout(graph=graph, robot_edge=robot_edge, d0=d0, d1=d1,
+                                        goalID=goal.id, atNode=False, startNode=start.id,
+                                        n_samples=num_samples)
+    assert heuristic == pytest.approx(0.35*15.0+0.65*200, abs=0.5)
+
+def test_heuristic_sampling_dj():
+    start, goal, graph = graphs.disjoint_unc()
+    robot_edge = [start.id, start.id]
+    d0 = 0.0
+    d1 = 0.0
+    num_samples = 40000
+    heuristic = core.sampling_rollout(graph=graph, robot_edge=robot_edge, d0=d0, d1=d1,
+                                        goalID=goal.id, atNode=False, startNode=start.id,
+                                        n_samples=num_samples)
+    true1 = 0.1*(0.72*8*1.41421356+0.28*200)
+    true2 = 0.9*(0.1*8.0 +0.9*(0.72*8*1.41421356+0.28*200))
+    assert heuristic == pytest.approx(true1+true2, abs=0.5)
+
+def test_heuristic_sampling_sgraph():
+    start, goal, graph = graphs.s_graph_unc()
+    robot_edge = [start.id, start.id]
+    d0 = 0.0
+    d1 = 0.0
+    num_samples = 40000
+    heuristic = core.sampling_rollout(graph=graph, robot_edge=robot_edge, d0=d0, d1=d1,
+                                        goalID=goal.id, atNode=False, startNode=start.id,
+                                        n_samples=num_samples)
+    b1 = 0.1*(0.1*200 +0.9*(0.9*8*1.41421356+ 0.1*(0.1*200 + 0.9*(0.9*200 +0.1*(4+8*1.41421356)))))
+    b21 = 0.9*(0.9*8*1.41421356+ 0.1*200 )
+    b22 = 0.1*(0.9*(0.9*(4+8*1.41421356)+0.1*200) + 0.1*200)
+    b2 = 0.9*(0.1*8+ 0.9*(b21 + b22))
+    print(f"heuristic: {heuristic} --- true value: {b1+b2}")
+    assert heuristic == pytest.approx(b1+b2, abs=0.5)
     

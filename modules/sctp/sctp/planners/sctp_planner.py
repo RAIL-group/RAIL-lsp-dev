@@ -6,7 +6,8 @@ from sctp.param import RobotType
 
 
 class SCTPPlanner(object):
-    def __init__(self, args, init_graph, goalID, robot, drones=[], rollout_fn = None, verbose=False):
+    def __init__(self, args, init_graph, goalID, robot, drones=[], rollout_fn = None, 
+                tree_depth = 500, n_samples=100, verbose=False):
         self.args = args
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -15,6 +16,8 @@ class SCTPPlanner(object):
         self.goalID = goalID
         self.rollout_fn = rollout_fn
         self.goalNeighbors = []
+        self.max_depth = tree_depth
+        self.n_samples = n_samples
         
     def reached_goal(self):
         if not self.robot.at_node:
@@ -60,9 +63,10 @@ class SCTPPlanner(object):
         
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
-                                        drones=drones)
+                                        drones=drones,
+                                        n_samples=self.n_samples)
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
-            sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, rollout_fn=self.rollout_fn)
+            sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, depth= self.max_depth, rollout_fn=self.rollout_fn)
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]
