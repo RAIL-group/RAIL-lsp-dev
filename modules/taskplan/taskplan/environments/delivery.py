@@ -15,7 +15,7 @@ class DeliveryEnvironment:
                             0, self.occupancy_grid.shape[1]]
 
     def get_robot_pose(self):
-        return (200, 125)  # Decide
+        return (50, 150)  # Decide for left and right
 
     def get_top_down_frame(self):
         return self.occupancy_grid
@@ -183,7 +183,7 @@ def get_occupancy_grid():
     set_rectangle(grid, (70, 270), (90, 290), occupied)
 
     # Garbage can
-    set_rectangle(grid, (360, 260), (380, 280), occupied)
+    set_rectangle(grid, (360, 10), (380, 20), occupied)
 
     # wall1
     set_rectangle(grid, (400, 0), (410, 110), occupied)
@@ -229,9 +229,13 @@ def get_rooms():
 
 
 def get_objects():
-    # list the objects remotecontrol and mug
-    remotecontrol = {'id': 'remotecontrol|3|0'}
-    mug = {'id': 'mug|1|0'}
+    # list the objects remotecontrol and waterbottle
+    cellphone = {'id': 'cellphone|3|0'}
+    waterbottle = {'id': 'waterbottle|1|0'}
+    newspaper = {'id': 'newspaper|3|0'}
+    apple = {'id': 'apple|1|0'}
+    remote = {'id': 'remotecontrol|2|0'}
+    television = {'id': 'television|2|0'}
 
     # list the containers that are in kitchen: diningtable, fridge
     # countertop, sink, garbagecan
@@ -241,12 +245,13 @@ def get_objects():
     }
     fridge = {
         'id': 'fridge|1|0',
-        'position': (31, 190)
+        'position': (31, 190),
+        'children': [waterbottle]
     }
     countertop = {
         'id': 'countertop|1|0',
         'position': (30, 269),
-        'children': [mug]
+        'children': [apple]
     }
     sink = {
         'id': 'sink|1|0',
@@ -254,7 +259,7 @@ def get_objects():
     }
     garbagecan = {
         'id': 'garbagecan|1|0',
-        'position': (359, 259)
+        'position': (370, 21)
     }
 
     # list the containers that are in bedroom:
@@ -266,15 +271,17 @@ def get_objects():
     tvstand = {
         'id': 'tvstand|3|0',
         'position': (835, 269),
-        'children': [remotecontrol]
+        'children': [remote, television]
     }
     sofa = {
         'id': 'sofa|3|0',
-        'position': (989, 80)
+        'position': (989, 80),
+        'children': [newspaper]
     }
     desk = {
         'id': 'desk|3|0',
-        'position': (879, 280)
+        'position': (879, 280),
+        'children': [cellphone]
     }
 
     objects = [diningtable, fridge, countertop, sink, garbagecan,
