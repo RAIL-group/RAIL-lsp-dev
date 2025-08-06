@@ -4,28 +4,33 @@ from pddlstream.algorithms.search import solve_from_pddl
 
 import procthor
 import taskplan
-from taskplan.environments.home import Home
+from taskplan.environments.longhome import LongHome
+from taskplan.environments.delivery import DeliveryEnvironment
 
 
 def get_args():
     args = lambda: None
     args.current_seed = 0
     args.resolution = 0.05
-    args.goal_type = 'breakfast+coffee'
+    args.goal_type = 'breakfast_coffee'
     args.cost_type = 'learned'
     args.cache_path = '/data/.cache'
     args.save_dir = '/data/test_logs'
     args.network_file = '/data/sbert/logs/test/fcnn.pt'
     args.image_filename = f'demo_{args.current_seed}.png'
     args.logfile_name = 'task_learned_logfile.txt'
+    args.goal_for = 'demo_delivery'  # or 'demo_breakfast_coffee'
     return args
 
 
-def test_home():
+def test_demo():
     args = get_args()
 
     # Load data for a given seed
-    thor_data = Home()
+    if args.goal_for == 'demo_delivery':
+        thor_data = DeliveryEnvironment()
+    elif args.goal_for == 'demo_breakfast_coffee':
+        thor_data = LongHome()
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
@@ -52,8 +57,7 @@ def test_home():
         whole_graph=whole_graph,
         map_data=thor_data,
         args=args,
-        learned_data=learned_data,
-        goal_for='demo'
+        learned_data=learned_data
     )
     taskplan.utilities.utils.check_pddl_validity(pddl, args)
 
@@ -61,7 +65,7 @@ def test_home():
         generate_pddl_problem_from_struct(pddl['problem_struct'])
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                 planner=pddl['planner'], max_planner_time=120)
+                                 planner=pddl['planner'], max_planner_time=240)
 
     executed_actions, robot_poses, action_cost = taskplan.planners.task_loop.run(
         plan, pddl, partial_map, init_robot_pose, args)
