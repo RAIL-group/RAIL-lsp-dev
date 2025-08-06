@@ -8,7 +8,8 @@ pre_compute = {}
 grid_cost = {}
 
 
-def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfast', learned_data=None):
+def get_problem(map_data, unvisited, seed=0, cost_type=None,
+                goal_type='breakfast', learned_data=None, goal_for=''):
     costs = get_action_costs()
     obj_of_interest = []
     cnt_of_interest = []
@@ -188,8 +189,15 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None, goal_type='breakfas
             val = map_data.known_cost[c1][c2]
             init_fluents[('known-cost', c1, c2)] = round(val, 4)
 
-    task = goal_provider(seed, cnt_of_interest, obj_of_interest,
-                         objects, goal_type)
+    if goal_for == 'demo_breakfast_coffee':
+        task = '(or (and (exists (?obj1 - item) (and (obj-type-bread ?obj1) (is-toasted ?obj1) (is-at ?obj1 bed|2|0))) (exists (?obj2 - item) (and (obj-type-plate ?obj2) (is-at ?obj2 bed|2|0))) (exists (?obj - item) (and (obj-type-mug ?obj) (filled-with-coffee ?obj) (is-at ?obj bed|2|0)))))'
+    # elif goal_for == 'demo2':
+    #     task = '(or (and (exists (?obj1 - item) (and (obj-type-bread ?obj1) (is-toasted ?obj1) (is-at ?obj1 countertop|1|0))) (exists (?obj2 - item) (and (obj-type-plate ?obj2) (is-at ?obj2 countertop|1|0))) (exists (?obj - item) (and (obj-type-mug ?obj) (filled-with-coffee ?obj) (is-at ?obj countertop|1|0)))))'
+    elif goal_for == 'demo_delivery':
+        task = '(and (exists (?obj1 - item) (and (obj-type-cellphone ?obj1) (is-at ?obj1 bed|3|0))) (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1|0))))'
+    else:
+        task = goal_provider(seed, cnt_of_interest, obj_of_interest,
+                             objects, goal_type)
 
     if task is None:
         return None, None
