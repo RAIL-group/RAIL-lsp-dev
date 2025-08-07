@@ -19,6 +19,7 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
             executed_actions.append(action)
             if action.name != 'move':
                 action_cost += costs[action.name]
+
             if action.name == 'pour-water':
                 pour_from = action.args[0]
                 pour_to = action.args[1]
