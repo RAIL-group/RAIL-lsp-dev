@@ -19,7 +19,7 @@ def get_args():
     args.network_file = '/data/sbert/logs/test/fcnn.pt'
     args.image_filename = f'demo_{args.current_seed}.png'
     args.logfile_name = 'task_learned_logfile.txt'
-    args.goal_for = 'demo_delivery'  # or 'demo_breakfast_coffee'
+    args.goal_for = ['demo_delivery', 'demo_breakfast_coffee'][0]
     return args
 
 
