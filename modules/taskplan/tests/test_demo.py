@@ -13,12 +13,14 @@ def get_args():
     args.current_seed = 0
     args.resolution = 0.05
     args.goal_type = 'breakfast_coffee'
-    args.cost_type = 'learned'
     args.cache_path = '/data/.cache'
     args.save_dir = '/data/test_logs'
     args.network_file = '/data/sbert/logs/test/fcnn.pt'
     args.image_filename = f'demo_{args.current_seed}.png'
-    args.logfile_name = 'task_learned_logfile.txt'
+    args.cost_type = ['learned', 'pessimistic'][0]
+    args.logfile_name = ['task_learned_logfile.txt',
+                         'task_pessimistic_greedy_logfile.txt',
+                         'task_pessimistic_lsp_logfile.txt'][0]
     args.goal_for = ['demo_delivery', 'demo_breakfast_coffee'][0]
     return args
 
@@ -109,11 +111,12 @@ def test_demo():
 
     plt.subplot(224)
     # 4 plot the graph overlaied image
+    cost_str = taskplan.utilities.utils.get_cost_string(args)
     plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(grid))
     plt.imshow(plotting_grid)
     x, y = init_robot_pose
     plt.text(x, y, '+', color='red', size=6, rotation=45)
-    plt.title(f'Cost: {distance:0.3f}', fontsize=6)
+    plt.title(f'Cost {cost_str}: {distance:0.3f}', fontsize=6)
     plt.xticks(fontsize=5)
     plt.yticks(fontsize=5)
 
