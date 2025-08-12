@@ -5,10 +5,12 @@ from pddlstream.algorithms.search import solve_from_pddl
 import procthor
 import taskplan
 from taskplan.environments.longhome import LongHome
-from taskplan.environments.delivery import DeliveryEnvironment
+from taskplan.environments.real_world_delivery import DeliveryEnvironment
 
-import rospy
-rospy.init_node('taskplan')
+# import rospy
+# rospy.init_node('taskplan')
+from robotics_utils.ros.transform_manager import TransformManager
+TransformManager.init_node()
 
 
 def get_args():
@@ -40,8 +42,8 @@ def test_demo():
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()
-    args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
-        thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
+    # args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
+    #     thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
