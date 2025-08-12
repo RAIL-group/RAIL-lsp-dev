@@ -7,6 +7,9 @@ import taskplan
 from taskplan.environments.longhome import LongHome
 from taskplan.environments.delivery import DeliveryEnvironment
 
+import rospy
+rospy.init_node('taskplan')
+
 
 def get_args():
     args = lambda: None
@@ -125,3 +128,7 @@ def test_demo():
         plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
 
     plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
+
+
+if __name__ == "__main__":
+    test_demo()
