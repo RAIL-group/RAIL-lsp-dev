@@ -7,7 +7,7 @@ from . import ros_utils
 import numpy as np
 
 
-def get_scene_graph_from_yaml(yaml_file):
+def get_scene_graph_from_yaml(yaml_file, objects):
 
     with open(yaml_file, "r") as f:
         scene_data = yaml.safe_load(f)
@@ -17,42 +17,65 @@ def get_scene_graph_from_yaml(yaml_file):
 
     # Add apartment node
     apartment_idx = graph.add_node({
-        'id': 'Apartment|0',
+        'id': 'apartment|0',
         'name': 'apartment',
         'pos': (0, 0, 0),
+        'position': (0, 0, 0),
         'type': [1, 0, 0, 0]  # Apartment
     })
 
     # Add rooms
     room_containers_info = {}
     for room_name, room_data in scene_data.items():
-        room_id = f"{room_name}|0"
+        room_id = f"{room_name}"
         room_position = (room_data['x'], room_data['y'], room_data['yaw'])
         room_idx = graph.add_node({
             'id': room_id,
-            'name': room_name.lower(),
+            'name': room_name.split('|')[0],
             'pos': room_position,
+            'position': room_position,
             'type': [0, 1, 0, 0]  # Room
         })
         graph.add_edge(apartment_idx, room_idx)
         room_containers_info[room_idx] = room_data.get('containers', {})
+    
+    ensure_connectivity(graph)
 
     for room_idx, containers in room_containers_info.items():
         # Add containers in the room
         room_id = graph.nodes[room_idx]['id']
         for container_name, pos in containers.items():
-            container_id = f"{room_id}|{container_name}"
+            container_id = f"{container_name}"
             container_position = (pos['x'], pos['y'], pos['yaw'])
 
             container_idx = graph.add_node({
                 'id': container_id,
-                'name': container_name.lower(),
+                'name': container_name.split('|')[0],
                 'pos': container_position,
+                'position': container_position,
                 'type': [0, 0, 1, 0]  # Container
             })
             graph.add_edge(room_idx, container_idx)
+    
 
-    ensure_connectivity(graph)
+    for container_idx in graph.container_indices:
+        container_name = graph.nodes[container_idx]['name']
+        container_position = graph.nodes[container_idx]['position']
+        children = []
+        if container_name in objects:
+            for obj in objects[container_name]:
+                object_idx = graph.add_node({
+                    'id': f'{obj}|{container_idx}',
+                    'name': obj,
+                    'pos': container_position,
+                    'position': container_position,
+                    'type': [0, 0, 0, 1]
+
+                })
+                graph.add_edge(container_idx, object_idx)
+                children.append(graph.nodes[object_idx])
+        graph.nodes[container_idx]['children'] = children 
+
     return graph
 
 
@@ -115,14 +138,15 @@ def get_edges_for_connected_graph(graph, pos='pos'):
 
 
 def get_graph_dict_from_scengraph(graph):
-    return {
+    graph = {
         'nodes': graph.nodes,
         'edges': graph.edges,
-        'edge_index': np.array(graph.edges).T.astype(int),
+        'edge_index': np.array(graph.edges).astype(int),
         'cnt_node_idx': graph.container_indices,
         'obj_node_idx': graph.object_indices,
         'idx_map': graph.asset_id_to_node_idx_map
         }
+    return graph
 
 
 def get_path_length(path):
@@ -142,15 +166,16 @@ def compute_distances(robot_pose, container_nodes):
     robot_node = {
         'id': 'initial_robot_pose',
         'pos': robot_pose,
+        'position': robot_pose,
     }
 
     for node1 in [robot_node] + container_nodes:
         for node2 in [robot_node] + container_nodes:
             if node1['id'] == node2['id']:
-                distances[(node1['id'] == node2['id'])] = 0.0
+                distances[(node1['id'], node2['id'])] = 0.0
                 continue
             print(f"Computing distance between {node1['id']} and {node2['id']}")
-            
+            print(node1, node2)
             path = ros_utils.compute_path(node1['pos'], node2['pos'])
             if path is None:
                 print("Error computing path!")
@@ -161,7 +186,23 @@ def compute_distances(robot_pose, container_nodes):
     return distances
 
 
+def get_robots_room_coords(robot_pose, rooms):
+    room_distances = compute_distances(robot_pose, rooms)
+    robot_to_room_distances = {}
+    for k, v in room_distances.items():
+        if k[0] == 'initial_robot_pose' and k[1] != 'initial_robot_pose':
+            robot_to_room_distances[k[1]] = v
+    min_room = min(robot_to_room_distances, key=robot_to_room_distances.get)
+    for room in rooms:
+        if room['id'] == min_room:
+            return room['position']
+    raise ValueError('Error finding closest room from robot')
 
+
+def compute_cost(start, goal):
+    path = ros_utils.compute_path(start, goal)
+    cost = get_path_length(path)
+    return cost
 
 
 

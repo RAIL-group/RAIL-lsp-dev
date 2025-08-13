@@ -64,9 +64,9 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     if args.cost_type == 'known':
         init_subgoals_idx = []
     elif args.goal_for == 'demo_breakfast_coffee':
-        init_subgoals_idx = [4, 5, 6, 7, 9, 10, 11, 12]
+        init_subgoals_idx = map_data.scenegraph.container_indices
     elif args.goal_for == 'demo_delivery':
-        init_subgoals_idx = [4, 5, 6, 7, 8, 9, 10, 11, 12]
+        init_subgoals_idx = map_data.scenegraph.container_indices
     else:
         init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
             whole_graph['cnt_node_idx'], args.current_seed)

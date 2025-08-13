@@ -6,6 +6,7 @@ import procthor
 import taskplan
 from taskplan.environments.longhome import LongHome
 from taskplan.environments.real_world_delivery import DeliveryEnvironment
+# from taskplan.environments.delivery_v2 import DeliveryEnvironmentV2 as DeliveryEnvironment, get_known_cost
 
 # import rospy
 # rospy.init_node('taskplan')
@@ -42,15 +43,28 @@ def test_demo():
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()
+    # print(get_known_cost(grid, thor_data.containers, init_robot_pose))
+    # exit()
     # args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
     #     thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
+    print(whole_graph['node_names'])
+    print(whole_graph['obj_node_idx'])
+    print(whole_graph['cnt_node_idx'])
+    print(whole_graph['edge_index'])
+    # exit()
 
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid)
+    # print(thor_data.scenegraph.edges)
+    # exit()
+    # print(partial_map.org_edge_index)
+    # exit()
     partial_map.set_room_info(init_robot_pose, thor_data.rooms)
+    partial_map.distance = thor_data.known_cost_coords
+
 
     if args.cost_type == 'learned':
         learned_data = {
@@ -74,62 +88,66 @@ def test_demo():
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                  planner=pddl['planner'], max_planner_time=240)
 
+    for p in plan:
+        print(p)
     executed_actions, robot_poses, action_cost = taskplan.planners.task_loop.run(
         plan, pddl, partial_map, init_robot_pose, args)
 
-    distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
-    distance += action_cost
-    print(f"Planning cost: {distance}")
+    # distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
+    # trajectory = np.array(robot_poses).T[:, :2]
+    # distance = 0
+    # distance += action_cost
+    # print(f"Planning cost: {distance}")
 
     # plotting code
-    plt.clf()
-    plt.figure(figsize=(14, 8))
-    plt.suptitle(f"{pddl['goal']} - seed: [{args.current_seed}]", fontsize=6)
+    # plt.clf()
+    # plt.figure(figsize=(14, 8))
+    # plt.suptitle(f"{pddl['goal']} - seed: [{args.current_seed}]", fontsize=6)
 
-    plt.subplot(221)
-    # 0 plot the plan
-    taskplan.plotting.plot_plan(plan=executed_actions)
+    # plt.subplot(221)
+    # # 0 plot the plan
+    # taskplan.plotting.plot_plan(plan=executed_actions)
 
-    plt.subplot(222)
-    # 1 plot the whole graph
-    plt.title('Whole scene graph', fontsize=6)
-    graph_image = whole_graph['graph_image']
-    plt.imshow(graph_image)
-    plt.box(False)
-    # Hide x and y ticks
-    plt.xticks([])
-    plt.yticks([])
+    # plt.subplot(222)
+    # # 1 plot the whole graph
+    # plt.title('Whole scene graph', fontsize=6)
+    # # graph_image = whole_graph['graph_image']
+    # plt.imshow(procthor.plotting.make_plotting_grid(np.transpose(grid)))
+    # plt.box(False)
+    # # Hide x and y ticks
+    # plt.xticks([])
+    # plt.yticks([])
 
-    viridis_cmap = plt.get_cmap('viridis')
+    # viridis_cmap = plt.get_cmap('viridis')
 
-    colors = np.linspace(0, 1, len(trajectory[0]))
-    line_colors = viridis_cmap(colors)
+    # colors = np.linspace(0, 1, len(trajectory[0]))
+    # line_colors = viridis_cmap(colors)
 
-    plt.subplot(223)
-    # 3 plot the graph overlaied image
-    procthor.plotting.plot_graph_on_grid_old(grid, whole_graph)
-    x, y = init_robot_pose
-    plt.text(x, y, '+', color='red', size=6, rotation=45)
-    plt.title('Graph overlaied occupancy grid', fontsize=6)
-    plt.xticks(fontsize=5)
-    plt.yticks(fontsize=5)
+    # plt.subplot(223)
+    # # 3 plot the graph overlaied image
+    # procthor.plotting.plot_graph_on_grid_old(grid, whole_graph)
+    # x, y = init_robot_pose
+    # plt.text(x, y, '+', color='red', size=6, rotation=45)
+    # plt.title('Graph overlaied occupancy grid', fontsize=6)
+    # plt.xticks(fontsize=5)
+    # plt.yticks(fontsize=5)
 
-    plt.subplot(224)
-    # 4 plot the graph overlaied image
-    cost_str = taskplan.utilities.utils.get_cost_string(args)
-    plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(grid))
-    plt.imshow(plotting_grid)
-    x, y = init_robot_pose
-    plt.text(x, y, '+', color='red', size=6, rotation=45)
-    plt.title(f'Cost {cost_str}: {distance:0.3f}', fontsize=6)
-    plt.xticks(fontsize=5)
-    plt.yticks(fontsize=5)
+    # plt.subplot(224)
+    # # 4 plot the graph overlaied image
+    # cost_str = taskplan.utilities.utils.get_cost_string(args)
+    # plotting_grid = procthor.plotting.make_plotting_grid(np.transpose(grid))
+    # plt.imshow(plotting_grid)
+    # x, y = init_robot_pose
+    # plt.text(x, y, '+', color='red', size=6, rotation=45)
+    # plt.title(f'Cost {cost_str}: {distance:0.3f}', fontsize=6)
+    # plt.xticks(fontsize=5)
+    # plt.yticks(fontsize=5)
 
-    for idx, x in enumerate(trajectory[0]):
-        y = trajectory[1][idx]
-        plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
+    # for idx, x in enumerate(trajectory[0]):
+    #     y = trajectory[1][idx]
+    #     plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
 
-    plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
+    # plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
 
 
 if __name__ == "__main__":

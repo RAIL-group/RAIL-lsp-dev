@@ -1,7 +1,7 @@
 from taskplan.pddl.helper import get_expected_cost_of_finding, goal_provider
-from taskplan.utilities.utils import get_robots_room_coords, get_action_costs
+from taskplan.utilities.utils import get_action_costs
 from procthor.utils import get_generic_name, get_cost
-
+from taskplan.real_world_utils.utils import get_robots_room_coords
 
 pre_compute = {}
 
@@ -15,8 +15,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
     cnt_of_interest = []
     missing_objects = []
     containers = map_data.containers
-    robot_room_coord = get_robots_room_coords(
-        map_data.occupancy_grid, map_data.get_robot_pose(), map_data.rooms)
+    robot_room_coord = get_robots_room_coords(map_data.get_robot_pose(), map_data.rooms)
     objects = {
         'init_r': ['initial_robot_pose']
     }
@@ -125,13 +124,13 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
                                 if (from_coord, from_room_coords) in grid_cost:
                                     part_from = grid_cost[(from_coord, from_room_coords)]
                                 else:
-                                    part_from = get_cost(map_data.occupancy_grid, from_coord, from_room_coords)
+                                    part_from = map_data.known_cost_coords[(from_coord, from_room_coords)]
                                     grid_cost[(from_coord, from_room_coords)] = part_from
 
                                 if (to_coord, to_room_coords) in grid_cost:
                                     part_to = grid_cost[(to_coord, to_room_coords)]
                                 else:
-                                    part_to = get_cost(map_data.occupancy_grid, to_coord, to_room_coords)
+                                    part_to = map_data.known_cost_coords[(to_coord, to_room_coords)]
                                     grid_cost[(to_coord, to_room_coords)] = part_to
                                 d = costs['find'] + part_from + intermediate_d + part_to
 
@@ -194,7 +193,9 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
     # elif goal_for == 'demo2':
     #     task = '(or (and (exists (?obj1 - item) (and (obj-type-bread ?obj1) (is-toasted ?obj1) (is-at ?obj1 countertop|1|0))) (exists (?obj2 - item) (and (obj-type-plate ?obj2) (is-at ?obj2 countertop|1|0))) (exists (?obj - item) (and (obj-type-mug ?obj) (filled-with-coffee ?obj) (is-at ?obj countertop|1|0)))))'
     elif goal_for == 'demo_delivery':
-        task = '(and (exists (?obj1 - item) (and (obj-type-cellphone ?obj1) (is-at ?obj1 bed|3|0))) (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1|0))))'
+        # task = '(and (exists (?obj1 - item) (and (obj-type-cellphone ?obj1) (is-at ?obj1 bed|2))) (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1))))'
+        # task = '(rob-at bed|2)'
+        task = '(is-holding waterbottle|5)'
     else:
         task = goal_provider(seed, cnt_of_interest, obj_of_interest,
                              objects, goal_type)

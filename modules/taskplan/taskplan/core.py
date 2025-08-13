@@ -6,6 +6,7 @@ import lsp
 import gridmap
 import taskplan
 from taskplan.utilities.utils import get_action_costs
+from taskplan.real_world_utils.utils import compute_cost
 
 
 IS_FROM_LAST_CHOSEN_REWARD = 0 * 10.0
@@ -72,14 +73,15 @@ class PartialMap:
         # self.distances = graph['distances']
         self.distinct = distinct  # when true looks for specific object instance
 
-        self.target_obj = random.sample(self.obj_node_idx, 1)[0]
+        # self.target_obj = random.sample(self.obj_node_idx, 1)[0]
+
         self.container_poses = self._get_container_poses()
 
         if grid is not None:
             self.grid = grid
 
     def _get_container_poses(self):
-        return {container_idx: tuple(self.node_coords[container_idx][0:2])
+        return {container_idx: tuple(self.node_coords[container_idx][0:3])
                 for container_idx in self.cnt_node_idx}
 
     def _get_object_free_graph(self):
@@ -246,8 +248,9 @@ class PartialMap:
 
     def set_room_info(self, robot_pose, rooms):
         self.room_info = {}
-        robot_room = taskplan.utilities.utils.get_robots_room_coords(
-            self.grid, robot_pose, rooms, return_idx=True)
+        # robot_room = taskplan.utilities.utils.get_robots_room_coords(
+        #     self.grid, robot_pose, rooms, return_idx=True)
+        robot_room = taskplan.real_world_utils.utils.get_robots_room_coords(robot_pose, rooms)
         self.room_info[robot_pose] = robot_room
 
         for idx, room in enumerate(rooms):
@@ -288,6 +291,7 @@ def get_top_n_frontiers_new(frontiers, n, robot_pose, partial_map):
     for front_p in fs_prob:
         front_coord = partial_map.container_poses[front_p.value]
         front_room = partial_map.room_info[front_coord]
+        print(front_room, robot_room)
         if front_p not in seen and front_room == robot_room:
             seen.add(front_p)
             fs_collated.append(front_p)
@@ -348,30 +352,31 @@ def get_robot_distances(grid, robot_pose, subgoals):
     where poses are stored in grid cell coordinates.'''
     robot_distances = dict()
 
-    occ_grid = np.copy(grid)
-    occ_grid[int(robot_pose[0])][int(robot_pose[1])] = 0
+    # occ_grid = np.copy(grid)
+    # occ_grid[int(robot_pose[0])][int(robot_pose[1])] = 0
 
-    for subgoal in subgoals:
-        occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
+    # for subgoal in subgoals:
+    #     occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
 
-    cost_grid = gridmap.planning.compute_cost_grid_from_position(
-        occ_grid,
-        start=[
-            robot_pose[0],
-            robot_pose[1]
-        ],
-        use_soft_cost=True,
-        only_return_cost_grid=True)
+    # cost_grid = gridmap.planning.compute_cost_grid_from_position(
+    #     occ_grid,
+    #     start=[
+    #         robot_pose[0],
+    #         robot_pose[1]
+    #     ],
+    #     use_soft_cost=True,
+    #     only_return_cost_grid=True)
 
     # Compute the cost for each frontier
     for subgoal in subgoals:
-        f_pt = subgoal.pos
-        cost = cost_grid[int(f_pt[0]), int(f_pt[1])]
+        # f_pt = subgoal.pos
+        # cost = cost_grid[int(f_pt[0]), int(f_pt[1])]
+        cost = compute_cost(robot_pose, subgoal.pos)
 
-        if math.isinf(cost):
-            cost = 100000000000
-            subgoal.set_props(prob_feasible=0.0, is_obstructed=True)
-            subgoal.just_set = False
+        # if math.isinf(cost):
+        #     cost = 100000000000
+        #     subgoal.set_props(prob_feasible=0.0, is_obstructed=True)
+        #     subgoal.just_set = False
 
         robot_distances[subgoal] = cost
 
@@ -382,20 +387,21 @@ def get_subgoal_distances(grid, subgoals):
     ''' This function returns distance from any subgoal to other subgoals
     where poses are stored in grid cell coordinates.'''
     subgoal_distances = {}
-    occ_grid = np.copy(grid)
-    for subgoal in subgoals:
-        occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
+    # occ_grid = np.copy(grid)
+    # for subgoal in subgoals:
+    #     occ_grid[int(subgoal.pos[0]), int(subgoal.pos[1])] = 0
     for idx, sg_1 in enumerate(subgoals[:-1]):
-        start = sg_1.pos
-        cost_grid = gridmap.planning.compute_cost_grid_from_position(
-            occ_grid,
-            start=start,
-            use_soft_cost=True,
-            only_return_cost_grid=True)
+        # start = sg_1.pos
+        # cost_grid = gridmap.planning.compute_cost_grid_from_position(
+        #     occ_grid,
+        #     start=start,
+        #     use_soft_cost=True,
+        #     only_return_cost_grid=True)
         for sg_2 in subgoals[idx + 1:]:
             fsg_set = frozenset([sg_1, sg_2])
-            fpoints = sg_2.pos
-            cost = cost_grid[int(fpoints[0]), int(fpoints[1])]
+            # fpoints = sg_2.pos
+            # cost = cost_grid[int(fpoints[0]), int(fpoints[1])]
+            cost = compute_cost(sg_1.pos, sg_2.pos)
             subgoal_distances[fsg_set] = cost
 
     return subgoal_distances

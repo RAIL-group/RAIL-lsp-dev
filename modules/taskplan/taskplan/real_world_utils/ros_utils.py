@@ -55,7 +55,7 @@ def get_occupancy_grid():
 def get_robot_pose():
     print("Waiting to get robot pose...")
     pose = TransformManager.lookup_transform('body', 'map', when=rospy.Time.now() + rospy.Duration(3))
-    return [pose.position.x, pose.position.y, pose.yaw_rad]
+    return (pose.position.x, pose.position.y, pose.yaw_rad)
 
 
 
