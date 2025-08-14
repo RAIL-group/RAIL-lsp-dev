@@ -5,6 +5,7 @@ import tf
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
 from robotics_utils.ros.transform_manager import TransformManager
+from spot_skills.srv import NameService
 
 
 def create_pose_stamped(location):
@@ -19,7 +20,6 @@ def create_pose_stamped(location):
     pose.pose.orientation.z = quaternion[2]
     pose.pose.orientation.w = quaternion[3]
     return pose
-
 
 
 def compute_path(start, goal):
@@ -58,4 +58,12 @@ def get_robot_pose():
     return (pose.position.x, pose.position.y, pose.yaw_rad)
 
 
-
+def move_spot(container_name):
+    rospy.wait_for_service('/spot/navigation/to_waypoint')
+    try:
+        move_to_waypoint = rospy.ServiceProxy('/spot/navigation/to_waypoint', NameService)
+        response = move_to_waypoint(name=container_name)
+        return response.success
+    except rospy.ServiceException as e:
+        rospy.logerr("Failed to call /spot/navigation/to_waypoint: %s", e)
+        return False

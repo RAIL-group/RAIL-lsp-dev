@@ -11,8 +11,14 @@ from taskplan.environments.real_world_delivery import DeliveryEnvironment
 # import rospy
 # rospy.init_node('taskplan')
 from robotics_utils.ros.transform_manager import TransformManager
-TransformManager.init_node()
+# from robotics_utils.perception.sensors.visual_fiducials import VisualFiducialSystem
+# from robotics_utils.ros.fiducial_tracker import FiducialTracker
+# from pathlib import Path
 
+# vfs = VisualFiducialSystem.from_yaml(Path('/resources/apriltags/taskplan.yaml'))
+# ft = FiducialTracker(vfs, prefix='ar_pose_marker')
+
+TransformManager.init_node()
 
 def get_args():
     args = lambda: None
@@ -45,8 +51,8 @@ def test_demo():
     init_robot_pose = thor_data.get_robot_pose()
     # print(get_known_cost(grid, thor_data.containers, init_robot_pose))
     # exit()
-    # args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
-    #     thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
+    args.robot_room_coord = taskplan.real_world_utils.utils.get_robots_room_coords(
+        init_robot_pose, thor_data.rooms)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
@@ -58,11 +64,10 @@ def test_demo():
 
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid)
-    # print(thor_data.scenegraph.edges)
-    # exit()
-    # print(partial_map.org_edge_index)
-    # exit()
     partial_map.set_room_info(init_robot_pose, thor_data.rooms)
+    # print('Debug ------------->')
+    # print(partial_map.room_info)
+    # exit()
     partial_map.distance = thor_data.known_cost_coords
 
 
@@ -104,9 +109,9 @@ def test_demo():
     # plt.figure(figsize=(14, 8))
     # plt.suptitle(f"{pddl['goal']} - seed: [{args.current_seed}]", fontsize=6)
 
-    # plt.subplot(221)
-    # # 0 plot the plan
-    # taskplan.plotting.plot_plan(plan=executed_actions)
+    plt.subplot(121)
+    # 0 plot the plan
+    taskplan.plotting.plot_plan(plan=executed_actions)
 
     # plt.subplot(222)
     # # 1 plot the whole graph
@@ -123,14 +128,14 @@ def test_demo():
     # colors = np.linspace(0, 1, len(trajectory[0]))
     # line_colors = viridis_cmap(colors)
 
-    # plt.subplot(223)
-    # # 3 plot the graph overlaied image
-    # procthor.plotting.plot_graph_on_grid_old(grid, whole_graph)
-    # x, y = init_robot_pose
-    # plt.text(x, y, '+', color='red', size=6, rotation=45)
-    # plt.title('Graph overlaied occupancy grid', fontsize=6)
-    # plt.xticks(fontsize=5)
-    # plt.yticks(fontsize=5)
+    plt.subplot(122)
+    # 3 plot the graph overlaied image
+    procthor.plotting.plot_graph_on_grid_old(grid, whole_graph)
+    x, y = init_robot_pose
+    plt.text(x, y, '+', color='red', size=6, rotation=45)
+    plt.title('Graph overlaied occupancy grid', fontsize=6)
+    plt.xticks(fontsize=5)
+    plt.yticks(fontsize=5)
 
     # plt.subplot(224)
     # # 4 plot the graph overlaied image
@@ -147,7 +152,7 @@ def test_demo():
     #     y = trajectory[1][idx]
     #     plt.plot(x, y, color=line_colors[idx], marker='.', markersize=3)
 
-    # plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
+    plt.savefig(f'{args.save_dir}/{args.image_filename}', dpi=1000)
 
 
 if __name__ == "__main__":

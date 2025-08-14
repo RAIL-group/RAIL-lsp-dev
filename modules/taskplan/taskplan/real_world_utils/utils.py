@@ -2,7 +2,6 @@ import yaml
 from procthor.scenegraph import SceneGraph
 import math
 from procthor.utils import get_dc_comps
-# from scipy.spatial.transform import Rotation as R
 from . import ros_utils
 import numpy as np
 
@@ -127,16 +126,6 @@ def get_edges_for_connected_graph(graph, pos='pos'):
     return edges_to_add
 
 
-# def euler_to_quaternion(euler):
-#     r = R.from_euler('xyz', euler)
-#     return r.as_quat()  # [x, y, z, w]
-
-
-# def quaternion_to_euler(quaternion):
-#     r = R.from_quat(quaternion)
-#     return r.as_euler('xyz')  # returns roll, pitch, yaw
-
-
 def get_graph_dict_from_scengraph(graph):
     graph = {
         'nodes': graph.nodes,
@@ -186,23 +175,22 @@ def compute_distances(robot_pose, container_nodes):
     return distances
 
 
-def get_robots_room_coords(robot_pose, rooms):
+def get_robots_room_coords(robot_pose, rooms, return_idx=False):
     room_distances = compute_distances(robot_pose, rooms)
     robot_to_room_distances = {}
     for k, v in room_distances.items():
         if k[0] == 'initial_robot_pose' and k[1] != 'initial_robot_pose':
             robot_to_room_distances[k[1]] = v
     min_room = min(robot_to_room_distances, key=robot_to_room_distances.get)
-    for room in rooms:
+    for idx, room in enumerate(rooms):
         if room['id'] == min_room:
+            if return_idx:
+                return idx+1
             return room['position']
-    raise ValueError('Error finding closest room from robot')
+    # raise ValueError('Error finding closest room from robot')
 
 
 def compute_cost(start, goal):
     path = ros_utils.compute_path(start, goal)
     cost = get_path_length(path)
     return cost
-
-
-

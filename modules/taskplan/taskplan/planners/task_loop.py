@@ -4,6 +4,8 @@ import taskplan
 from pddlstream.algorithms.search import solve_from_pddl
 from taskplan.utilities.utils import get_container_pose
 from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner, KnownPlanner
+from taskplan.real_world_utils.ros_utils import move_spot
+
 
 
 def run(plan, pddl, partial_map, init_robot_pose, args):
@@ -59,6 +61,11 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 # Update problem for move action.
                 # (rob-at move_end)
                 robot_poses.append(me_pose)
+
+                container_name = move_end.split('|')[0]
+                success = move_spot(container_name)
+                if not success:
+                    raise ValueError('Failed to move Spot!')
                 taskplan.pddl.helper.update_problem_move(
                     pddl['problem_struct'], move_end)
             elif action.name == 'pick':
@@ -168,6 +175,12 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                     for con_idx in connection_idx
                 ]
                 found_at = idx2assetID[explored_loc]
+
+                container_name = found_at.split('|')[0]
+                print('Executing find on robot')
+                success = move_spot(container_name)
+                if not success:
+                    raise ValueError('Failed to move Spot!')
 
                 # Update problem for find action.
                 # (rob-at {found_at})
