@@ -30,8 +30,6 @@ class SCTPPlanner(object):
         self.robot.cur_pose = np.array([robot_data[0][0],robot_data[0][1]])
         self.robot.at_node = robot_data[1]
         self.robot.edge = robot_data[2].copy()
-        # if self.robot.at_node:
-        #     assert self.robot.edge == []
         self.robot.last_node = robot_data[3]
         self.robot.pl_vertex = robot_data[4]
         self.robot.remaining_time = 0.0
@@ -42,13 +40,14 @@ class SCTPPlanner(object):
                 drone.at_node = drone_data[i][1]
                 drone.edge = []
                 drone.last_node = drone_data[i][2]
+                drone.unfinished_action = drone_data[i][3]
                 drone.remaining_time = 0.0
                 drone.need_action = True    
 
         if self.verbose:
             print('------------robots poses after updating ---------------')
             if self.drones != []:
-                print(f"Drones: ", [(drone.cur_pose, drone.at_node) for drone in self.drones])
+                print(f"Drones: ", [(drone.cur_pose, drone.at_node, drone.last_node, drone.remaining_time) for drone in self.drones])
             print(f"Robot: {self.robot.cur_pose} at node? {self.robot.at_node} /on edge? {self.robot.edge}/ last node: {self.robot.last_node}")
         
     
@@ -60,7 +59,7 @@ class SCTPPlanner(object):
             drones = []
         else:
             drones = [drone.copy() for drone in self.drones]
-        
+                
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
                                         drones=drones,

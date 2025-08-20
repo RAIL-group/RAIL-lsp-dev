@@ -79,12 +79,12 @@ def get_shortestPath_cost(graph, start, goal):
             continue
         visited.add(current_node)
         if current_node == goal:
-            return costs[current_node]
+            return costs[current_node], len(path)
         
         # Explore neighbors
         vertices = [v for v in graph.vertices+graph.pois if v.id == current_node]
         if len(vertices) == 0: # the start node was removed
-            return -1.0
+            return -1.0, 1000
         for nei in vertices[0].neighbors:
             step_cost = 0.0
             for edge in graph.edges:
@@ -99,9 +99,7 @@ def get_shortestPath_cost(graph, start, goal):
                 costs[nei] = new_path_cost
                 new_path = path + [nei]
                 heapq.heappush(queue, (new_path_cost, nei, new_path))
-    # raise ValueError("Found no path - error")
-    return -1.0
-
+    return -1.0, 1000
 
 def get_shortest_path_with_blocknode(graph, start, goal, redge = [], block_nodes = []):
     block_pen = 500.0

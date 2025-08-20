@@ -2,6 +2,7 @@ from enum import Enum
 import random
 import matplotlib.pyplot as plt
 from sctp import sctp_graphs  as graphs
+from sctp import graph as g
 from sctp import param
 from sctp.utils import paths, plotting
 import numpy as np
@@ -83,7 +84,7 @@ class SCTPState(object):
                 elif vertex.block_prob == 0.0:
                     self.history.add_history(action, EventOutcome.TRAV)
             self.assigned_pois = set()
-            self.v_vertices = dict() #set()
+            self.v_vertices = dict()
             self.heuristic_vertices = dict()
             # define robot
             self.robot = robot
@@ -107,21 +108,34 @@ class SCTPState(object):
             self.uavs = drones 
             self.uav_actions = []
             if self.uavs != []:
-                for uav in self.uavs:
-                    uav.need_action = True
-                self.uav_actions = [] 
-                self.uav_actions = [Action(target=poi.id, rtype=RobotType.Drone) for poi in self.graph.pois]
-                
+                self.uav_actions = [Action(target=poi.id, rtype=RobotType.Drone) for poi in self.graph.pois]                
                 self.uav_actions = [action for action in self.uav_actions \
                                     if self.history.get_action_outcome(action) == EventOutcome.CHANCE] # list unexplored pois
+                continue_actions = []
+                for uav in self.uavs:
+                    if uav.unfinished_action is not None and uav.unfinished_action in self.uav_actions:
+                        uav.action = uav.unfinished_action
+                        continue_actions.append(uav.unfinished_action)
+                        uav.unfinished_action = None
+                        uav.need_action = False
+                        distance, direction = self.get_distance_direction(uav.cur_pose, uav.action.target)
+                        uav.action.update_pose((uav.cur_pose[0], uav.cur_pose[1]))
+                        uav.retarget(uav.action, distance, direction)
+                        # print(f"THe uav {uav.id} has targeted to POI: {uav.action.target}")
+                    else:
+                        uav.need_action = True
+                
                 if param.ADD_IV:
                     for act in self.uav_actions: # only for value information gain 118-127
+                        if act in continue_actions:
+                            continue
                         act_value = get_action_value(graph=self.graph, action=act, robot_edge=[self.robot.last_node, self.robot.last_node],
                                                     d0=0.0, d1=0.0, goalID=self.goalID, atNode=self.robot.at_node, drone_pose=self.robot.cur_pose,
                                                     cur_heuristic=self.heuristic, n_samples=param.IV_SAMPLE_SIZE)
                         self.uav_action_values[act] = act_value
                     self.uav_action_values = dict(sorted(self.uav_action_values.items(), key=lambda item: item[1], reverse=True))
                     self.uav_actions = list(self.uav_action_values.keys())[:min(param.MAX_UAV_ACTION, len(self.uav_action_values))]
+                    
                     for _ in range(min(param.MAX_UAV_ACTION, len(self.uav_action_values))):
                         first_key = next(iter(self.uav_action_values))
                         self.uav_action_values.pop(first_key)
@@ -133,7 +147,8 @@ class SCTPState(object):
         
                 assert isinstance(self.uav_actions[0], Action)
                 assert len(self.uav_actions) > 0
-                self.state_actions = [action for action in self.uav_actions]
+                if any([uav.need_action for uav in self.uavs]):
+                    self.state_actions = [action for action in self.uav_actions]
             stuck = is_robot_stuck(self)
             
     def get_actions(self):
@@ -142,9 +157,9 @@ class SCTPState(object):
     def update_heuristic2(self):
         redge = [self.robot.last_node, self.robot.pl_vertex]
         block_pois = [key.target for key, value in self.history.get_data().items() if value == EventOutcome.BLOCK]
-        new_graph = graphs.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
-        min_dist1 = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
-        min_dist2 = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
+        new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
+        min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
+        min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
         assert (min_dist1 < 0) == (min_dist2 < 0)
         if min_dist1 < 0.0 and min_dist2 < 0.0:
             self.heuristic = STUCK_COST
@@ -158,9 +173,9 @@ class SCTPState(object):
     def update_uav_actionvalue(self):
         redge = [self.robot.last_node, self.robot.pl_vertex]
         block_pois = [key.target for key, value in self.history.get_data().items() if value == EventOutcome.BLOCK]
-        new_graph = graphs.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
-        min_dist1 = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
-        min_dist2 = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
+        new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
+        min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
+        min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
         assert (min_dist1 < 0) == (min_dist2 < 0)
         uav_actions_left = [Action(target=poi.id, rtype=RobotType.Drone) for poi in new_graph.pois]
         uav_actions_left = [action for action in uav_actions_left if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
@@ -175,7 +190,6 @@ class SCTPState(object):
             if action in self.uav_action_values:
                 del self.uav_action_values[action]
         
-
     @property
     def is_goal_state(self):
         return self.robot.last_node == self.goalID or self.noway2goal
@@ -193,16 +207,14 @@ class SCTPState(object):
             assert action in temp_state.uav_actions
             uav_idx = uav_needs_action.index(True)
             start_pos = temp_state.uavs[uav_idx].cur_pose
-            action.update_pose(start_pos)
-            end_pos = [node for node in temp_state.graph.vertices+temp_state.graph.pois if node.id == action.target][0].coord
             if np.isnan(start_pos[0]) or np.isnan(start_pos[1]):
                 ValueError("Start position is NaN") 
-            distance = np.linalg.norm(start_pos - np.array([end_pos[0], end_pos[1]]))
-            if distance != 0.0:
-                direction = (np.array([end_pos[0], end_pos[1]]) - start_pos)/distance
-            else:
-                direction = np.array([1.0, 1.0])
+            action.update_pose(start_pos)
+            distance, direction = temp_state.get_distance_direction(start_pos, action.target)            
+            # print(f"state depth is: {self.depth} with distance {distance} and direction {direction}")
+            # print(f"the time remaining is: {self.uavs[uav_idx].remaining_time} -- {temp_state.uavs[uav_idx].remaining_time}")
             temp_state.uavs[uav_idx].retarget(action, distance, direction)
+            # print(f"state depth is: {self.depth} =for checking")
             if action.target not in temp_state.assigned_pois:
                 temp_state.assigned_pois.add(action.target)
             anyrobot_action = True
@@ -210,12 +222,7 @@ class SCTPState(object):
             assert temp_state.robot.need_action == True
             start_pos = temp_state.robot.cur_pose
             action.update_pose(start_pos)
-            end_pos = [node for node in temp_state.graph.vertices+temp_state.graph.pois if node.id == action.target][0].coord
-            distance = np.linalg.norm(start_pos - np.array(end_pos))
-            if distance != 0.0:
-                direction = (np.array([end_pos[0], end_pos[1]]) - start_pos)/distance
-            else:
-                direction = np.array([1.0, 1.0])
+            distance, direction = temp_state.get_distance_direction(start_pos, action.target)
             temp_state.robot.retarget(action, distance, direction)
             anyrobot_action = True
         assert anyrobot_action == True
@@ -247,6 +254,15 @@ class SCTPState(object):
             new_state.uav_actions = []
         return new_state
             
+    def get_distance_direction(self, start_pos, target):
+        end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == target][0].coord
+        distance = np.linalg.norm(np.array(start_pos) - np.array(end_pos))
+        if distance != 0.0:
+            direction = (np.array([end_pos[0], end_pos[1]]) - start_pos)/distance
+        else:
+            direction = np.array([1.0, 1.0])
+        return distance, direction
+
 def advance_state(state1, action):
     state = state1.copy()
     # 1. if any robot needs action, determine its actions then return
@@ -279,8 +295,10 @@ def advance_state(state1, action):
         else:
             uav.need_action = False
     if robot_reach_first:
+        # print("Ground robot reaches its target first")
         return get_new_nodes_grobot(state, last_node=last_node, last_edge=edge)
     else:
+        # print(f"Drone {uav_index} reaches its target first")
         return get_new_nodes_drone(state=state, uav_index=uav_index)
         
 def get_new_nodes_grobot(state, last_node, last_edge):
@@ -290,9 +308,8 @@ def get_new_nodes_grobot(state, last_node, last_edge):
     # update the uav action set.
     state.uav_actions = [action for action in state.uav_actions if action.target != state.robot.last_node]
     action = Action(target=state.robot.last_node)
-    if param.ADD_IV:
-        if action in state.uav_action_values:
-            del state.uav_action_values[action]
+    if param.ADD_IV and len(state.uavs) > 0 and action in state.uav_action_values:
+        del state.uav_action_values[action]
     if param.ADD_IV:
         if len(state.uav_actions) == 0 and len(state.uavs) >0 and len(state.uav_action_values) == 0:
             state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone)]
@@ -306,8 +323,8 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         state.state_actions = [action for action in state.robot_actions]
         state.depth += 1
         state.update_heuristic2()
-        if param.ADD_IV:
-            state.update_uav_actionvalue()
+        if param.ADD_IV and len(state.uavs) > 0:
+            # state.update_uav_actionvalue()
             if len(state.uav_actions) ==0 and len(state.uav_action_values) >0:
                 state.uav_actions = [list(state.uav_action_values.keys())[0]]
                 state.uav_action_values.pop(state.uav_actions[0])
@@ -331,8 +348,9 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         # update the cost if revisiting the vertex
         state.action_cost += (state.v_vertices.get(state.robot.last_node, 0)-1) * REVISIT_PEN
         state.update_heuristic2()
-        if param.ADD_IV:
-            state.update_uav_actionvalue()
+        if param.ADD_IV and len(state.uavs) > 0:
+            if cur_node in state.graph.vertices: # only reculcate action values if robots is at vertex
+                state.update_uav_actionvalue()
             if len(state.uav_actions) ==0 and len(state.uav_action_values) >0:
                 state.uav_actions = [list(state.uav_action_values.keys())[0]]
                 state.uav_action_values.pop(state.uav_actions[0])
@@ -352,9 +370,7 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         new_state_trav.state_actions = [action for action in new_state_trav.robot_actions]
         new_state_trav.depth += 1
         new_state_trav.update_heuristic2()
-        if param.ADD_IV:
-            new_state_trav.update_uav_actionvalue()
-            if len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
+        if param.ADD_IV and len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
                 new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
                 new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
         # BLOCKED
@@ -370,9 +386,7 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         stuck= is_robot_stuck(new_state_block)
         new_state_block.depth += 1
         new_state_block.update_heuristic2()
-        if param.ADD_IV:
-            new_state_block.update_uav_actionvalue()
-            if len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
+        if param.ADD_IV and len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
                 new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
                 new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
         assert new_state_block.depth == new_state_trav.depth
@@ -409,7 +423,6 @@ def get_new_nodes_drone(state, uav_index):
                 action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
             state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
         
-        
     # if some uavs also finish theirs actions, reset need_action for the next iteration
     for i, uav in enumerate(state.uavs):
         uav.need_action = False if i != uav_index and uav.need_action else True
@@ -440,10 +453,9 @@ def get_new_nodes_drone(state, uav_index):
         stuck = is_robot_stuck(new_state_trav)
         new_state_trav.depth += 1
         new_state_trav.update_heuristic2()
-        if param.ADD_IV:
-            if len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
-                new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
-                new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
+        if param.ADD_IV and len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
+            new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
+            new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
         new_state_trav.state_actions = [action for action in new_state_trav.uav_actions]
         # BLOCKED
         new_state_block = state.copy()
@@ -454,10 +466,9 @@ def get_new_nodes_drone(state, uav_index):
         stuck = is_robot_stuck(new_state_block)
         new_state_block.depth += 1
         new_state_block.update_heuristic2()
-        if param.ADD_IV:
-            if len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
-                new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
-                new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
+        if param.ADD_IV and len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
+            new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
+            new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
         new_state_block.state_actions = [action for action in new_state_block.uav_actions]
         assert new_state_trav.depth == new_state_block.depth
         return {new_state_trav: (1.0-vertex.block_prob, new_state_trav.action_cost),
@@ -488,6 +499,8 @@ def _get_robot_that_finishes_first(state):
     time_remaining_uavs = []
     if len(state.uavs) > 0:
         for uav in state.uavs:
+            if uav.last_node == state.goalID:
+                continue
             if uav.remaining_time >APPROX_TIME:
                 time_remaining_uavs.append(uav.remaining_time)
     robot_reach_first = False
@@ -506,7 +519,7 @@ def _is_robot_goal_connected(graph, history, redge, goalID):
     for key, value in history.get_data().items():
         if value == EventOutcome.BLOCK:
             block_pois.append(key.target)
-    new_graph = graphs.modify_graph(graph=graph, robot_edge=redge, poiIDs=block_pois)
+    new_graph = g.modify_graph(graph=graph, robot_edge=redge, poiIDs=block_pois)
     reach1 = paths.is_reachable(graph=new_graph, start=redge[0], goal=goalID)
     reach2 = paths.is_reachable(graph=new_graph, start=redge[1], goal=goalID)
     assert reach1 == reach2
@@ -525,13 +538,13 @@ def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_sam
     total_cost = 0.0
     for _ in range(n_samples):
         block_pois = [poi.id for poi in graph.pois if random.random() <= poi.block_prob ] 
-        modified_graph = graphs.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
+        modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
         if atNode:
-            cost = paths.get_shortestPath_cost(modified_graph, startNode, goalID)
+            cost, _ = paths.get_shortestPath_cost(modified_graph, startNode, goalID)
             total_cost += cost if (cost >= 0.0) else param.NOWAY_PEN
         else:
-            cost0 = paths.get_shortestPath_cost(modified_graph, robot_edge[0], goalID)
-            cost1 = paths.get_shortestPath_cost(modified_graph, robot_edge[1], goalID)
+            cost0, _ = paths.get_shortestPath_cost(modified_graph, robot_edge[0], goalID)
+            cost1, _ = paths.get_shortestPath_cost(modified_graph, robot_edge[1], goalID)
             assert (cost1 < 0) == (cost0 < 0)
             if cost0 >= 0:
                 total_cost += (cost0+d0) if (cost0+d0)<(cost1+d1) else (cost1+d1)
@@ -542,23 +555,22 @@ def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_sam
 def get_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, 
                      drone_pose, cur_heuristic, n_samples=100):
     dist = np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/VEL_RATIO
-    # dist = 0.0
-    # print(f"The distance between the drone and the action target is {dist:.2f}")
     # value if the action is passable
     block_value = 0.0
     pass_value = 0.0
+    num_pois = len(graph.pois)
+    num_vertices = len(graph.vertices)
+    num_edges = len(graph.edges)
     for _ in range(n_samples):
+        assert num_pois == len(graph.pois)
+        assert num_vertices == len(graph.vertices)
+        assert num_edges == len(graph.edges)
         pass_value += sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=False)
         block_value += sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=True)
     pass_value /= n_samples
     block_value /= n_samples
-    # print(f"The average block value is {block_value}")
-    # print(f"The average pass value is {pass_value}")
     aver_block = graph.get_poi(action.target).block_prob * block_value
     aver_pass = (1-graph.get_poi(action.target).block_prob) * pass_value
-    # print(f"The average block value is {block_value:.2f}")
-    # print(f"The average pass value is {pass_value:.2f}")
-    # print(f"The distance is {dist:.2f}")
     value = aver_block + aver_pass
     bc = cur_heuristic - value
     return bc, bc - dist 
@@ -568,14 +580,14 @@ def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, blo
     # noway_penalty = 200.0
     block_pois = [poi.id for poi in graph.pois if poi.id != action.target and random.random() <= poi.block_prob ] 
     if block_edge:
-        modified_graph = graphs.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois+[action.target])
+        modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois+[action.target])
     else:
-        modified_graph = graphs.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
+        modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
     if atNode:
-        cost = paths.get_shortestPath_cost(modified_graph, start=robot_edge[0], goal=goalID)
+        cost, _ = paths.get_shortestPath_cost(modified_graph, start=robot_edge[0], goal=goalID)
         return cost if cost >= 0.0 else param.NOWAY_PEN
     else:
-        cost0 = paths.get_shortestPath_cost(modified_graph, start=robot_edge[0], goal=goalID)
-        cost1 = paths.get_shortestPath_cost(modified_graph, start=robot_edge[1], goal=goalID)
+        cost0, _ = paths.get_shortestPath_cost(modified_graph, start=robot_edge[0], goal=goalID)
+        cost1, _ = paths.get_shortestPath_cost(modified_graph, start=robot_edge[1], goal=goalID)
         assert (cost1 < 0) == (cost0 < 0)
         return min(cost0+d0, cost1+d1) if cost0 >= 0 else param.NOWAY_PEN

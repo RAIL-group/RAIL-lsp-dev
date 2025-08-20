@@ -175,9 +175,10 @@ def get_best_path_sctp(root):
     paths = []
     costs = []
     node = root
-    # count =0
+    for uav in root.state.uavs:
+        if uav.action is not None:
+            paths.append(uav.action)
     while not node.is_terminal_node():
-        # count +=1
         if node.total_n <5 \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break

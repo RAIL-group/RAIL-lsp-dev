@@ -9,12 +9,14 @@ class Robot:
         self.robot_type = robot_type
         self.cur_pose = np.array(position)
         self.last_node = cur_node
+        self.unfinished_action = None
         if at_node:
             self.edge = []
             self.at_node = True
         else:
             self.edge = edge
             self.at_node = False
+            # assert self.last_node == None
         if self.robot_type == RobotType.Ground:
             self.vel = 1.0
         elif self.robot_type == RobotType.Drone:
@@ -68,6 +70,7 @@ class Robot:
         new_robot.pl_vertex = self.pl_vertex
         new_robot.direction = self.direction.copy()
         new_robot.visited_vertices = self.visited_vertices.copy()
+        new_robot.unfinished_action = self.unfinished_action
         return new_robot
 
     def retarget(self, new_action, distance, direction):

@@ -290,13 +290,14 @@ def test_sctp_plan_exec_mg():
 
 
 def test_sctp_plan_exec_rg():
+    print("")
     args = _get_args()
     args.planner = 'sctp'
     args.seed = 3000
-    args.num_iterations = 1000
-    args.n_samples = 400
+    args.num_iterations = 500
+    args.n_samples = 1000
     args.n_vertex = 8
-    args.max_depth = 35
+    args.max_depth = 30
     verbose = True
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -313,9 +314,10 @@ def test_sctp_plan_exec_rg():
     plan_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
         
-    plan_exec.max_counter = 60
+    plan_exec.max_counter = 25
     for step_data in plan_exec:
         print("####################### New navigation #######################################")
+        # print(step_data['drones'])
         sctpplanner.update(
             step_data['observed_pois'],
             step_data['robot'],

@@ -154,31 +154,35 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
 
 
 
-def plot_sctpgraph(graph, plt, verbose=False):
+def plot_sctpgraph(graph, plt, textsize=7, verbose=False):
     x_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
     x_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
     y_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
     y_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
-    # print(f"The box is: {x_min}, {y_min}, {x_max}, {y_max}")
-    plt.ylim(y_min-0.5, y_max+1.0)
-    plt.xlim(x_min-1.2, x_max+1.0)
+    
+    plt.set_ylim(y_min-0.5, y_max+1.0)
+    plt.set_xlim(x_min-1.2, x_max+1.0)
     # Plot edges
+    count = 0
     for edge in graph.edges:
         x_values = [edge.v1.coord[0], edge.v2.coord[0]]
         y_values = [edge.v1.coord[1], edge.v2.coord[1]]
+        
+        # print(f"Edge {count}: {edge.v1.id}-{edge.v2.id}")
+        count += 1
         plt.plot(x_values, y_values, 'b-', linewidth=1.0, alpha=1.0)
         # Display block probability
         if verbose:
             mid_x = (edge.v1.coord[0] + edge.v2.coord[0]) / 2
             mid_y = (edge.v1.coord[1] + edge.v2.coord[1]) / 2
             costs = f"{edge.cost:.2f}"
-            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=7)
+            plt.text(mid_x, mid_y+0.25, costs, color='red', fontsize=textsize)
 
     # Plot nodes
     for node in graph.vertices:
         plt.scatter(node.coord[0], node.coord[1], color='green', s=25)
         if verbose:
-            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=7)
+            plt.text(node.coord[0], node.coord[1] + 0.2, f"V{node.id}", color='blue', fontsize=textsize)
 
     for poi in graph.pois:
         plt.scatter(poi.coord[0], poi.coord[1], color='red', s=25)
@@ -187,9 +191,7 @@ def plot_sctpgraph(graph, plt, verbose=False):
         else:
             plt.scatter(poi.coord[0], poi.coord[1], color='white', s=8)
         if verbose:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=7)
-        # else:
-        #     plt.text(poi.coord[0], poi.coord[1] + 0.1, f"P{poi.id}", color='blue', fontsize=7)
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
     return [[x_min, y_min], [x_max, y_max]]
         
 

@@ -311,3 +311,23 @@ def test_sctp_random_graph():
     start, goal, graph = graphs.random_graph(n_vertex=11)
     plotting.plot_sctpgraph(graph=graph, plt=plt, verbose=True)
     plt.show()
+    
+def test_sctp_island_graph():
+    seed = 3037
+    np.random.seed(seed)
+    random.seed(seed)
+    verbose = False
+    minSG_dist = 10 # number of edge between start and goal)
+    start, goal, graph = graphs.random_island_graph(n_island=10, SG_dist_min=minSG_dist)
+    fig = plt.figure(figsize=(10, 10), dpi=300)
+    ax = plt.gca()
+    ax.set_aspect('equal', adjustable='box')
+    plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+    plt.text(start.coord[0]-0.3, start.coord[1], 'R_s', fontsize=8)
+    plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+    plt.text(start.coord[0]-0.3, start.coord[1]-1.0, 'D_s', fontsize=8)
+    plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
+    plt.text(goal.coord[0]+0.2, goal.coord[1], 'goal', fontsize=8)
+    plotting.plot_sctpgraph(graph=graph, plt=plt, verbose=verbose)
+    
+    plt.show()
