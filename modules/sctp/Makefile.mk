@@ -1,15 +1,15 @@
 
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
-SCTP_NUM_EXPERIMENTS = 5
+SCTP_NUM_EXPERIMENTS = 10
 SCTP_NUM_DRONES = 1
-SCTP_NUM_VERTICES = 10
-SCTP_EXPERIMENT_NAME = dbg_August20_${SCTP_NUM_VERTICES}V
+SCTP_NUM_VERTICES = 8
+SCTP_EXPERIMENT_NAME = dbg_August21_${SCTP_NUM_VERTICES}V
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
 
-SCTP_PLANNERS = sctp
+SCTP_PLANNERS = base
 all-targets-sctp-eval = $(foreach planner, $(SCTP_PLANNERS), \
 							$(foreach seed, $(call sctp_get_seeds), \
 								$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/sctp_eval_planner_$(planner)_seed_$(seed).png))
@@ -29,8 +29,8 @@ $(all-targets-sctp-eval):
 		--num_iterations 1000 \
 		--C 300 \
 		--n_vertex $(SCTP_NUM_VERTICES) \
-		--max_depth 25 \
-		--n_samples 1000 \
+		--max_depth 20 \
+		--n_maps 200 \
 
 .PHONY: sctp-a-random-graph
 sctp-a-random-graph:

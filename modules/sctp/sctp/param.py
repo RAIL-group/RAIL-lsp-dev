@@ -2,7 +2,7 @@ from enum import Enum
 
 EventOutcome = Enum('EventOutcome', ['BLOCK', 'TRAV','CHANCE'])
 RobotType = Enum('RobotType', ['Ground', 'Drone'])
-MAX_EDGE_LENGTH = 20.0
+MAX_EDGE_LENGTH = 25.0
 MIN_EDGE_LENGTH = 8.0
 MAX_ISLAND_DISTANCE = 20.0
 MIN_ISLAND_DISTANCE = 12.0
@@ -16,4 +16,4 @@ APPROX_TIME = 1e-5
 TRAV_LEVEL = 0.5
 REVISIT_PEN = 0.0
 # REVISIT_PEN = 6.0
-ADD_IV = True
+ADD_IV = False

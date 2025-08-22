@@ -425,6 +425,8 @@ def remove_poi(graph, poiID):
 
 def remove_pois(graph, poiIDs=[]):
     graph_copy = graph.copy() #remove_blockEdges(graph=graph)
+    if not poiIDs:
+        return graph_copy
     graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in poiIDs]
     graph_copy.edges = [edge for edge in graph_copy.edges if edge.v1.id not in poiIDs and edge.v2.id not in poiIDs]
     for vertex in graph_copy.vertices:
@@ -441,20 +443,41 @@ def modify_graph(graph, robot_edge, poiIDs=[]):
         poi_robot = [poi for poi in robot_edge if poi in poiIDs][0]
         other_side = robot_edge[0] if poi_robot == robot_edge[1] else robot_edge[1]
         p = [poi for poi in graph.pois if poi.id == poi_robot][0]
-        if len(p.neighbors) == 2:
-            block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
-            new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
-                                                                        or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
-            for vertex in new_graph.vertices:
-                if vertex.id == block_side:
-                    vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
-                    break 
-            for poi in new_graph.pois:
-                if poi.id == poi_robot:
-                    poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
-                    break
-        return new_graph
+        block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
+        return remove_edges(new_graph, redges=[[block_side, other_side]])
+        # if len(p.neighbors) == 2:
+            
+        #     new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
+        #                                                                 or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
+        #     for vertex in new_graph.vertices:
+        #         if vertex.id == block_side:
+        #             vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
+        #             break 
+        #     for poi in new_graph.pois:
+        #         if poi.id == poi_robot:
+        #             poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
+        #             break
+        # return new_graph
 
+
+def remove_edges(graph, redges=[]):
+    graph_copy = graph.copy()
+    if not redges:
+        return graph_copy
+    for e in redges:
+        graph_copy.edges = [edge for edge in graph_copy.edges if not ((edge.v1.id == e[0] and edge.v2.id == e[1])
+                                                                        or (edge.v1.id == e[1] and edge.v2.id == e[0]))]
+        count = 0
+        for vertex in graph_copy.vertices+graph_copy.pois:
+            if vertex.id == e[0]:
+                count += 1
+                vertex.neighbors = [nei for nei in vertex.neighbors if nei != e[1]]
+            if vertex.id == e[1]:
+                vertex.neighbors = [nei for nei in vertex.neighbors if nei != e[0]]
+                count += 1
+            if count >= 2:
+                break        
+    return graph_copy
 
 def get_poi_value(graph, poiID, startID, goalID):
     graphw = remove_blockEdges(graph)

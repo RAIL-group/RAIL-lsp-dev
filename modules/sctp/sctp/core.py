@@ -63,13 +63,13 @@ def get_edge(edges, v1_id, v2_id):
     
 
 class SCTPState(object):
-    def __init__(self, graph=None, goalID=None, robot=None, drones=[], iscopy=False, n_samples=100):
+    def __init__(self, graph=None, goalID=None, robot=None, drones=[], iscopy=False, n_maps=100):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.noway2goal = False
         self.depth = 0
         self.vertices_map = dict() # map vertex id to vertex object
-        self.n_samples = n_samples
+        self.n_samples = n_maps
         self.uav_action_values = dict() # map action to its value
               
         if not iscopy:
@@ -126,6 +126,7 @@ class SCTPState(object):
                         uav.need_action = True
                 
                 if param.ADD_IV:
+                    # print("Something wrong - it should not be here")
                     for act in self.uav_actions: # only for value information gain 118-127
                         if act in continue_actions:
                             continue
@@ -167,7 +168,7 @@ class SCTPState(object):
         d2 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[1]].coord))
         d1 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[0]].coord))
         self.heuristic = sampling_rollout(new_graph, redge, d1, d2, self.goalID, self.robot.at_node, 
-                                          startNode=self.robot.last_node, n_samples=self.n_samples)        
+                                          startNode=self.robot.last_node, n_maps=self.n_samples)        
         return self.heuristic
         
     def update_uav_actionvalue(self):
@@ -533,10 +534,10 @@ def sctp_rollout3(state):
     return state.update_heuristic2()
 
 
-def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_samples=100):
+def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_maps=100):
     # noway_penalty = 200.0
     total_cost = 0.0
-    for _ in range(n_samples):
+    for _ in range(n_maps):
         block_pois = [poi.id for poi in graph.pois if random.random() <= poi.block_prob ] 
         modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
         if atNode:
@@ -550,7 +551,7 @@ def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_sam
                 total_cost += (cost0+d0) if (cost0+d0)<(cost1+d1) else (cost1+d1)
             else:
                 total_cost += param.NOWAY_PEN
-    return total_cost/n_samples
+    return total_cost/n_maps
 
 def get_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, 
                      drone_pose, cur_heuristic, n_samples=100):

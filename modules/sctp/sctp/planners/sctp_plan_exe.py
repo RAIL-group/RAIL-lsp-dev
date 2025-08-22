@@ -14,11 +14,10 @@ class SCTPPlanExecution(object):
         self.action_cost = 0.0
         self.joint_actions = []
         self.costs = []
-        self.max_counter = 50
+        self.max_counter = 100
         self.counter = 0
         self.success = False
         self.vertices_status = {}
-
 
     def __iter__(self):
         while True:

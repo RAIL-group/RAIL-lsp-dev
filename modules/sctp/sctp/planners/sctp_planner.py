@@ -1,13 +1,14 @@
 import numpy as np
 import pouct_planner
 import sctp
+from sctp import param
 from sctp.core import Action
 from sctp.param import RobotType
 
 
 class SCTPPlanner(object):
     def __init__(self, args, init_graph, goalID, robot, drones=[], rollout_fn = None, 
-                tree_depth = 500, n_samples=100, verbose=False):
+                tree_depth = 500, n_maps=100, verbose=False):
         self.args = args
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -17,7 +18,8 @@ class SCTPPlanner(object):
         self.rollout_fn = rollout_fn
         self.goalNeighbors = []
         self.max_depth = tree_depth
-        self.n_samples = n_samples
+        self.n_maps = n_maps
+        # print(f"The number of iterations of MCTS is {self.args.num_iterations} with revisit_pen is {param.REVISIT_PEN}")
         
     def reached_goal(self):
         if not self.robot.at_node:
@@ -63,7 +65,7 @@ class SCTPPlanner(object):
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
                                         robot=robot,
                                         drones=drones,
-                                        n_samples=self.n_samples)
+                                        n_maps=self.n_maps)
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
             sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, depth= self.max_depth, rollout_fn=self.rollout_fn)
         # because replanning, so just take some first n+1 action

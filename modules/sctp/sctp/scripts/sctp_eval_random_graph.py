@@ -1,10 +1,10 @@
 import numpy as np
 import argparse
 from sctp.utils import plotting
-import random
+import random, time
 from sctp import sctp_graphs as graphs
 from sctp.robot import Robot
-from sctp import core
+from sctp import core, param
 import matplotlib.pyplot as plt
 from sctp.param import RobotType
 from pathlib import Path
@@ -41,9 +41,16 @@ def _setup(args):
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     planner_robot = robot.copy()
     if args.planner == 'base':
-        drones = []    
+        drones = []
+        param.REVISIT_PEN = 6.0
+        # args.num_iterations = 10000
     elif args.planner =='sctp':
+        # args.num_iterations = 5000
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
+    elif args.planner == 'sctp_iv':
+        drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
+        param.ADD_IV = True
+        # args.num_iterations = 3000
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
@@ -51,12 +58,12 @@ def _setup(args):
 
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=policyGraph, goalID=goal.id,robot=planner_robot, 
                                         drones=planner_drones, tree_depth=args.max_depth, 
-                                      n_samples=args.n_samples, rollout_fn=core.sctp_rollout3) 
+                                      n_maps=args.n_maps, rollout_fn=core.sctp_rollout3) 
     planning_exe = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                 graph=graph, reached_goal=sctpplanner.reached_goal, verbose=False)
 
     
-    
+    start_time = time.perf_counter() 
     for step_data in planning_exe:
         sctpplanner.update(
             step_data['observed_pois'],
@@ -68,7 +75,7 @@ def _setup(args):
         planning_exe.save_joint_actions(joint_actions, cost)
     
     cost = robot.net_time
-
+    runtime = time.perf_counter() - start_time
     x_g = [pose[0] for pose in robot.all_poses]
     y_g = [pose[1] for pose in robot.all_poses]
     dpaths = []
@@ -82,7 +89,7 @@ def _setup(args):
 
     logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
     with open(logfile, "a+") as f:
-        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | SUCC : {int(planning_exe.success)} | COST : {cost:0.3f}\n")
+        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | SUCC : {int(planning_exe.success)} | COST : {cost:0.3f} | RUNTIME : {runtime:0.2f}\n")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -94,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--C', type=int, default=50)
     # parser.add_argument('--v_num', type=int, default=6)
     parser.add_argument('--max_depth', type=int, default=500)
-    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--n_maps', type=int, default=100)
     parser.add_argument('--n_vertex', type=int, default=14)
     args = parser.parse_args()
     args.current_seed = args.seed
