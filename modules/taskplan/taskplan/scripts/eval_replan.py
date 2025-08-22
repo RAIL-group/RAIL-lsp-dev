@@ -23,6 +23,8 @@ def evaluate_main(args):
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()
+    args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
+        thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
@@ -48,6 +50,8 @@ def evaluate_main(args):
     taskplan.utilities.utils.check_pddl_validity(pddl, args)
 
     cost_str = taskplan.utilities.utils.get_cost_string(args)
+    pddl['problem'] = taskplan.pddl.helper.\
+        generate_pddl_problem_from_struct(pddl['problem_struct'])
 
     plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                  planner=pddl['planner'], max_planner_time=120)
