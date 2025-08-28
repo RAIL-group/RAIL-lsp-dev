@@ -142,3 +142,4 @@ include modules/lsp/Makefile.mk
 include modules/procthor/Makefile.mk
 include modules/taskplan/Makefile.mk
 include modules/object_search/Makefile.mk
+include modules/object_search_select/Makefile.mk
