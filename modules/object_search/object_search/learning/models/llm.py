@@ -1,7 +1,7 @@
 import os
 import re
 from openai import OpenAI
-import google.generativeai as genai
+from google import genai
 from pathlib import Path
 import pandas as pd
 from dotenv import load_dotenv
@@ -10,43 +10,52 @@ from collections import Counter
 load_dotenv(dotenv_path='/data/.env')
 
 
-class GPT4:
-    def __init__(self, prompt_cache_path='/data/.cache/gpt4_prompt_cache.csv'):
-        self.client = OpenAI(organization='org-rjqQxMqdPyu0NpSFXshcA88Q',
-                             project='proj_5gbQGApHd9F8blfA4mpiKE9R',
-                             api_key=os.getenv('OPENAI_API_KEY'))
-        self.prompt_cache_path = Path(prompt_cache_path)
+class LLM:
+    """Abstract LLM class"""
+    def __init__(self, client=None, model_name="", prompt_cache_dir=None):
+        self.client = client
+        self.model_name = model_name
+        if prompt_cache_dir is None:
+            self.prompt_cache_path = None
+            self.prompt_cache = None
+            return
+        self.prompt_cache_path = Path(prompt_cache_dir) / f"{self.model_name}_cache.csv"
         if not self.prompt_cache_path.exists():
             self.prompt_cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self.prompt_cache = pd.DataFrame(columns=['prompt', 'probability'])
+            self.prompt_cache = pd.DataFrame(columns=['prompt', 'response'])
             self.prompt_cache.set_index('prompt', inplace=True)
             self.prompt_cache.to_csv(self.prompt_cache_path)
         else:
-            self.prompt_cache = pd.read_csv(prompt_cache_path, index_col='prompt')
+            self.prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
 
-    def query_llm(self, prompt, use_prompt_caching=True):
-        if use_prompt_caching and prompt in self.prompt_cache.index:
-            prob_feasible = self.prompt_cache.loc[prompt]['probability']
-            return prob_feasible
-        print("Querying GPT4...")
-        response = self.client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            model="gpt-4o-mini",
-        )
-        content = response.choices[0].message.content.strip()
-        if use_prompt_caching and prompt not in self.prompt_cache.index:
-            self.prompt_cache.loc[prompt] = content
+    def query_llm(self, prompt):
+        raise NotImplementedError
+
+    def get_response(self, prompt):
+        cached_response = self.get_cached_response(prompt)
+        if cached_response is not None:
+            return cached_response
+        response = self.query_llm(prompt)
+        self.save_response_to_cache(prompt, response)
+        return response
+
+    def get_cached_response(self, prompt):
+        if self.prompt_cache is not None and prompt in self.prompt_cache.index:
+            print(f"Using cached {self.model_name} response...")
+            return self.prompt_cache.loc[prompt, 'response']
+        return None
+
+    def save_response_to_cache(self, prompt, response):
+        if self.prompt_cache is not None:
+            self.prompt_cache.loc[prompt] = response
             self.prompt_cache.to_csv(self.prompt_cache_path)
-        return content
 
     @classmethod
-    def get_net_eval_fn(_, prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
-        llm_model = GPT4()
+    def get_net_eval_fn(cls,
+                        prompt_template_id=0,
+                        fake_llm_response_text=None,
+                        prompt_cache_path=None):
+        llm_model = cls(prompt_cache_path=prompt_cache_path)
 
         def get_properties(datum, subgoals):
             prob_feasible_dict = {}
@@ -67,96 +76,20 @@ class GPT4:
                                          subgoal_container_name,
                                          room_name,
                                          prompt_template_id)
-                response = llm_model.query_llm(prompt, use_prompt_caching)
+                response = llm_model.query_llm(prompt)
                 prob_feasible_dict[subgoal] = parse_llm_response(response)
             return prob_feasible_dict
 
         return get_properties
 
     @classmethod
-    def get_search_action_fn(_, prompt_template_id=0, use_prompt_caching=True):
-        llm_model = GPT4(prompt_cache_path='/data/.cache/fullgpt4_prompt_cache.csv')
-
-        def get_search_action(datum, subgoals):
-            graph = datum['graph']
-            target_object_name = datum['target_obj_info']['name']
-            room_distances = datum['room_distances']
-            robot_distances = datum['robot_distances']
-            prompt, subgoal_description_to_idx = generate_prompt_llm_as_planner(graph,
-                                                                                target_object_name,
-                                                                                subgoals,
-                                                                                room_distances,
-                                                                                robot_distances,
-                                                                                prompt_template_id)
-            response = llm_model.query_llm(prompt, use_prompt_caching)
-            chosen_subgoal = identify_subgoal_from_response(response, subgoal_description_to_idx)
-            if chosen_subgoal is None:
-                print("Using nearest subgoal as chosen subgoal.")
-                chosen_subgoal = min(subgoals, key=robot_distances.get)
-            return chosen_subgoal
-
-        return get_search_action
-
-
-class Gemini:
-    def __init__(self, prompt_cache_path='/data/.cache/gemini_prompt_cache.csv'):
-        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        self.client = genai.GenerativeModel("gemini-1.5-pro")
-        self.prompt_cache_path = Path(prompt_cache_path)
-        if not self.prompt_cache_path.exists():
-            self.prompt_cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self.prompt_cache = pd.DataFrame(columns=['prompt', 'probability'])
-            self.prompt_cache.set_index('prompt', inplace=True)
-            self.prompt_cache.to_csv(self.prompt_cache_path)
-        else:
-            self.prompt_cache = pd.read_csv(prompt_cache_path, index_col='prompt')
-
-    def query_llm(self, prompt, use_prompt_caching=True):
-        if prompt in self.prompt_cache.index:
-            prob_feasible = self.prompt_cache.loc[prompt]['probability']
-            return f'{prob_feasible}'
-        print("Querying Gemini...")
-        response = self.client.generate_content(prompt)
-        content = response.text.strip()
-        if use_prompt_caching and prompt not in self.prompt_cache.index:
-            self.prompt_cache.loc[prompt] = content
-            self.prompt_cache.to_csv(self.prompt_cache_path)
-        return content
-
-    @classmethod
-    def get_net_eval_fn(_, prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
-        llm_model = Gemini()
-
-        def get_properties(datum):
-            if fake_llm_response_text is not None:
-                print("******Using fake LLM response******")
-                prob_feasible = parse_llm_response(fake_llm_response_text)
-                return prob_feasible
-
-            graph = datum['graph']
-            target_object_name = datum['target_obj_info']['name']
-            subgoal_container_name = graph.get_node_name_by_idx(datum['subgoal'].id)
-            parent_node_idx = graph.get_parent_node_idx(datum['subgoal'].id)
-            room_name = graph.get_node_name_by_idx(parent_node_idx)
-            prompt = generate_prompt(graph,
-                                     target_object_name,
-                                     subgoal_container_name,
-                                     room_name,
-                                     prompt_template_id)
-            response = llm_model.query_llm(prompt, use_prompt_caching)
-            prob_feasible = parse_llm_response(response)
-            return prob_feasible
-
-        return get_properties
-
-    @classmethod
-    def get_search_action_fn(_, prompt_template_id=0, use_prompt_caching=True):
-        llm_model = Gemini(prompt_cache_path='/data/.cache/fullgemini_prompt_cache.csv')
+    def get_search_action_fn(cls, prompt_template_id=0, prompt_cache_path=None):
+        llm_model = cls(prompt_cache_path=prompt_cache_path)
 
         def get_search_action(datum):
             graph = datum['graph']
-            target_object_name = datum['target_obj_info']['name']
             subgoals = datum['subgoals']
+            target_object_name = datum['target_obj_info']['name']
             room_distances = datum['room_distances']
             robot_distances = datum['robot_distances']
             prompt, subgoal_description_to_idx = generate_prompt_llm_as_planner(graph,
@@ -165,7 +98,7 @@ class Gemini:
                                                                                 room_distances,
                                                                                 robot_distances,
                                                                                 prompt_template_id)
-            response = llm_model.query_llm(prompt, use_prompt_caching)
+            response = llm_model.query_llm(prompt)
             chosen_subgoal = identify_subgoal_from_response(response, subgoal_description_to_idx)
             if chosen_subgoal is None:
                 print("Using nearest subgoal as chosen subgoal.")
@@ -173,13 +106,49 @@ class Gemini:
             return chosen_subgoal
 
         return get_search_action
+
+
+class GPT(LLM):
+    def __init__(self, model_name="gpt-5-mini", prompt_cache_path=None):
+        client = OpenAI(organization='org-rjqQxMqdPyu0NpSFXshcA88Q',
+                        project='proj_5gbQGApHd9F8blfA4mpiKE9R',
+                        api_key=os.getenv('OPENAI_API_KEY'))
+        super().__init__(client, model_name, prompt_cache_path)
+
+    def query_llm(self, prompt):
+        print(f"Querying GPT model {self.model_name}")
+        result = self.client.responses.create(
+            model=self.model_name,
+            input=prompt
+        )
+        response = result.output_text.strip()
+        return response
+
+
+class Gemini(LLM):
+    def __init__(self, model_name="gemini-2.5-flash", prompt_cache_path=None):
+        client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+        super().__init__(client, model_name, prompt_cache_path)
+
+    def query_llm(self, prompt):
+        print(f"Querying Gemini model {self.model_name}")
+        result = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt
+        )
+        response = result.text.strip()
+        return response
 
 
 def generate_prompt(graph, target_object_name, subgoal_container_name, room_name, prompt_template_id):
     """Generate the prompt for the LLM model."""
     description = generate_description(graph)
+    target_object_name = clean_name(target_object_name)
+    subgoal_container_name = clean_name(subgoal_container_name)
+    room_name = clean_name(room_name)
+
     templates = {
-        0: (
+        'prompt_a': (
             f"You are serving as part of a system in which a robot needs to find objects located around a household. "
             f"Here is a schema that describes the connectivity of rooms in the house: {description} "
             "You will be asked to estimate the probability (a value between 1% and 100%) of where "
@@ -195,23 +164,7 @@ def generate_prompt(graph, target_object_name, subgoal_container_name, room_name
             f"What is the likelihood that I find {target_object_name} in the "
             f"{subgoal_container_name} in the {room_name}?"
         ),
-        1: (
-            f"You are serving as part of a system in which a robot needs to find objects located around a household. "
-            f"Here is a schema that describes the connectivity of rooms in the house: {description} "
-            "You will be asked to estimate the probability (a value between 1% and 100%) of where "
-            "objects are located in that house, "
-            "leveraging your considerable experience in how human occupied spaces are located. "
-            "You must produce a numerical value and nothing else, "
-            "as it is important to the overall functioning of the system. "
-            "Here is an example exchange for an arbitrary house: "
-            "User: 'What is the likelihood that I find eggs in the refrigerator in the kitchen?' You: '90%'. "
-            "The logic here is that there is a high likelihood that a typical refrigerator in the kitchen "
-            "contains eggs, but it is not guaranteed as not all refrigerators have eggs. "
-            "Here is your prompt for today: "
-            f"What is the likelihood that I find {target_object_name} in the "
-            f"{subgoal_container_name} in the {room_name}?"
-        ),
-        2: (
+        'prompt_b': (
             f"You are assisting in a robotic system designed to locate items within a residence. "
             f"The following is a description of the layout and connectivity between rooms in the home: {description} "
             "Your task is to estimate the likelihood (a percentage from 1% to 100%) that a specified object "
@@ -227,53 +180,7 @@ def generate_prompt(graph, target_object_name, subgoal_container_name, room_name
             f"What is the probability of finding {target_object_name} in the "
             f"{subgoal_container_name} in the {room_name}?"
         ),
-        3: (
-            f"You are an integral part of a decision-support system for a household robot. "
-            f"The connectivity of the home's rooms is described as follows: {description} "
-            "You need to determine the probability (in percentage terms between 1% and 100%) that a specific object "
-            "is found in a given location. "
-            "Your estimates should rely on common household practices and arrangements. "
-            "Provide only a numerical probability without any text or explanation, as clarity and "
-            "brevity are essential. "
-            "Here is an example scenario: "
-            "User: 'What are the chances of finding milk in the fridge in the kitchen?' You: '95%'. "
-            "This estimate assumes most kitchens have refrigerators containing milk, although it is not guaranteed. "
-            "Now, proceed with your evaluation for the following query: "
-            f"What are the chances of finding {target_object_name} in the "
-            f"{subgoal_container_name} in the {room_name}?"
-        ),
-        4: (
-            f"You are part of an artificial intelligence system tasked with predicting the likelihood of objects "
-            "being located in various areas of a home. "
-            f"The home's structure and room connections are defined as: {description} "
-            "Your task is to assign a probability (1%-100%) to the presence of objects based on typical "
-            "household habits and norms. "
-            "Respond with only a numerical percentage, avoiding any additional commentary, to streamline "
-            "the system's workflow. "
-            "Here is an illustrative example: "
-            "User: 'What is the probability of finding a book on the coffee table in the living room?' You: '70%'. "
-            "This estimation considers the common practice of placing books on living room tables but allows "
-            "for exceptions. "
-            "Evaluate the following query: "
-            f"What is the probability of finding {target_object_name} in the "
-            f"{subgoal_container_name} in the {room_name}?"
-        ),
-        5: (
-            f"You are part of a cognitive framework supporting a robot designed to locate items within homes. "
-            f"Below is the configuration of the house's rooms and their connectivity: {description} "
-            "Your role is to provide a probability (in percentage form, from 1% to 100%) for the likelihood "
-            "of an object being in a specified location. "
-            "Base your answers on common human organizational patterns. "
-            "Respond only with a numerical value, as conciseness is vital for seamless system integration. "
-            "Example scenario: "
-            "User: 'What is the probability of finding a jacket on the coat rack in the living room?' You: '75%'. "
-            "This reflects the common practice of hanging jackets on coat racks in the living room, "
-            "albeit not universal. "
-            "Now, evaluate this query: "
-            f"What is the probability of finding {target_object_name} in the "
-            f"{subgoal_container_name} in the {room_name}?"
-        ),
-        6: (
+        'prompt_minimal': (
             f"What is the probability of finding {target_object_name} in the "
             f"{subgoal_container_name} in the {room_name} of a typical household? "
             "Your response should only include a numerical percentage value between 1% to 100% and nothing else."
@@ -387,7 +294,7 @@ def generate_prompt_llm_as_planner(graph, target_object_name, subgoals,
     search_locations_description = get_search_locations_description(subgoal_descriptions)
 
     templates = {
-        0: (
+        'prompt_direct': (
             "You are assisting a robot in locating objects within a household based on a provided map of rooms "
             "and their contents. "
             "Your task is to determine the exact location where the specified object can be found, "

@@ -1,31 +1,33 @@
 from object_search.planners import LearnedPlanner
-from object_search.learning.models.llm import GPT4, Gemini
+from object_search.learning.models.llm import GPT, Gemini
 from object_search.core import Subgoal
 from object_search.learning import utils
 from lsp.core import get_frontier_distances, get_robot_distances
 
 
-class LSPLLMGPT4Planner(LearnedPlanner):
+class LSPLLMGPTPlanner(LearnedPlanner):
     def __init__(self, target_obj_info, args, destination=None, verbose=True,
                  prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
-        subgoal_property_net = GPT4.get_net_eval_fn(prompt_template_id,
-                                                    fake_llm_response_text,
-                                                    use_prompt_caching)
+        prompt_cache_dir = '/data/.cache/prompt_cache/lsp_llm' if use_prompt_caching else None
+        subgoal_property_net = GPT.get_net_eval_fn(prompt_template_id,
+                                                   fake_llm_response_text,
+                                                   prompt_cache_dir)
         preprocess_input_fn = utils.prepare_lspllm_input
-        super(LSPLLMGPT4Planner, self).__init__(target_obj_info,
-                                                args,
-                                                subgoal_property_net,
-                                                preprocess_input_fn,
-                                                destination,
-                                                verbose)
+        super(LSPLLMGPTPlanner, self).__init__(target_obj_info,
+                                               args,
+                                               subgoal_property_net,
+                                               preprocess_input_fn,
+                                               destination,
+                                               verbose)
 
 
 class LSPLLMGeminiPlanner(LearnedPlanner):
     def __init__(self, target_obj_info, args, destination=None, verbose=True,
                  prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/lsp_llm' if use_prompt_caching else None
         subgoal_property_net = Gemini.get_net_eval_fn(prompt_template_id,
                                                       fake_llm_response_text,
-                                                      use_prompt_caching)
+                                                      prompt_cache_dir)
         preprocess_input_fn = utils.prepare_lspllm_input
         super(LSPLLMGeminiPlanner, self).__init__(target_obj_info,
                                                   args,
@@ -79,23 +81,25 @@ class FullLLMPlanner(LearnedPlanner):
         return datum
 
 
-class FullLLMGPT4Planner(FullLLMPlanner):
+class FullLLMGPTPlanner(FullLLMPlanner):
     def __init__(self, target_obj_info, args, destination=None, verbose=True,
                  prompt_template_id=0, use_prompt_caching=True):
-        subgoal_property_net = GPT4.get_search_action_fn(prompt_template_id,
-                                                         use_prompt_caching)
-        super(FullLLMGPT4Planner, self).__init__(target_obj_info,
-                                                 args,
-                                                 subgoal_property_net,
-                                                 destination,
-                                                 verbose)
+        prompt_cache_dir = '/data/.cache/prompt_cache/full_llm' if use_prompt_caching else None
+        subgoal_property_net = GPT.get_search_action_fn(prompt_template_id,
+                                                        prompt_cache_dir)
+        super(FullLLMGPTPlanner, self).__init__(target_obj_info,
+                                                args,
+                                                subgoal_property_net,
+                                                destination,
+                                                verbose)
 
 
 class FullLLMGeminiPlanner(FullLLMPlanner):
     def __init__(self, target_obj_info, args, destination=None, verbose=True,
                  prompt_template_id=0, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/full_llm' if use_prompt_caching else None
         subgoal_property_net = Gemini.get_search_action_fn(prompt_template_id,
-                                                           use_prompt_caching)
+                                                           prompt_cache_dir)
         super(FullLLMGeminiPlanner, self).__init__(target_obj_info,
                                                    args,
                                                    subgoal_property_net,
