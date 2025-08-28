@@ -7,6 +7,8 @@ from common import Pose
 from ai2thor.controller import Controller
 from . import utils
 from .scenegraph import SceneGraph
+import pickle
+from pathlib import Path
 
 IGNORE_CONTAINERS = [
     'baseballbat', 'basketBall', 'boots', 'desklamp', 'painting',
@@ -17,7 +19,7 @@ IGNORE_CONTAINERS = [
 
 
 class ThorInterface:
-    def __init__(self, args, preprocess=True):
+    def __init__(self, args, preprocess=True, use_cache=True):
         self.args = args
         self.seed = args.current_seed
         random.seed(self.seed)
@@ -48,14 +50,42 @@ class ThorInterface:
                 if container['id'].split('|')[0].lower() not in IGNORE_CONTAINERS
             ]
 
-        self.controller = Controller(scene=self.scene,
-                                     gridSize=self.grid_resolution,
-                                     width=480, height=480)
-        # Note: Load occupancy_grid before scene_graph
+        self.cached_data = self.load_cache() if use_cache else None
+        if self.cached_data is None:
+            self.controller = Controller(scene=self.scene,
+                                         gridSize=self.grid_resolution,
+                                         width=480, height=480)
+            self.cached_data = self.save_and_get_cache()
+        else:
+            print("-----------Using cached procthor data-----------")
+            self.controller = None
+
         self.occupancy_grid = self.get_occupancy_grid()
         self.scene_graph = self.get_scene_graph()
         self.robot_pose = self.get_robot_pose()
         self.known_cost = self.get_known_costs()
+
+    def save_and_get_cache(self, path='/resources/procthor-10k/cache'):
+        """Cache the scene data."""
+        cache = {
+            'reachable_positions': self.get_reachable_positions(),
+            'image_ortho': self.get_top_down_image(orthographic=True),
+            'image_persp': self.get_top_down_image(orthographic=False)
+        }
+        save_dir = Path(path)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        with open(save_dir / f'scene_{self.args.current_seed}.pkl', 'wb') as f:
+            pickle.dump(cache, f)
+        return cache
+
+    def load_cache(self, path='/resources/procthor-10k/cache'):
+        """Load the cached scene data."""
+        cache_file = Path(path) / f'scene_{self.args.current_seed}.pkl'
+        if not cache_file.exists():
+            return None
+        with open(cache_file, 'rb') as f:
+            cache = pickle.load(f)
+        return cache
 
     def gen_map_and_poses(self, num_objects=1):
         """Returns scene graph, grid, initial robot pose and target object info."""
@@ -115,13 +145,17 @@ class ThorInterface:
             return target_objs_info[0]
         return target_objs_info
 
-    def get_occupancy_grid(self):
+    def get_reachable_positions(self):
+        if self.cached_data is not None:
+            return self.cached_data['reachable_positions']
         event = self.controller.step(action="GetReachablePositions")
         reachable_positions = event.metadata["actionReturn"]
-        RPs = reachable_positions
+        return reachable_positions
 
-        xs = [rp["x"] for rp in reachable_positions]
-        zs = [rp["z"] for rp in reachable_positions]
+    def get_occupancy_grid(self):
+        rps = self.get_reachable_positions()
+        xs = [rp["x"] for rp in rps]
+        zs = [rp["z"] for rp in rps]
 
         # Calculate the mins and maxs
         min_x, max_x = min(xs), max(xs)
@@ -132,7 +166,7 @@ class ThorInterface:
 
         # Create list of free points
         points = list(zip(xs, zs))
-        grid_to_points_map = {self.scale_to_grid(point): RPs[idx]
+        grid_to_points_map = {self.scale_to_grid(point): rps[idx]
                               for idx, point in enumerate(points)}
         height, width = self.scale_to_grid([max_x, max_z])
         occupancy_grid = np.ones((height + 2, width + 2), dtype=int)
@@ -273,6 +307,11 @@ class ThorInterface:
         return known_cost
 
     def get_top_down_image(self, orthographic=True):
+        if self.cached_data is not None:
+            if orthographic:
+                return self.cached_data['image_ortho']
+            else:
+                return self.cached_data['image_persp']
         # Setup top down camera
         event = self.controller.step(action="GetMapViewCameraProperties", raise_for_failure=True)
         pose = copy.deepcopy(event.metadata["actionReturn"])
