@@ -24,12 +24,6 @@ class KnownPlanner(Planner):
                     f'Ps={subgoal.prob_feasible:.2f} | '
                     f'for {self.known_graph.get_node_name_by_idx(subgoal.id)}'
                 )
-        if self.verbose:
-            print(f'Containers with target object [{self.target_obj_info["name"]}]:')
-            for subgoal in self.subgoals:
-                print([f'{subgoal.id}: {self.known_graph.get_node_name_by_idx(subgoal.id)}'
-                       for subgoal in self.subgoals if subgoal.prob_feasible == 1.0])
-            print(" ")
 
     def compute_selected_subgoal(self):
         feasible_subgoals = [subgoal for subgoal in self.subgoals if subgoal.prob_feasible == 1.0]
