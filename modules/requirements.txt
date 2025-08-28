@@ -9,7 +9,7 @@ tensorboard
 prior
 ai2thor
 sentence_transformers
-google-generativeai
+google-genai
 openai
 python-dotenv
 
