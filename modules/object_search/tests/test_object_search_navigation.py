@@ -11,7 +11,7 @@ def get_args():
     args.save_dir = '/data/test_logs'
     args.current_seed = 0
     args.resolution = 0.05
-    args.do_save_video = True
+    args.do_save_video = False
     return args
 
 
@@ -41,7 +41,8 @@ def test_object_search_optimistic_planner():
         chosen_subgoal = planner.compute_selected_subgoal()
         planning_loop.set_chosen_subgoal(chosen_subgoal)
 
-    cost, trajectory = object_search.utils.compute_cost_and_trajectory(known_grid, robot.all_poses)
+    cost, trajectory = object_search.utils.compute_cost_and_trajectory(known_grid, robot.all_poses, args.resolution,
+                                                                       use_robot_model=True)
 
     plt.figure(figsize=(8, 8))
     known_locations = [known_graph.get_node_name_by_idx(idx) for idx in target_obj_info['container_idxs']]
@@ -66,7 +67,7 @@ def test_object_search_optimistic_planner():
     plt.subplot(224)
     ax = plt.subplot(224)
     object_search.plotting.plot_grid_with_robot_trajectory(ax, known_grid, robot.all_poses, trajectory, known_graph)
-    plt.title(f"Cost: {cost:0.3f}")
+    plt.title(f"Cost: {cost:0.1f} meters")
 
     plt.savefig(Path(args.save_dir) / f'object_search_optimistic_{args.current_seed}.png', dpi=1000)
 
