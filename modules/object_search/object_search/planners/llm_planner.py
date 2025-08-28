@@ -54,7 +54,7 @@ class FullLLMPlanner(LearnedPlanner):
         # Room distances are computed once since they don't change
         if self.room_distances is None:
             rooms = [Subgoal(idx, self.graph.get_node_position_by_idx(idx)) for idx in self.graph.room_indices]
-            room_distances = get_frontier_distances(self.grid, rooms)
+            room_distances = get_frontier_distances(self.grid, rooms) if len(rooms) > 1 else {}
             # Convert distances to meters for better interpretability by LLMs
             self.room_distances = {frozenset([r1.id, r2.id]): float(d) * self.args.resolution
                                    for (r1, r2), d in room_distances.items()}
