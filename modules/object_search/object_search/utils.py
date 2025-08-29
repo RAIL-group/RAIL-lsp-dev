@@ -4,7 +4,7 @@ from common import Pose
 import lsp
 
 
-def compute_cost_and_trajectory(grid, path, resolution=0.05, use_robot_model=True):
+def compute_cost_and_trajectory(grid, path, resolution=0.05, use_robot_model=False):
     '''This function returns the path cost, robot trajectory
     given the occupancy grid and the container poses the
     robot explored during object search.
@@ -71,7 +71,7 @@ def compute_cost_and_robot_trajectory(grid, path):
                                                                 do_use_path=True)
             robot.move(motion_primitives, np.argmin(costs))
             dist = Pose.cartesian_distance(robot.pose, next_pose)
-            if dist < 1.0:
+            if dist <= 2.0:
                 reached = True
 
     trajectory = [[], []]
