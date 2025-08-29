@@ -127,7 +127,10 @@ if __name__ == "__main__":
     if args.do_not_replay:
         exit()
 
+    print("Getting replay costs for all planners.")
     costs, lb_costs = planner.get_costs(robot)
+    print(f"Costs: {costs}")
+    print(f"Lower-bound costs: {lb_costs}")
 
     with open(cost_file, 'w') as f:
         np.savetxt(f, costs)
