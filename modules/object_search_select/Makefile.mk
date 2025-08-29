@@ -4,7 +4,7 @@ OBJECT_SEARCH_SELECT_CORE_ARGS ?= --resolution 0.05
 
 
 OBJECT_SEARCH_SELECT_NUM_SEEDS_DEPLOY ?= 150
-OBJECT_SEARCH_SELECT_POLICIES ?= optimistic lspgptpromptminimal lspgptprompta lspgptpromptb lspgeminipromptminimal lspgeminiprompta lspgeminipromptb fullgptpromptdirect fullgeminipromptdirect
+OBJECT_SEARCH_SELECT_POLICIES ?= optimistic lspgptprompta lspgptpromptb lspgptpromptminimal lspgeminiprompta lspgeminipromptb lspgeminipromptminimal fullgptpromptdirect fullgeminipromptdirect
 OBJECT_SEARCH_SELECT_ENVS ?= apartment
 OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR ?= policy_selection/replay_costs_iclr
 

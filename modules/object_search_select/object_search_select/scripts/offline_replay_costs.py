@@ -30,12 +30,12 @@ def eval_main(args):
     robot = object_search.robot.Robot(robot_pose)
     planners = [
         OptimisticPlanner(target_obj_info, args),
-        LSPLLMGPTPlanner(target_obj_info, args, prompt_template_id='prompt_minimal'),
         LSPLLMGPTPlanner(target_obj_info, args, prompt_template_id='prompt_a'),
         LSPLLMGPTPlanner(target_obj_info, args, prompt_template_id='prompt_b'),
-        LSPLLMGeminiPlanner(target_obj_info, args, prompt_template_id='prompt_minimal'),
+        LSPLLMGPTPlanner(target_obj_info, args, prompt_template_id='prompt_minimal'),
         LSPLLMGeminiPlanner(target_obj_info, args, prompt_template_id='prompt_a'),
         LSPLLMGeminiPlanner(target_obj_info, args, prompt_template_id='prompt_b'),
+        LSPLLMGeminiPlanner(target_obj_info, args, prompt_template_id='prompt_minimal'),
         FullLLMGPTPlanner(target_obj_info, args, prompt_template_id='prompt_direct'),
         FullLLMGeminiPlanner(target_obj_info, args, prompt_template_id='prompt_direct')
     ]
@@ -97,8 +97,8 @@ if __name__ == "__main__":
     parser.add_argument('--do_not_replay', action='store_true')
     parser.add_argument('--do_plot', action='store_true')
     planner_names = ['optimistic',
-                     'lspgptpromptminimal', 'lspgptprompta', 'lspgptpromptb',
-                     'lspgeminipromptminimal', 'lspgeminiprompta', 'lspgeminipromptb',
+                     'lspgptprompta', 'lspgptpromptb', 'lspgptpromptminimal',
+                     'lspgeminiprompta', 'lspgeminipromptb', 'lspgeminipromptminimal',
                      'fullgptpromptdirect',
                      'fullgeminipromptdirect']
     parser.add_argument('--chosen_planner', choices=planner_names)
