@@ -76,7 +76,7 @@ class LLM:
                                          subgoal_container_name,
                                          room_name,
                                          prompt_template_id)
-                response = llm_model.query_llm(prompt)
+                response = llm_model.get_response(prompt)
                 prob_feasible_dict[subgoal] = parse_llm_response(response)
             return prob_feasible_dict
 
@@ -98,7 +98,7 @@ class LLM:
                                                                                 room_distances,
                                                                                 robot_distances,
                                                                                 prompt_template_id)
-            response = llm_model.query_llm(prompt)
+            response = llm_model.get_response(prompt)
             chosen_subgoal = identify_subgoal_from_response(response, subgoal_description_to_idx)
             if chosen_subgoal is None:
                 print("Using nearest subgoal as chosen subgoal.")
@@ -303,7 +303,7 @@ def generate_prompt_llm_as_planner(graph, target_object_name, subgoals,
             "You should only pick one location from the given list. "
             "Here is an example: "
             "User: The apartment contains: bathroom, bedroom, kitchen. The distance between rooms is as follows: "
-            "bathroom and bedroom: 5.95 metres, bedroom and kitchen: 3.25 metres, bathroom and kitchen: 4.75 metres. "
+            "bathroom and bedroom: 5.95 meters, bedroom and kitchen: 3.25 meters, bathroom and kitchen: 4.75 meters. "
             "The robot is currently located at bathroom and is looking for pillow. "
             "Available locations to search are: sink in bathroom, toilet in bathroom, bed in bedroom, "
             "sidetable in bedroom. "
@@ -374,8 +374,9 @@ def get_room_distances_description(graph, room_distances, room_idx_to_name):
         room2_name = room_idx_to_name[room2_idx]
         descriptions.append(f"{room1_name} and {room2_name}: {distance:.1f} meters")
 
-    description = (f"The {space_type} contains the following rooms: {', '.join(sorted(room_idx_to_name.values()))}. "
-                   f"The distance between rooms is as follows: {', '.join(descriptions)}.")
+    description = f"The {space_type} contains the following rooms: {', '.join(sorted(room_idx_to_name.values()))}. "
+    if len(descriptions) > 0:
+        description += f"The distance between rooms is as follows: {', '.join(descriptions)}."
 
     return description
 
