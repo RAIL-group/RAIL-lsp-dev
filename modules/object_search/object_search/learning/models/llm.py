@@ -17,16 +17,13 @@ class LLM:
         self.model_name = model_name
         if prompt_cache_dir is None:
             self.prompt_cache_path = None
-            self.prompt_cache = None
             return
         self.prompt_cache_path = Path(prompt_cache_dir) / f"{self.model_name}_cache.csv"
         if not self.prompt_cache_path.exists():
             self.prompt_cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self.prompt_cache = pd.DataFrame(columns=['prompt', 'response'])
-            self.prompt_cache.set_index('prompt', inplace=True)
-            self.prompt_cache.to_csv(self.prompt_cache_path)
-        else:
-            self.prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
+            prompt_cache = pd.DataFrame(columns=['prompt', 'response'])
+            prompt_cache.set_index('prompt', inplace=True)
+            prompt_cache.to_csv(self.prompt_cache_path)
 
     def query_llm(self, prompt):
         raise NotImplementedError
@@ -40,15 +37,19 @@ class LLM:
         return response
 
     def get_cached_response(self, prompt):
-        if self.prompt_cache is not None and prompt in self.prompt_cache.index:
+        if self.prompt_cache_path is None:
+            return None
+        prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
+        if prompt in prompt_cache.index:
             print(f"Using cached {self.model_name} response...")
-            return self.prompt_cache.loc[prompt, 'response']
+            return prompt_cache.loc[prompt, 'response']
         return None
 
     def save_response_to_cache(self, prompt, response):
-        if self.prompt_cache is not None:
-            self.prompt_cache.loc[prompt] = response
-            self.prompt_cache.to_csv(self.prompt_cache_path)
+        if self.prompt_cache_path is not None:
+            prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
+            prompt_cache.loc[prompt] = response
+            prompt_cache.to_csv(self.prompt_cache_path)
 
     @classmethod
     def get_net_eval_fn(cls,
