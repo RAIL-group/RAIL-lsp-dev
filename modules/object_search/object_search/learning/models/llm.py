@@ -3,9 +3,9 @@ import re
 from openai import OpenAI
 from google import genai
 from pathlib import Path
-import pandas as pd
 from dotenv import load_dotenv
 from collections import Counter
+import hashlib
 
 load_dotenv(dotenv_path='/data/.env')
 
@@ -18,12 +18,8 @@ class LLM:
         if prompt_cache_dir is None:
             self.prompt_cache_path = None
             return
-        self.prompt_cache_path = Path(prompt_cache_dir) / f"{self.model_name}_cache.csv"
-        if not self.prompt_cache_path.exists():
-            self.prompt_cache_path.parent.mkdir(parents=True, exist_ok=True)
-            prompt_cache = pd.DataFrame(columns=['prompt', 'response'])
-            prompt_cache.set_index('prompt', inplace=True)
-            prompt_cache.to_csv(self.prompt_cache_path)
+        self.prompt_cache_path = Path(prompt_cache_dir) / f"{self.model_name}_cache"
+        self.prompt_cache_path.mkdir(parents=True, exist_ok=True)
 
     def query_llm(self, prompt):
         raise NotImplementedError
@@ -39,17 +35,25 @@ class LLM:
     def get_cached_response(self, prompt):
         if self.prompt_cache_path is None:
             return None
-        prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
-        if prompt in prompt_cache.index:
-            print(f"Using cached {self.model_name} response...")
-            return prompt_cache.loc[prompt, 'response']
-        return None
+        prompt_md5 = hashlib.md5(prompt.encode()).hexdigest()
+        cache_file = self.prompt_cache_path / f"{prompt_md5}.txt"
+        if not cache_file.exists():
+            return None
+        with open(cache_file) as f:
+            lines = f.read().splitlines()
+        if len(lines) != 2:
+            print(f"Cache in {cache_file.name} is not valid.")
+            return None
+        print(f"Using cached {self.model_name} response from {cache_file.name}")
+        return lines[-1]
 
     def save_response_to_cache(self, prompt, response):
-        if self.prompt_cache_path is not None:
-            prompt_cache = pd.read_csv(self.prompt_cache_path, index_col='prompt')
-            prompt_cache.loc[prompt] = response
-            prompt_cache.to_csv(self.prompt_cache_path)
+        if self.prompt_cache_path is None:
+            return
+        prompt_md5 = hashlib.md5(prompt.encode()).hexdigest()
+        cache_file = self.prompt_cache_path / f"{prompt_md5}.txt"
+        with open(cache_file, "w") as f:
+            f.write(prompt.strip() + "\n" + response.strip() + "\n")
 
     @classmethod
     def get_net_eval_fn(cls,
