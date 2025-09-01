@@ -57,6 +57,7 @@ def eval_main(args):
         planning_loop.set_chosen_subgoal(chosen_subgoal)
 
     cost, trajectory = object_search.utils.compute_cost_and_trajectory(known_grid, robot.all_poses, args.resolution)
+
     plt.figure(figsize=(8, 8))
     known_locations = [known_graph.get_node_name_by_idx(idx) for idx in target_obj_info['container_idxs']]
     plt.suptitle(f"Seed: {args.current_seed} | Target object: {target_obj_info['name']}\n"
@@ -84,8 +85,8 @@ def eval_main(args):
 
     plt.savefig(Path(args.save_dir) /
                 f'img_plcy_{args.chosen_planner}_envrnmnt_{args.env}_{args.current_seed}.png', dpi=1000)
-    plt.savefig(Path(args.save_dir) /
-                f'img_plcy_{args.chosen_planner}_envrnmnt_{args.env}_{args.current_seed}.pdf', dpi=1000)
+    # plt.savefig(Path(args.save_dir) /
+    #             f'img_plcy_{args.chosen_planner}_envrnmnt_{args.env}_{args.current_seed}.pdf', dpi=1000)
     return planner, robot
 
 
