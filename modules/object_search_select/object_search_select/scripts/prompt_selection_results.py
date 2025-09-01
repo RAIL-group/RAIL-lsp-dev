@@ -487,29 +487,6 @@ if __name__ == "__main__":
         print('Improvement Gemini: Our Worst Planner wrt Optimistic Planner: '
               f'{percent_improve_gemini_our_worst_vs_optimistic:.1f}%')
         print('----------------------------------------------------')
-
-        print('--------------------------Optimistic--------------------------')
-        our_planner_gemini_costs = env_planner_costs[i][our_planner_gemini_idx]
-        our_best_planner_gemini = np.argmin(our_planner_gemini_costs)
-        our_best_planner_gemini_cost = our_planner_gemini_costs[our_best_planner_gemini]
-        print(f'Our Best Planner Gemini: {p_names[our_planner_gemini_idx][our_best_planner_gemini]}, '
-              f'Cost: {our_best_planner_gemini_cost:.2f}')
-        our_worst_planner_gemini = np.argmax(our_planner_gemini_costs)
-        our_worst_planner_gemini_cost = our_planner_gemini_costs[our_worst_planner_gemini]
-        print(f'Our Worst Planner Gemini: {p_names[our_planner_gemini_idx][our_worst_planner_gemini]}, '
-              f'Cost: {our_worst_planner_gemini_cost:.2f}')
-        print('----------------------------------------------------')
-        directllm_gemini_cost = env_planner_costs[i][direct_planner_gemini_idx]
-        percent_improve_gemini_our_best_vs_directllm = (
-            directllm_gemini_cost - our_best_planner_gemini_cost) / directllm_gemini_cost * 100
-        print('Improvement Gemini: Our Best Planner wrt Full-LLM Planner: '
-              f'{percent_improve_gemini_our_best_vs_directllm:.1f}%')
-        percent_improve_gemini_our_worst_vs_directllm = (
-            directllm_gemini_cost - our_worst_planner_gemini_cost) / directllm_gemini_cost * 100
-        print('Improvement Gemini: Our Worst Planner wrt Full-LLM Planner: '
-              f'{percent_improve_gemini_our_worst_vs_directllm:.1f}%')
-        print('----------------------------------------------------')
-
         print('--------------------------Final Selection Results--------------------------')
         print('Average Cost')
         print(f'UCB: {ucb_cost_final:.2f}, Ours: {our_cost_final:.2f}, '
