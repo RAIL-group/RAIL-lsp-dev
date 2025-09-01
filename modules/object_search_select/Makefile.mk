@@ -54,3 +54,14 @@ $(object-search-select-offline-replay-seeds):
 		--chosen_planner $(policy) \
 		--env $(env) \
 		> $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR)/stdout_$(policy)_$(env)_$(seed).txt
+
+object-search-select-policy-selection-results: object-search-select-offline-replay-costs
+object-search-select-policy-selection-results: DOCKER_ARGS ?= -it
+object-search-select-policy-selection-results: xhost-activate
+object-search-select-policy-selection-results:
+	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR)/results
+	@$(DOCKER_PYTHON) -m object_search_select.scripts.prompt_selection_results \
+		--save_dir /data/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR) \
+		--start_seeds $(apartment_start_seed) \
+		--num_seeds $(OBJECT_SEARCH_SELECT_NUM_SEEDS_DEPLOY) \
+		> $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR)/results/results.txt
