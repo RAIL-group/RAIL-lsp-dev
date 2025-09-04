@@ -66,8 +66,9 @@ class SCTPPlanner(object):
                                         robot=robot,
                                         drones=drones,
                                         n_maps=self.n_maps)
-        action, cost, [ordering, costs] = pouct_planner.core.po_mcts(
-            sctpstate, n_iterations=self.args.num_iterations, C=self.args.C, depth= self.max_depth, rollout_fn=self.rollout_fn)
+        action, cost, [ordering, costs] = pouct_planner.core.po_mcts(sctpstate, \
+                        n_iterations=self.args.num_iterations, C=self.args.C, depth= self.max_depth, \
+                        rollout_fn=self.rollout_fn)
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]

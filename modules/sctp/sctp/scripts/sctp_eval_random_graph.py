@@ -35,22 +35,34 @@ def mgraph_init():
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
+    # start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
+    start, goal, graph = graphs.random_bridges_graph()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     planner_robot = robot.copy()
+    param.IV_SAMPLE_SIZE = 1000
     if args.planner == 'base':
         drones = []
+        print(f"Running CTP with num_iterations {args.num_iterations}")
         param.REVISIT_PEN = 6.0
-        # args.num_iterations = 10000
     elif args.planner =='sctp':
-        # args.num_iterations = 5000
+        print(f"Running SCTP and num_iterations {args.num_iterations}")
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-    elif args.planner == 'sctp_iv':
+    # elif args.planner =='sctpfk':
+    #     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
+    
+    elif args.planner == 'sctpiv':
+        print(f"Running SCTP with IV and num_iterations {args.num_iterations}")
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
         param.ADD_IV = True
-        # args.num_iterations = 3000
+    # elif args.planner == 'sctpivthractfk':
+    #     print(f"Using SCTP with IV with num_iterations {args.num_iterations}")
+    #     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
+    #     param.ADD_IV = True
+    #     param.MAX_UAV_ACTION = 3
+        # args.num_iterations = 4000
+    
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     

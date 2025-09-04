@@ -47,6 +47,58 @@ def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return start, goal, graph
 
+def random_bridges_graph(n_bridge=3):
+    count = 0
+    while True:
+        start, goal, graph = create_3bridges_graph()
+        if g.check_graph_valid(startID=start.id, goalID=goal.id, graph=graph):
+            break
+        count += 1
+        if count > 10:
+            # print("Cannot find a valid graph, try other seed ranges")
+            raise ValueError("Cannot find a valid graph, try other seed ranges")
+    return start, goal, graph
+
+def create_3bridges_graph():
+    node1 = g.Vertex(coord=(-10.0, 0.0)) # start node
+    node2 = g.Vertex(coord=(np.random.uniform(8.5,11.5), np.random.uniform(-1.0,1.5)))
+    node3 = g.Vertex(coord=(np.random.uniform(19.0,21.5), np.random.uniform(-1.0,1.5)))
+    node4 = g.Vertex(coord=(np.random.uniform(29.0,31.5), np.random.uniform(-1.0,1.5))) # goal
+    node5 = g.Vertex(coord=(np.random.uniform(9.0,11.5), np.random.uniform(29.0,31.5)))
+    node6 = g.Vertex(coord=(np.random.uniform(19.0,21.5), np.random.uniform(29.0,31.5)))
+    node7 = g.Vertex(coord=(np.random.uniform(9.0,11.5), np.random.uniform(-79.0,-81.5)))
+    node8 = g.Vertex(coord=(np.random.uniform(19.0,21.5), np.random.uniform(-79.0,-81.5)))
+    nodes = [node1, node2, node3, node4, node5, node6, node7, node8]
+    graph = g.Graph(nodes)
+    graph.edges.clear()
+    rand1 = np.random.uniform(0.55,0.65)
+    edge_rand  = np.random.randint(1,3)
+    graph.add_edge(node1, node2, np.random.uniform(0.1,0.15))
+    if edge_rand == 1:
+        graph.add_edge(node2, node3, rand1)
+    else:
+        graph.add_edge(node2, node3, np.random.uniform(0.15,0.25))
+    if edge_rand == 2:
+        graph.add_edge(node3, node4, rand1)
+    else:
+        graph.add_edge(node3, node4, np.random.uniform(0.15,0.25))
+    
+    rand1 = np.random.uniform(0.4,0.5)
+    edge_rand  = np.random.randint(1,3)
+    graph.add_edge(node1, node5, np.random.uniform(0.1,0.15))
+    if edge_rand == 1:
+        graph.add_edge(node5, node6, rand1)
+    else:
+        graph.add_edge(node5, node6, np.random.uniform(0.1,0.2))
+    if edge_rand == 2:
+        graph.add_edge(node6, node4, rand1)
+    else:
+        graph.add_edge(node6, node4, np.random.uniform(0.1,0.2))
+    graph.add_edge(node1, node7, np.random.uniform(0.05,0.1))
+    graph.add_edge(node7, node8, np.random.uniform(0.05,0.1))
+    graph.add_edge(node8, node4, np.random.uniform(0.05,0.1))
+    return node1, node4, graph
+
 def linear_graph_unc():
     start_node = g.Vertex(coord=(0.0, 0.0))
     node1 = g.Vertex(coord=(5.0, 0.0))

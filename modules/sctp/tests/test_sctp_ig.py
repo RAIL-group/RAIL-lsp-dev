@@ -609,3 +609,101 @@ def test_sctp_ig_island_random_small():
    plotting.plot_sctpgraph(graph, ax, textsize=textsize, verbose=True)
    plt.show()
 
+
+def test_sctp_ig_bridges_graph():
+   print("")
+   # seed = 3000
+   # random.seed(seed)
+   seed = 3000
+   np.random.seed(seed)
+   random.seed(seed)
+   start, goal, graph = graphs.random_bridges_graph()
+   num_samples = 5000
+   poi9 = graph.pois[0]
+   poi10 = graph.pois[1]
+   poi11 = graph.pois[2]  
+   poi12 = graph.pois[3]  
+   poi13 = graph.pois[4] # it should be 6   
+   poi14 = graph.pois[5]
+   poi15 = graph.pois[6]
+   poi16 = graph.pois[7]
+   poi17 = graph.pois[8]
+   
+   # if all edges are passable, edge 7's not not positive   
+   start = graph.get_vertex_by_id(1)
+   goal = graph.get_vertex_by_id(4)
+   robot_edge = [start.id, start.id]
+   d0 = 0.0
+   d1 = 0.0
+   atNode = True
+   cur_robot_node = start.id
+   cur_drone_pose = (start.coord[0],start.coord[1])
+   cur_robot_pose = (start.coord[0],start.coord[1])
+   
+   # if drone is moved and ground robot is at the middle of 
+   # robot_edge = [start.id, poi9.id]
+   # poi9.block_prob = 0.0
+   # d0 = 1.0
+   # d1 = 1.0
+   # atNode = False
+   # cur_robot_node = start.id
+   # cur_drone_pose = (2.0,3.0)
+   # cur_robot_pose = (1.0,3.0)
+   
+   heuristic = core.sampling_rollout(graph=graph, robot_edge=robot_edge, d0=d0, d1=d1,
+                                     goalID=goal.id, atNode=atNode, startNode=cur_robot_node,
+                                     n_maps=num_samples)
+   print(f"Heuristic: {heuristic:.2f}")
+   action = core.Action(target = poi9.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi10.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi11.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi12.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=start.coord,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi13.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi14.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi15.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   action = core.Action(target = poi16.id)
+   behave_change, cost = core.get_action_value(graph=graph, action=action, d0=d0, d1=d1, robot_edge=robot_edge,
+                                atNode=atNode, goalID=goal.id, drone_pose=cur_drone_pose,
+                                cur_heuristic=heuristic, n_samples=num_samples)
+   print(f"A{action.target}({behave_change:.2f}/{cost:.2f})->")
+   
+   # fig = plt.figure(figsize=(10, 10), dpi=300)
+   textsize = 4
+   _, ax = plt.subplots()
+   plt.scatter(cur_robot_pose[0], cur_robot_pose[1], marker='o', color='r')
+   plt.text(cur_robot_pose[0]-0.3, cur_robot_pose[1]+0.5, 'R_s', fontsize=textsize)
+   plt.scatter(cur_drone_pose[0], cur_drone_pose[1], marker='o', color='r')
+   plt.text(cur_drone_pose[0]-0.3, cur_drone_pose[1]-1.5, 'D_s', fontsize=textsize)
+   plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
+   plt.text(goal.coord[0]+0.2, goal.coord[1], 'goal', fontsize=textsize)
+   plotting.plot_sctpgraph(graph, ax, textsize=textsize, verbose=True)
+   plt.show()
+

@@ -331,3 +331,24 @@ def test_sctp_island_graph():
     plotting.plot_sctpgraph(graph=graph, plt=plt, verbose=verbose)
     
     plt.show()
+    
+def test_sctp_bridges_graph():
+    seed = 3001
+    np.random.seed(seed)
+    random.seed(seed)
+    verbose = False
+    start, goal, graph = graphs.random_bridges_graph()
+    # fig = plt.figure(figsize=(10, 10), dpi=300)
+    fig, ax = plt.subplots()
+    # ax = plt.gca()
+    ax.set_aspect('equal', adjustable='box')
+    plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+    plt.text(start.coord[0]-0.3, start.coord[1], 'R_s', fontsize=8)
+    plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+    plt.text(start.coord[0]-0.3, start.coord[1]-1.0, 'D_s', fontsize=8)
+    plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
+    plt.text(goal.coord[0]+0.2, goal.coord[1], 'goal', fontsize=8)
+    plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
+    
+    plt.show()
+    

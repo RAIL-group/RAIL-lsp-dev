@@ -55,8 +55,6 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
         backpropagate(leaf, simulation_result)
         
         targets = [a.target for a in sa]
-        # if targets[0] == 187:
-        # if targets[0] == 5 or targets[0] == 2:
         # total_cost += simulation_result
         # with open(logfile, "a+") as f:
         #     f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | HEU-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
@@ -189,5 +187,8 @@ def get_best_path_sctp(root):
         if root.state.uavs == []:
             node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
         else:
+            # if node.prev_action and node.prev_action.rtype == RobotType.Ground:
+            #     node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
+            # else: 
             node = max(children, key=lambda x: x.total_n)        
     return paths, costs

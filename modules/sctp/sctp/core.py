@@ -71,7 +71,7 @@ class SCTPState(object):
         self.vertices_map = dict() # map vertex id to vertex object
         self.n_samples = n_maps
         self.uav_action_values = dict() # map action to its value
-              
+        self.behavior_change = dict() # map action to its value
         if not iscopy:
             self.graph = graph
             self.goalID = goalID
@@ -107,7 +107,9 @@ class SCTPState(object):
             # define drones
             self.uavs = drones 
             self.uav_actions = []
+            # print(f"The number of drones is {len(self.uavs)}")
             if self.uavs != []:
+                
                 self.uav_actions = [Action(target=poi.id, rtype=RobotType.Drone) for poi in self.graph.pois]                
                 self.uav_actions = [action for action in self.uav_actions \
                                     if self.history.get_action_outcome(action) == EventOutcome.CHANCE] # list unexplored pois
@@ -124,19 +126,27 @@ class SCTPState(object):
                         # print(f"THe uav {uav.id} has targeted to POI: {uav.action.target}")
                     else:
                         uav.need_action = True
-                
                 if param.ADD_IV:
-                    # print("Something wrong - it should not be here")
                     for act in self.uav_actions: # only for value information gain 118-127
                         if act in continue_actions:
                             continue
-                        act_value = get_action_value(graph=self.graph, action=act, robot_edge=[self.robot.last_node, self.robot.last_node],
-                                                    d0=0.0, d1=0.0, goalID=self.goalID, atNode=self.robot.at_node, drone_pose=self.robot.cur_pose,
+                        redge = [self.robot.last_node, self.robot.pl_vertex]
+                        d1 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[0]].coord))
+                        d2 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[1]].coord))
+                        bc = get_behavior_change(graph=self.graph, action=act, robot_edge=redge,
+                                                    d0=d1, d1=d2, goalID=self.goalID, atNode=self.robot.at_node,
                                                     cur_heuristic=self.heuristic, n_samples=param.IV_SAMPLE_SIZE)
-                        self.uav_action_values[act] = act_value
+                        self.behavior_change[act] = bc
+                        
+                        # df, act_value = get_action_value(graph=self.graph, action=act, robot_edge=redge,
+                        #                             d0=d1, d1=d2, goalID=self.goalID, atNode=self.robot.at_node, drone_pose=self.robot.cur_pose,
+                        #                             cur_heuristic=self.heuristic, n_samples=param.IV_SAMPLE_SIZE)
+                        # assert df > act_value
+                        # print(f"Action {act.target} has value {act_value:.2f} with df {df:.2f}")
+                        self.uav_action_values[act] = get_action_value(self.behavior_change[act], act, self.uavs[0].cur_pose, self.graph) #act_value
                     self.uav_action_values = dict(sorted(self.uav_action_values.items(), key=lambda item: item[1], reverse=True))
                     self.uav_actions = list(self.uav_action_values.keys())[:min(param.MAX_UAV_ACTION, len(self.uav_action_values))]
-                    
+                    assert len(self.uav_actions) <= param.MAX_UAV_ACTION
                     for _ in range(min(param.MAX_UAV_ACTION, len(self.uav_action_values))):
                         first_key = next(iter(self.uav_action_values))
                         self.uav_action_values.pop(first_key)
@@ -156,6 +166,7 @@ class SCTPState(object):
         return self.state_actions
 
     def update_heuristic2(self):
+        # self.heuristic = 0.0
         redge = [self.robot.last_node, self.robot.pl_vertex]
         block_pois = [key.target for key, value in self.history.get_data().items() if value == EventOutcome.BLOCK]
         new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
@@ -171,7 +182,32 @@ class SCTPState(object):
                                           startNode=self.robot.last_node, n_maps=self.n_samples)        
         return self.heuristic
         
-    def update_uav_actionvalue(self):
+    # def update_uav_actionvalue(self):
+    #     # raise KeyError("This function is not used anymore")
+    #     redge = [self.robot.last_node, self.robot.pl_vertex]
+    #     block_pois = [key.target for key, value in self.history.get_data().items() if value == EventOutcome.BLOCK]
+    #     new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
+    #     min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
+    #     min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
+    #     assert (min_dist1 < 0) == (min_dist2 < 0)
+    #     uav_actions_left = [Action(target=poi.id, rtype=RobotType.Drone) for poi in new_graph.pois]
+    #     uav_actions_left = [action for action in uav_actions_left if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
+    #     self.uav_action_values.clear()
+    #     for action in uav_actions_left:
+    #         _, action_value = get_action_value(graph=new_graph, action=action, robot_edge=redge,
+    #                                         d0=min_dist1, d1=min_dist2, goalID=self.goalID, atNode=self.robot.at_node,
+    #                                         drone_pose=self.robot.cur_pose, cur_heuristic=self.heuristic,
+    #                                         n_samples=param.IV_SAMPLE_SIZE)
+            
+    #         self.uav_action_values[action] = action_value
+    
+    def update_action_value(self, uav_idx):
+        self.uav_action_values.clear()
+        for action, value in self.behavior_change.items():
+            action_value = get_action_value(bc=value, action=action, drone_pose=self.uavs[uav_idx].cur_pose, graph=self.graph)
+            self.uav_action_values[action] = action_value
+    
+    def update_action_bc(self):
         redge = [self.robot.last_node, self.robot.pl_vertex]
         block_pois = [key.target for key, value in self.history.get_data().items() if value == EventOutcome.BLOCK]
         new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
@@ -180,17 +216,14 @@ class SCTPState(object):
         assert (min_dist1 < 0) == (min_dist2 < 0)
         uav_actions_left = [Action(target=poi.id, rtype=RobotType.Drone) for poi in new_graph.pois]
         uav_actions_left = [action for action in uav_actions_left if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
-        self.uav_action_values.clear()
+        # self.uav_action_values.clear()
+        self.behavior_change.clear()
         for action in uav_actions_left:
-            action_value = get_action_value(graph=new_graph, action=action, robot_edge=redge,
+            bc_value = get_behavior_change(graph=new_graph, action=action, robot_edge=redge,
                                             d0=min_dist1, d1=min_dist2, goalID=self.goalID, atNode=self.robot.at_node,
-                                            drone_pose=self.robot.cur_pose, cur_heuristic=self.heuristic,
-                                            n_samples=param.IV_SAMPLE_SIZE)
-            self.uav_action_values[action] = action_value
-        for action in self.uav_actions:
-            if action in self.uav_action_values:
-                del self.uav_action_values[action]
-        
+                                            cur_heuristic=self.heuristic, n_samples=param.IV_SAMPLE_SIZE)
+            self.behavior_change[action] = bc_value
+    
     @property
     def is_goal_state(self):
         return self.robot.last_node == self.goalID or self.noway2goal
@@ -212,10 +245,7 @@ class SCTPState(object):
                 ValueError("Start position is NaN") 
             action.update_pose(start_pos)
             distance, direction = temp_state.get_distance_direction(start_pos, action.target)            
-            # print(f"state depth is: {self.depth} with distance {distance} and direction {direction}")
-            # print(f"the time remaining is: {self.uavs[uav_idx].remaining_time} -- {temp_state.uavs[uav_idx].remaining_time}")
             temp_state.uavs[uav_idx].retarget(action, distance, direction)
-            # print(f"state depth is: {self.depth} =for checking")
             if action.target not in temp_state.assigned_pois:
                 temp_state.assigned_pois.add(action.target)
             anyrobot_action = True
@@ -296,10 +326,8 @@ def advance_state(state1, action):
         else:
             uav.need_action = False
     if robot_reach_first:
-        # print("Ground robot reaches its target first")
         return get_new_nodes_grobot(state, last_node=last_node, last_edge=edge)
     else:
-        # print(f"Drone {uav_index} reaches its target first")
         return get_new_nodes_drone(state=state, uav_index=uav_index)
         
 def get_new_nodes_grobot(state, last_node, last_edge):
@@ -309,13 +337,16 @@ def get_new_nodes_grobot(state, last_node, last_edge):
     # update the uav action set.
     state.uav_actions = [action for action in state.uav_actions if action.target != state.robot.last_node]
     action = Action(target=state.robot.last_node)
-    if param.ADD_IV and len(state.uavs) > 0 and action in state.uav_action_values:
-        del state.uav_action_values[action]
-    if param.ADD_IV:
-        if len(state.uav_actions) == 0 and len(state.uavs) >0 and len(state.uav_action_values) == 0:
+    # if param.ADD_IV and len(state.uavs) > 0 and action in state.uav_action_values:
+    #     del state.uav_action_values[action]
+        
+    if param.ADD_IV and len(state.uavs) >0:
+        if  action in state.uav_action_values:
+            del state.uav_action_values[action]
+        if len(state.uav_actions) == 0  and len(state.uav_action_values) == 0:
             state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone)]
     else:
-        if len(state.uav_actions) == 0 and len(state.uavs) >0:
+        if len(state.uav_actions) == 0:
             state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone)]
     state.v_vertices[state.robot.last_node] = state.v_vertices.get(state.robot.last_node, 0) + 1
     assert state.robot.at_node == True
@@ -324,11 +355,12 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         state.state_actions = [action for action in state.robot_actions]
         state.depth += 1
         state.update_heuristic2()
-        if param.ADD_IV and len(state.uavs) > 0:
-            # state.update_uav_actionvalue()
-            if len(state.uav_actions) ==0 and len(state.uav_action_values) >0:
-                state.uav_actions = [list(state.uav_action_values.keys())[0]]
-                state.uav_action_values.pop(state.uav_actions[0])
+        # if param.ADD_IV and len(state.uavs) > 0: # Nothing to do for drones' actions
+        #     if len(state.uav_actions) <= param.IV_SAMPLE_SIZE and len(state.uav_action_values) >0:
+        #         actions = list(state.uav_action_values.keys())[:min(param.IV_SAMPLE_SIZE, len(state.uav_action_values))]
+        #         state.uav_actions.extend(actions) # [list(state.uav_action_values.keys())[0]]
+        #         for action in actions:
+        #             state.uav_action_values.pop(action)
         return {state: (1.0, state.action_cost)}
     # if edge_status is traversable, return action traversable (state) with traversable cost
     elif vertex_status == EventOutcome.TRAV: 
@@ -349,12 +381,16 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         # update the cost if revisiting the vertex
         state.action_cost += (state.v_vertices.get(state.robot.last_node, 0)-1) * REVISIT_PEN
         state.update_heuristic2()
-        if param.ADD_IV and len(state.uavs) > 0:
-            if cur_node in state.graph.vertices: # only reculcate action values if robots is at vertex
-                state.update_uav_actionvalue()
-            if len(state.uav_actions) ==0 and len(state.uav_action_values) >0:
-                state.uav_actions = [list(state.uav_action_values.keys())[0]]
-                state.uav_action_values.pop(state.uav_actions[0])
+        if param.ADD_IV and len(state.uavs) > 0 and cur_node in state.graph.vertices: # only reculcate action values if robots is at vertex
+            state.update_action_bc()
+            # state.update_uav_actionvalue()
+        #     if len(state.uav_action_values) > 0:
+        #         state.uav_actions = []
+        #         n_to_add = min(param.MAX_UAV_ACTION - len(state.uav_actions), len(state.uav_action_values))
+        #         actions = list(state.uav_action_values.keys())[:n_to_add]
+        #         state.uav_actions.extend(actions)
+        #         for action in actions:
+        #             state.uav_action_values.pop(action)
         return {state: (1.0, state.action_cost)}
     # if edge_status is 'CHANCE', we don't know the outcome.action
     elif vertex_status == EventOutcome.CHANCE:
@@ -371,9 +407,14 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         new_state_trav.state_actions = [action for action in new_state_trav.robot_actions]
         new_state_trav.depth += 1
         new_state_trav.update_heuristic2()
-        if param.ADD_IV and len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
-                new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
-                new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
+        if param.ADD_IV and len(new_state_trav.uav_actions) <= param.IV_SAMPLE_SIZE and len(new_state_trav.uav_action_values) >0:
+            actions = list(new_state_trav.uav_action_values.keys())[:min(param.IV_SAMPLE_SIZE-len(new_state_trav.uav_actions), \
+                                                                         len(new_state_trav.uav_action_values))]
+            new_state_trav.uav_actions.extend(actions) # [list(state.uav_action_values.keys())[0]]
+            for action in actions:
+                new_state_trav.uav_action_values.pop(action)
+            # new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
+            # new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
         # BLOCKED
         new_state_block = state.copy()
         new_state_block.action_cost = state.action_cost
@@ -387,9 +428,14 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         stuck= is_robot_stuck(new_state_block)
         new_state_block.depth += 1
         new_state_block.update_heuristic2()
-        if param.ADD_IV and len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
-                new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
-                new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
+        if param.ADD_IV and len(new_state_block.uav_actions) <= param.IV_SAMPLE_SIZE and len(new_state_block.uav_action_values) >0:
+            actions = list(new_state_block.uav_action_values.keys())[:min(param.IV_SAMPLE_SIZE-len(new_state_block.uav_actions), \
+                                                                         len(new_state_block.uav_action_values))]
+            new_state_block.uav_actions.extend(actions) # [list(state.uav_action_values.keys())[0]]
+            for action in actions:
+                new_state_block.uav_action_values.pop(action)
+                # new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
+                # new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
         assert new_state_block.depth == new_state_trav.depth
         return {new_state_trav: (1.0-vertex.block_prob, new_state_trav.action_cost),
                     new_state_block: (vertex.block_prob, new_state_block.action_cost)}
@@ -401,28 +447,35 @@ def get_new_nodes_drone(state, uav_index):
     # determine all actions related to the poi and remove it from the set.
     poi_id = state.uavs[uav_index].last_node
     assert poi_id == vertex.id
-    state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
     action = Action(target=poi_id, rtype=RobotType.Drone)
-    # assert action not in state.uav_action_values
+    # state.uav_actions.pop(action)
+    state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
+    
+    # if param.ADD_IV: # adding information gain
+        # if  action in state.uav_action_values:
+        #     del state.uav_action_values[action]
         
-    if param.ADD_IV: # adding information gain
-        if len(state.uav_actions) == 0 and len(state.uav_action_values) == 0:
-            state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone, 
-                                        start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
-            state.state_actions = [action for action in state.uav_actions]
-        elif len(state.uav_actions) > 0:
-            for action in state.uav_actions:
-                action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-            state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
-    else:
+        # if len(state.uav_actions) == 0 and len(state.uav_action_values) == 0:
+        #     state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone, 
+        #                                 start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
+        # else:
+        #     if len(state.uav_action_values) > 0:
+        #         if len(state.uav_actions) < param.MAX_UAV_ACTION:
+        #             n_to_add = min(param.MAX_UAV_ACTION - len(state.uav_actions), len(state.uav_action_values))
+        #             actions = list(state.uav_action_values.keys())[:n_to_add]
+        #             state.uav_actions.extend(actions)
+        #             for action in actions:
+        #                 state.uav_action_values.pop(action) 
+        #     for action in state.uav_actions:
+        #         action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
+    if not param.ADD_IV: # else:
         if len(state.uav_actions) == 0:
             state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone, 
                                         start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
-            state.state_actions = [action for action in state.uav_actions]
         else:
             for action in state.uav_actions:
                 action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-            state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
+        state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
         
     # if some uavs also finish theirs actions, reset need_action for the next iteration
     for i, uav in enumerate(state.uavs):
@@ -433,7 +486,6 @@ def get_new_nodes_drone(state, uav_index):
     
     if vertex_status == EventOutcome.BLOCK: # should not go here
         ValueError("Drones should never visit this node")
-        assert 1==0
         state.depth += 1
         return {state: (1.0, state.action_cost)}
     elif vertex_status == EventOutcome.TRAV:  # only at goal
@@ -447,34 +499,44 @@ def get_new_nodes_drone(state, uav_index):
             state.robot.remaining_time = 0.0
             state.robot_actions = [Action(target=state.robot.edge[0], start_pose = (state.robot.cur_pose[0],state.robot.cur_pose[1])), 
                                    Action(target=state.robot.edge[1], start_pose = (state.robot.cur_pose[0],state.robot.cur_pose[1]))]
-        # TRAVERSABLE
-        new_state_trav = state.copy()
-        new_state_trav.action_cost = state.action_cost
-        new_state_trav.history.add_history(state.uavs[uav_index].action, EventOutcome.TRAV)
-        stuck = is_robot_stuck(new_state_trav)
-        new_state_trav.depth += 1
-        new_state_trav.update_heuristic2()
-        if param.ADD_IV and len(new_state_trav.uav_actions) ==0 and len(new_state_trav.uav_action_values) >0:
-            new_state_trav.uav_actions = [list(new_state_trav.uav_action_values.keys())[0]]
-            new_state_trav.uav_action_values.pop(new_state_trav.uav_actions[0])
-        new_state_trav.state_actions = [action for action in new_state_trav.uav_actions]
-        # BLOCKED
-        new_state_block = state.copy()
-        new_state_block.action_cost = state.action_cost
-        new_state_block.history.add_history(state.uavs[uav_index].action, EventOutcome.BLOCK)
-        new_state_block.robot_actions = [action for action in new_state_block.robot_actions \
-                            if new_state_block.history.get_action_outcome(action) != EventOutcome.BLOCK]
-        stuck = is_robot_stuck(new_state_block)
-        new_state_block.depth += 1
-        new_state_block.update_heuristic2()
-        if param.ADD_IV and len(new_state_block.uav_actions) ==0 and len(new_state_block.uav_action_values) >0:
-            new_state_block.uav_actions = [list(new_state_block.uav_action_values.keys())[0]]
-            new_state_block.uav_action_values.pop(new_state_block.uav_actions[0])
-        new_state_block.state_actions = [action for action in new_state_block.uav_actions]
+        new_state_trav = get_drone_new_node(state, uav_index, blocked=False) # TRAVERSABLE STATE
+        new_state_block = get_drone_new_node(state, uav_index, blocked=True) # BLOCKED STATE
         assert new_state_trav.depth == new_state_block.depth
         return {new_state_trav: (1.0-vertex.block_prob, new_state_trav.action_cost),
                     new_state_block: (vertex.block_prob, new_state_block.action_cost)}
 
+def compute_drone_action(state, uav_index):
+    assert len(state.uavs) > 0
+    state.update_action_value(uav_index)
+    if len(state.uav_action_values) > 0:
+        state.uav_actions = []
+        n_to_add = min(param.MAX_UAV_ACTION - len(state.uav_actions), len(state.uav_action_values))
+        actions = list(state.uav_action_values.keys())[:n_to_add]
+        state.uav_actions.extend(actions)
+        for action in actions:
+            state.uav_action_values.pop(action)
+        for action in state.uav_actions:
+            action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
+    else:
+        state.uav_actions = [Action(target=state.goalID, rtype=RobotType.Drone, 
+                            start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
+
+def get_drone_new_node(state, uav_index, blocked=False):
+    assert len(state.uavs) > 0
+    new_state = state.copy()
+    new_state.action_cost = state.action_cost
+    if blocked:
+        new_state.history.add_history(state.uavs[uav_index].action, EventOutcome.BLOCK)
+    else:
+        new_state.history.add_history(state.uavs[uav_index].action, EventOutcome.TRAV)
+    stuck = is_robot_stuck(new_state)
+    new_state.depth += 1
+    new_state.update_heuristic2()
+    if param.ADD_IV:
+        compute_drone_action(new_state, uav_index)
+    new_state.state_actions = [action for action in new_state.uav_actions]
+    return new_state
+    
 
 def is_robot_stuck(state):
     if state.robot.last_node == state.goalID:
@@ -535,7 +597,6 @@ def sctp_rollout3(state):
 
 
 def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_maps=100):
-    # noway_penalty = 200.0
     total_cost = 0.0
     for _ in range(n_maps):
         block_pois = [poi.id for poi in graph.pois if random.random() <= poi.block_prob ] 
@@ -550,12 +611,10 @@ def sampling_rollout(graph, robot_edge, d0, d1, goalID, atNode, startNode, n_map
             if cost0 >= 0:
                 total_cost += (cost0+d0) if (cost0+d0)<(cost1+d1) else (cost1+d1)
             else:
-                total_cost += param.NOWAY_PEN
+                total_cost += param.NOWAY_PEN #param.STUCK_COST
     return total_cost/n_maps
 
-def get_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, 
-                     drone_pose, cur_heuristic, n_samples=100):
-    dist = np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/VEL_RATIO
+def get_behavior_change(graph, action, robot_edge, d0, d1, goalID, atNode, cur_heuristic, n_samples=100):
     # value if the action is passable
     block_value = 0.0
     pass_value = 0.0
@@ -572,10 +631,10 @@ def get_action_value(graph, action, robot_edge, d0, d1, goalID, atNode,
     block_value /= n_samples
     aver_block = graph.get_poi(action.target).block_prob * block_value
     aver_pass = (1-graph.get_poi(action.target).block_prob) * pass_value
-    value = aver_block + aver_pass
-    bc = cur_heuristic - value
-    return bc, bc - dist 
+    return cur_heuristic - (aver_block + aver_pass)
 
+def get_action_value(bc, action, drone_pose, graph):
+    return bc - np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/VEL_RATIO
 
 def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=False):
     # noway_penalty = 200.0

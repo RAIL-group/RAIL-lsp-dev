@@ -1,6 +1,6 @@
 import numpy as np
 import sctp
-from sctp.param import VEL_RATIO
+from sctp.param import VEL_RATIO, RobotType
 
 class SCTPPlanExecution(object):
     def __init__(self, graph, reached_goal, goalID, robot, drones=[], verbose=True):
@@ -48,26 +48,54 @@ class SCTPPlanExecution(object):
                 break
             self.vertices_status.clear()
             actions_list = [action for action in self.joint_actions]
+            # print(f"The last action is {actions_list[-1].target if len(actions_list) > 0 else None} {actions_list[-1].rtype if len(actions_list) > 0 else None}")
             self.counter += 1
+            # first_exec = True
+            count = 0
             while True:
                 if self.drones == []:
                     need_replan, actions_list = self.baseline_move(actions_list)
                 else:
-                    need_replan = self.team_move(actions_list[:len(self.drones)+1])
+                    # print(f"Multi-movements - step {count}, remaining actions {len(actions_list)}")
+                    need_replan, actions_list = self.team_move(actions_list)
+                count += 1
                 if need_replan or len(actions_list) == 0:
                     break
+                
             
     def team_move(self, actions_list):
-        self.action_cost = self.update_joint_action(actions_list)    
+        need_replan = True
+        # if actions_list[0].rtype == RobotType.Drone:
+        self.action_cost = self.update_joint_action(actions_list[:len(self.drones)+1])    
         self.transition_robot()
         self.transition_drones()
+        actions_list = actions_list[len(self.drones)+1:]
+        # all_drones_2goals = [drone.action.target==self.goalID for drone in self.drones]
+        #     need_replan = False if all(all_drones_2goals) else True
+        # else:
+        #     [print(f"Action target: {action.target}") for action in actions_list]
+            # drones_needs_action = [drone.need_action for drone in self.drones]
+            # if any(drones_needs_action):
+            #     raise KeyError("The drone head to goal, so we dont't need to reset the ground robot")
+            #     index = drones_needs_action.index(True)
+            #     self.action_cost = self.update_action(action=actions_list[0], rd_ID=index)
+            # elif self.robot.need_action:
+            # self.action_cost = self.update_action(action=actions_list[0])
+            # else:
+            #     raise ValueError("No robot needs action, it's wrong ")
+            # self.transition_robot()
+            # self.transition_drones()
+            # actions_list = actions_list[1:]
+            # all_drones_2goals = [drone.action.target==self.goalID for drone in self.drones]
+            # need_replan = False if all(all_drones_2goals) else True
         # Reset the robot and drones
-        self.robot.need_action = True
-        self.robot.remaining_time = 0.0
-        for drone in self.drones:
-            drone.need_action = True 
-            drone.remaining_time = 0.0
-        return True
+        if need_replan: 
+            self.robot.need_action = True
+            self.robot.remaining_time = 0.0
+            for drone in self.drones:
+                drone.need_action = True 
+                drone.remaining_time = 0.0
+        return need_replan, actions_list
         
     def baseline_move(self, actions_list):
         self.action_cost = self.update_action(actions_list[0])
@@ -85,19 +113,30 @@ class SCTPPlanExecution(object):
         self.joint_actions = joint_actions
         self.costs = costs
 
-    def update_action(self, action, droneID = None):        
-        # if droneID is None:
-        # for the robot
-        assert self.robot.remaining_time == 0.0
-        assert self.robot.need_action == True
-        end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
-        distance = np.linalg.norm(np.array(self.robot.cur_pose) - np.array(end_pos))
-        if distance != 0.0:
-            robot_direction = (np.array([end_pos[0], end_pos[1]]) - self.robot.cur_pose)/distance
+    def update_action(self, action, rd_ID = None):        
+        if action.rtype == RobotType.Ground:
+            assert self.robot.remaining_time == 0.0
+            assert self.robot.need_action == True
+            end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+            distance = np.linalg.norm(np.array(self.robot.cur_pose) - np.array(end_pos))
+            direction = (np.array([end_pos[0],end_pos[1]])-self.robot.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+            self.robot.retarget(action, distance, direction)
         else:
-            robot_direction = np.array([1.0, 1.0])
-        self.robot.retarget(action, distance, robot_direction)
-        return distance
+            assert rd_ID is not None, "Drone ID must be provided for drone actions"
+            drone = self.drones[rd_ID]
+            assert drone.remaining_time == 0.0
+            assert drone.need_action == True
+            end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+            distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
+            direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+            drone.retarget(action, distance, direction)
+        uav_remaining_time = [uav.remaining_time for uav in self.drones if uav.remaining_time > 0.0]
+        if len(uav_remaining_time) == 0:
+            min_time = self.robot.remaining_time
+        else:
+            min_time = min(uav_remaining_time) if uav_remaining_time else self.robot.remaining_time
+            min_time = min(min_time, self.robot.remaining_time)
+        return min_time
             
     def transition_robot(self):
         self.robot.advance_time(self.action_cost)
@@ -132,7 +171,6 @@ class SCTPPlanExecution(object):
                     new_block_found = True if v[0].block_status == 1 else False
                 drone.unfinished_action = None
             else:
-                # print(f"Drone {drone.id} is not at node {drone.last_node}, so it has unfinished action {drone.unfinished_action}")
                 drone.unfinished_action = drone.action
         return new_block_found
              
@@ -146,11 +184,8 @@ class SCTPPlanExecution(object):
             assert self.robot.remaining_time == 0.0
             end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[-1].target][0].coord
             distance = np.linalg.norm(np.array(self.robot.cur_pose) - np.array(end_pos))
-            if distance != 0.0:
-                robot_direction = (np.array([end_pos[0], end_pos[1]]) - self.robot.cur_pose)/distance
-            else:
-                robot_direction = np.array([1.0, 1.0])
-            self.robot.retarget(joint_action[-1], distance, robot_direction)
+            direction = (np.array([end_pos[0], end_pos[1]]) - self.robot.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+            self.robot.retarget(joint_action[-1], distance, direction)
             min_time = distance
         else:
             min_time = self.robot.remaining_time
@@ -162,13 +197,9 @@ class SCTPPlanExecution(object):
             assert drone.remaining_time == 0.0
             assert drone.need_action == True
             end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[i].target][0].coord
-            distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))            
-            if distance != 0.0:
-                direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance
-            else:
-                direction = np.array([1.0, 1.0])
+            distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
+            direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
             drone.retarget(joint_action[i], distance, direction)
             if distance > 0.0 and (distance/VEL_RATIO) < min_time:
                 min_time = distance/VEL_RATIO
         return min_time
-        # self.action_cost = min_time

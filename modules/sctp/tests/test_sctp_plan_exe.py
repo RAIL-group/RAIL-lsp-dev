@@ -6,7 +6,7 @@ from pathlib import Path
 from sctp import sctp_graphs as graphs
 from sctp.utils import plotting 
 from sctp.robot import Robot
-from sctp import core
+from sctp import core, param
 from sctp.param import EventOutcome, RobotType
 from sctp.planners import sctp_planner as planner
 from sctp.planners import sctp_plan_exe as plan_loop
@@ -19,9 +19,9 @@ def _get_args():
     parser.add_argument('--planner', type=str, default='base')
     parser.add_argument('--num_drones', type=int, default=1)
     parser.add_argument('--num_iterations', type=int, default=1000)
-    parser.add_argument('--C', type=int, default=100)
+    parser.add_argument('--C', type=int, default=300)
     parser.add_argument('--max_depth', type=int, default=500)
-    parser.add_argument('--n_samples', type=int, default=100)
+    parser.add_argument('--n_maps', type=int, default=100)
     parser.add_argument('--n_vertex', type=int, default=14)
 
     args = parser.parse_args(['--save_dir', ''])
@@ -292,16 +292,20 @@ def test_sctp_plan_exec_mg():
 def test_sctp_plan_exec_rg():
     print("")
     args = _get_args()
-    args.planner = 'sctp'
-    args.seed = 3000
-    args.num_iterations = 500
-    args.n_samples = 1000
+    args.planner = 'sctpiv'
+    if args.planner == 'sctpiv':
+        param.ADD_IV = True
+        param.IV_SAMPLE_SIZE = 1000
+    args.seed = 3005
+    args.num_iterations = 1500
     args.n_vertex = 8
-    args.max_depth = 30
+    args.max_depth = 25
+    args.C = 300
     verbose = True
     random.seed(args.seed)
     np.random.seed(args.seed)
-    start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
+    # start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
+    start, goal, graph = graphs.random_bridges_graph()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
 
@@ -310,11 +314,11 @@ def test_sctp_plan_exec_rg():
     planner_drones = [drone.copy() for drone in drones]
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=graph, goalID=goal.id,robot=planner_robot, 
                                       drones=planner_drones, tree_depth=args.max_depth, 
-                                      n_samples=args.n_samples, rollout_fn=core.sctp_rollout3, verbose=True) 
+                                      n_maps=param.IV_SAMPLE_SIZE, rollout_fn=core.sctp_rollout3, verbose=True) 
     plan_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
         
-    plan_exec.max_counter = 25
+    # plan_exec.max_counter = 50
     for step_data in plan_exec:
         print("####################### New navigation #######################################")
         # print(step_data['drones'])
@@ -323,7 +327,9 @@ def test_sctp_plan_exec_rg():
             step_data['robot'],
             step_data['drones']
         )
+        break
         joint_actions, cost = sctpplanner.compute_joint_action()
+        
         plan_exec.save_joint_actions(joint_actions, cost)
     
     cost = robot.net_time
