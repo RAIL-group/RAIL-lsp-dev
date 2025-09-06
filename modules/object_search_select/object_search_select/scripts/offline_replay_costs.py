@@ -80,8 +80,14 @@ def eval_main(args):
 
     plt.subplot(224)
     ax = plt.subplot(224)
-    object_search.plotting.plot_grid_with_robot_trajectory(ax, known_grid, robot.all_poses, trajectory, known_graph)
-    plt.title(f"Cost: {cost:0.1f} meters")
+    # object_search.plotting.plot_grid_with_robot_trajectory(ax, known_grid, robot.all_poses, trajectory, known_graph)
+    object_search.plotting.plot_grid_with_robot_trajectory_gradient(ax,
+                                                                    known_grid,
+                                                                    robot.all_poses,
+                                                                    trajectory,
+                                                                    known_graph,
+                                                                    cmap=args.planner_cmaps[args.chosen_planner])
+    plt.title(f"Planner: {args.chosen_planner} Cost: {cost:0.2f}")
 
     plt.savefig(Path(args.save_dir) /
                 f'img_plcy_{args.chosen_planner}_envrnmnt_{args.env}_{args.current_seed}.png', dpi=1000)
