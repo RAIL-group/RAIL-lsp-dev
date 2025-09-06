@@ -1,5 +1,5 @@
 from .planner import Planner
-from lsp.core import get_robot_distances
+from object_search.core import get_robot_distances
 
 
 class KnownPlanner(Planner):

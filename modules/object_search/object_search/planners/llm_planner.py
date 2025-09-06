@@ -2,7 +2,7 @@ from object_search.planners import LearnedPlanner
 from object_search.learning.models.llm import GPT, Gemini
 from object_search.core import Subgoal
 from object_search.learning import utils
-from lsp.core import get_frontier_distances, get_robot_distances
+from object_search.core import get_frontier_distances, get_robot_distances
 
 
 class LSPLLMGPTPlanner(LearnedPlanner):

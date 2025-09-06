@@ -63,7 +63,7 @@ def get_best_expected_cost_and_frontier_list(grid,
     frontiers = [f for f in frontiers if f.prob_feasible != 0]
 
     # Get robot distances
-    robot_distances = lsp.core.get_robot_distances(
+    robot_distances = get_robot_distances(
         grid, robot_pose, frontiers)
 
     # Get goal distances
@@ -71,7 +71,7 @@ def get_best_expected_cost_and_frontier_list(grid,
         goal_distances = {frontier: robot_distances[frontier]
                           for frontier in frontiers}
     else:
-        goal_distances = lsp.core.get_robot_distances(
+        goal_distances = get_robot_distances(
             grid, destination, frontiers)
 
     # Get most probable n frontiers to limit computational load
@@ -80,7 +80,7 @@ def get_best_expected_cost_and_frontier_list(grid,
                                                  robot_distances, num_frontiers_max)
 
     # Calculate robot and frontier distances
-    frontier_distances = lsp.core.get_frontier_distances(grid, frontiers)
+    frontier_distances = get_frontier_distances(grid, frontiers)
 
     distances = {
         'frontier': frontier_distances,
@@ -90,3 +90,11 @@ def get_best_expected_cost_and_frontier_list(grid,
 
     out = lsp.core.get_lowest_cost_ordering(frontiers, distances)
     return out
+
+
+def get_robot_distances(grid, robot_pose, frontiers):
+    return lsp.core.get_robot_distances(grid, robot_pose, frontiers)
+
+
+def get_frontier_distances(grid, frontiers):
+    return lsp.core.get_frontier_distances(grid, frontiers)
