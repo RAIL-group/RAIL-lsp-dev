@@ -2,7 +2,6 @@ from object_search.planners import LearnedPlanner
 from object_search.learning.models.llm import GPT, Gemini
 from object_search.core import Subgoal
 from object_search.learning import utils
-from object_search.core import get_frontier_distances, get_robot_distances
 
 
 class LSPLLMGPTPlanner(LearnedPlanner):
@@ -54,14 +53,14 @@ class FullLLMPlanner(LearnedPlanner):
         # Room distances are computed once since they don't change
         if self.room_distances is None:
             rooms = [Subgoal(idx, self.graph.get_node_position_by_idx(idx)) for idx in self.graph.room_indices]
-            room_distances = get_frontier_distances(self.grid, rooms) if len(rooms) > 1 else {}
+            room_distances = self.get_subgoal_distances(self.grid, rooms) if len(rooms) > 1 else {}
             # Convert distances to meters for better interpretability by LLMs
             self.room_distances = {frozenset([r1.id, r2.id]): float(d) * self.args.resolution
                                    for (r1, r2), d in room_distances.items()}
 
         # Robot distances are computed at every update
         containers = [Subgoal(idx, self.graph.get_node_position_by_idx(idx)) for idx in self.graph.container_indices]
-        robot_distances = get_robot_distances(self.grid, self.robot_pose, containers)
+        robot_distances = self.get_robot_distances(self.grid, self.robot_pose, containers)
         self.robot_distances = {c.id: float(d) * self.args.resolution
                                 for c, d in robot_distances.items()}
 

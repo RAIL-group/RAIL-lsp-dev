@@ -2,7 +2,7 @@ import torch
 from .planner import Planner
 from object_search.learning import utils
 from object_search.learning.models.fcnn import FCNN
-from object_search import core
+import lsp
 
 NUM_MAX_FRONTIERS = 8
 
@@ -38,13 +38,35 @@ class LearnedPlanner(Planner):
                 )
 
     def compute_selected_subgoal(self):
-        min_cost, frontier_ordering = core.get_best_expected_cost_and_frontier_list(
-            self.grid,
-            self.robot_pose,
-            self.destination,
-            self.subgoals,
-            num_frontiers_max=NUM_MAX_FRONTIERS)
+        subgoals = [s for s in self.subgoals if s.prob_feasible != 0]
 
+        # Get robot distances
+        robot_distances = self.get_robot_distances(
+            self.grid, self.robot_pose, subgoals)
+
+        # Get goal distances
+        if self.destination is None:
+            goal_distances = {subgoal: robot_distances[subgoal]
+                              for subgoal in subgoals}
+        else:
+            goal_distances = self.get_robot_distances(
+                self.grid, self.destination, subgoals)
+
+        # Get most probable n subgoals to limit computational load
+        if NUM_MAX_FRONTIERS > 0 and NUM_MAX_FRONTIERS < len(subgoals):
+            subgoals = lsp.core.get_top_n_frontiers(subgoals, goal_distances,
+                                                    robot_distances, NUM_MAX_FRONTIERS)
+
+        # Calculate robot and subgoal distances
+        frontier_distances = self.get_subgoal_distances(self.grid, subgoals)
+
+        distances = {
+            'frontier': frontier_distances,
+            'robot': robot_distances,
+            'goal': goal_distances,
+        }
+
+        min_cost, frontier_ordering = lsp.core.get_lowest_cost_ordering(subgoals, distances)
         return frontier_ordering[0]
 
 

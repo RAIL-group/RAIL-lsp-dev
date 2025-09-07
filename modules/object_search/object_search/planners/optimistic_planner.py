@@ -1,5 +1,4 @@
 from .planner import Planner
-from object_search.core import get_robot_distances
 
 
 class OptimisticPlanner(Planner):
@@ -9,6 +8,6 @@ class OptimisticPlanner(Planner):
         self.destination = destination
 
     def compute_selected_subgoal(self):
-        robot_distances = get_robot_distances(
+        robot_distances = self.get_robot_distances(
             self.grid, self.robot_pose, self.subgoals)
         return min(self.subgoals, key=robot_distances.get)

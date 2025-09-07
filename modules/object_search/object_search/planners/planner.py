@@ -1,3 +1,4 @@
+from object_search import core
 from object_search.core import Subgoal
 
 
@@ -15,12 +16,18 @@ class Planner():
         self.new_subgoals = [s for s in subgoals]
         self.subgoals = []
         for idx in subgoals:
-            pose = self.graph.get_node_position_by_idx(idx)[:2]
+            pose = self.graph.get_node_position_by_idx(idx)
             self.subgoals.append(Subgoal(idx, pose))
         self._update_subgoal_properties()
 
     def _update_subgoal_properties(self):
         pass
+
+    def get_robot_distances(self, grid, robot_pose, subgoals):
+        return core.get_robot_distances(grid, robot_pose, subgoals)
+
+    def get_subgoal_distances(self, grid, subgoals):
+        return core.get_frontier_distances(grid, subgoals)
 
     def compute_selected_subgoal(self):
         raise NotImplementedError
