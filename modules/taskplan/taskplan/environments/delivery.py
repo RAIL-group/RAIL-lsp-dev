@@ -232,10 +232,10 @@ def get_objects():
     # list the objects remotecontrol and waterbottle
     cellphone = {'id': 'cellphone|3|0'}
     waterbottle = {'id': 'waterbottle|1|0'}
-    newspaper = {'id': 'newspaper|3|0'}
-    apple = {'id': 'apple|1|0'}
-    remote = {'id': 'remotecontrol|2|0'}
-    television = {'id': 'television|2|0'}
+    # newspaper = {'id': 'newspaper|3|0'}
+    # apple = {'id': 'apple|1|0'}
+    # remote = {'id': 'remotecontrol|2|0'}
+    # television = {'id': 'television|2|0'}
 
     # list the containers that are in kitchen: diningtable, fridge
     # countertop, sink, garbagecan
@@ -251,7 +251,7 @@ def get_objects():
     countertop = {
         'id': 'countertop|1|0',
         'position': (30, 269),
-        'children': [apple]
+        # 'children': [apple]
     }
     sink = {
         'id': 'sink|1|0',
@@ -271,12 +271,12 @@ def get_objects():
     tvstand = {
         'id': 'tvstand|3|0',
         'position': (835, 269),
-        'children': [remote, television]
+        # 'children': [remote, television]
     }
     sofa = {
-        'id': 'sofa|3|0',
+        'id': 'couch|3|0',
         'position': (989, 80),
-        'children': [newspaper]
+        # 'children': [newspaper]
     }
     desk = {
         'id': 'desk|3|0',
