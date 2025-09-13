@@ -195,7 +195,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
     # elif goal_for == 'demo2':
     #     task = '(or (and (exists (?obj1 - item) (and (obj-type-bread ?obj1) (is-toasted ?obj1) (is-at ?obj1 countertop|1|0))) (exists (?obj2 - item) (and (obj-type-plate ?obj2) (is-at ?obj2 countertop|1|0))) (exists (?obj - item) (and (obj-type-mug ?obj) (filled-with-coffee ?obj) (is-at ?obj countertop|1|0)))))'
     elif goal_for == 'demo_delivery':
-        task = '(and (exists (?obj1 - item) (and (obj-type-cellphone ?obj1) (is-at ?obj1 bed|3|0))) (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1|0))))'
+        task = '(and (exists (?obj1 - item) (and (obj-type-cellphone ?obj1) (is-at ?obj1 bed|2|0))) (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1|0))))'
         # task = '(and (exists (?obj2 - item) (and (obj-type-waterbottle ?obj2) (is-at ?obj2 countertop|1|0))))'
     else:
         task = goal_provider(seed, cnt_of_interest, obj_of_interest,
@@ -207,11 +207,11 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
     goal = [task]
     # import pickle
     # spot_init_fluents = pickle.load(open('/data/test_logs/init_fluents.pkl', 'rb'))
-    import json
-    import ast
-    with open('/data/test_logs/spot_init_fluents_renamed.json', 'r') as f:
-        json_data = json.load(f)
-    spot_init_fluents = {ast.literal_eval(k): v for k, v in json_data.items()}
+    # import json
+    # import ast
+    # with open('/data/test_logs/spot_init_fluents_renamed.json', 'r') as f:
+    #     json_data = json.load(f)
+    # spot_init_fluents = {ast.literal_eval(k): v for k, v in json_data.items()}
     # Instead of constructing and returning a PDDL string, make it return a Python dictionary representing the problem components.
     struct = {
         'domain_name': 'indoor',
@@ -219,7 +219,7 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
         'objects': objects,
         'missing_objects': missing_objects,
         'init_predicates': init_predicates,  # List of tuples/strings for non-numeric facts
-        'init_fluents': spot_init_fluents,  # Dictionary for numeric fluents
+        'init_fluents': init_fluents,  # Dictionary for numeric fluents
         'goal_states': goal,
         'metric': 'minimize (total-cost)'
     }

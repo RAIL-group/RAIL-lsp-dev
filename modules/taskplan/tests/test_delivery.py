@@ -7,11 +7,13 @@ import procthor
 import taskplan
 from taskplan.environments.longhome import LongHome
 from taskplan.environments.delivery import DeliveryEnvironment
+from taskplan.environments.delivery_v2 import DeliveryEnvironmentV2
+from procthor import utils
 
 
 def get_args():
     args = lambda: None
-    args.current_seed = 8
+    args.current_seed = 6
     args.resolution = 0.05
     args.goal_type = 'breakfast_coffee'
     args.cache_path = '/data/.cache'
@@ -47,6 +49,7 @@ def test_delivery():
 
     # Initialize the PartialMap with whole graph
     partial_map = taskplan.core.PartialMap(whole_graph, grid)
+    partial_map.map_data = thor_data
     partial_map.set_room_info(init_robot_pose, thor_data.rooms)
     # print('From test demo')
     # print(partial_map.room_info)
@@ -90,11 +93,13 @@ def test_delivery():
     # 0 plot the plan
     taskplan.plotting.plot_plan(plan=executed_actions)
 
-    plt.subplot(222)
+    ax = plt.subplot(222)
     # 1 plot the whole graph
     plt.title('Whole scene graph', fontsize=6)
-    graph_image = whole_graph['graph_image']
-    plt.imshow(graph_image)
+    # graph_image = whole_graph['graph_image']
+    procthor.plotting.plot_graph(
+        ax, whole_graph['nodes'], whole_graph['edge_index'])
+    # plt.imshow(graph_image)
     plt.box(False)
     # Hide x and y ticks
     plt.xticks([])

@@ -12,20 +12,15 @@ class DeliveryEnvironment:
         self.containers = get_objects()
         # self.known_cost = get_known_cost(self.occupancy_grid, self.containers,
         #                                  self.get_robot_pose())
-        self.known_cost, self.container_distances, self.find_cost = get_real_cost()
+        self.known_cost, self.find_cost = get_real_cost()
         self.plot_offset = [0, 0]
         self.plot_extent = [0, self.occupancy_grid.shape[0],
                             0, self.occupancy_grid.shape[1]]
 
-        self.scenegraph = SceneGraph()
-        graph = self.get_graph(include_node_embeddings=False)
-        self.scenegraph.nodes = graph['nodes']
-        self.scenegraph.edges = graph['edge_index']
-        self.scenegraph.asset_id_to_node_idx_map = graph['idx_map']
+        graph = self.get_graph()
 
     def get_robot_pose(self):
-        # return (50, 150)  # Decide for left and right
-        return (31, 190)  # for the real environment, start in front of fridge
+        return (50, 150)  # Decide for left and right
 
     def get_top_down_frame(self):
         return self.occupancy_grid
@@ -42,7 +37,6 @@ class DeliveryEnvironment:
             'id': 'Apartment|0',
             'name': 'apartment',
             'pos': (0, 0),
-            'position': (0, 0),
             'type': [1, 0, 0, 0]
         }
         node_count += 1
@@ -54,7 +48,6 @@ class DeliveryEnvironment:
                 'id': room['id'],
                 'name': room['roomType'].lower(),
                 'pos': room['position'],
-                'position': room['position'],
                 'type': [0, 1, 0, 0]
             }
             edges.append(tuple([0, node_count]))
@@ -80,9 +73,10 @@ class DeliveryEnvironment:
                 'id': assetId,
                 'name': name,
                 'pos': container['position'],
-                'position': container['position'],
                 'type': [0, 0, 1, 0]
             }
+            # if name == 'diningtable':
+            #     print('Dining table at:', room_id)
             edges.append(tuple([room_id, node_count]))
             cnt_node_idx.append(node_count)
             node_count += 1
@@ -103,13 +97,13 @@ class DeliveryEnvironment:
                         'id': assetId,
                         'name': name,
                         'pos': container['position'],
-                        'position': container['position'],
                         'type': [0, 0, 0, 1]
                     }
                     edges.append(tuple([src, node_count]))
                     obj_node_idx.append(node_count)
                     node_count += 1
-
+        print(len(nodes), len(edges))
+        exit()
         graph = {
             'nodes': nodes,  # dictionary {id, name, pos, type}
             'edge_index': edges,  # pairwise edge list
@@ -357,9 +351,5 @@ def get_real_cost(json_file="/data/test_logs/spot_init_fluents_renamed.json"):
             known_cost[key[1]][key[1]] = 0.0
         known_cost[key[0]][key[1]] = container_distances[key]
         known_cost[key[1]][key[0]] = container_distances[key]
-    # room_names = ['kitchen|0|1', 'bedroom|0|2']
-    # container_distances[(room_names[0], room_names[1])] = 6.5
-    # container_distances[(room_names[1], room_names[0])] = 6.5
     print("Known cost:", known_cost)
-    print("==============")
-    return known_cost, container_distances, find_costs
+    return known_cost, find_costs
