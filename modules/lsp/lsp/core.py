@@ -18,6 +18,7 @@ import lsp
 from gridmap import planning
 import gridmap.utils
 import lsp_accel
+from taskplan.utilities.utils import get_action_costs
 
 IS_FROM_LAST_CHOSEN_REWARD = 0 * 10.0
 
@@ -521,11 +522,13 @@ class FState(object):
     def __init__(self, new_frontier, distances, old_state=None):
         nf = new_frontier
         p = nf.prob_feasible
+        observation_cost = get_action_costs()['find']
+        pick_cost = get_action_costs()['pick']
         # Success cost
         try:
-            sc = nf.delta_success_cost + distances['goal'][nf]
+            sc = nf.delta_success_cost + distances['goal'][nf] + pick_cost
         except KeyError:
-            sc = nf.delta_success_cost + distances['goal'][nf.id]
+            sc = nf.delta_success_cost + distances['goal'][nf.id] + pick_cost
         # Exploration cost
         ec = nf.exploration_cost
 
@@ -535,9 +538,9 @@ class FState(object):
             of = old_state.frontier_list[-1]
             # Known cost (travel between frontiers)
             try:
-                kc = distances['frontier'][frozenset([nf, of])]
+                kc = distances['frontier'][frozenset([nf, of])] + observation_cost
             except KeyError:
-                kc = distances['frontier'][frozenset([nf.id, of.id])]
+                kc = distances['frontier'][frozenset([nf.id, of.id])] + observation_cost
             self.cost = old_state.cost + old_state.prob * (kc + p * sc +
                                                            (1 - p) * ec)
             self.prob = old_state.prob * (1 - p)
@@ -546,9 +549,9 @@ class FState(object):
             self.frontier_list = [nf]
             # Known cost (travel to frontier)
             try:
-                kc = distances['robot'][nf]
+                kc = distances['robot'][nf] + observation_cost
             except KeyError:
-                kc = distances['robot'][nf.id]
+                kc = distances['robot'][nf.id] + observation_cost
 
             if nf.is_from_last_chosen:
                 kc -= IS_FROM_LAST_CHOSEN_REWARD
