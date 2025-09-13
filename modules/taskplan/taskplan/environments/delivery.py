@@ -22,8 +22,6 @@ class DeliveryEnvironment:
         self.scenegraph.nodes = graph['nodes']
         self.scenegraph.edges = graph['edge_index']
         self.scenegraph.asset_id_to_node_idx_map = graph['idx_map']
-        for key, value in self.scenegraph.asset_id_to_node_idx_map.items():
-            print(self.scenegraph.nodes[value])
 
         self.known_cost_coords = {}
         for (key1, key2), d in self.container_distances.items():

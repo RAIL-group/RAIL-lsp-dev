@@ -13,7 +13,7 @@ from procthor import utils
 
 def get_args():
     args = lambda: None
-    args.current_seed = 109
+    args.current_seed = 111
     args.resolution = 0.05
     args.goal_type = 'breakfast_coffee'
     args.cache_path = '/data/.cache'
@@ -40,15 +40,19 @@ def test_delivery():
 
     # Get the occupancy grid from data
     grid = thor_data.occupancy_grid
+    thor_data.occupancy_grid = None
     init_robot_pose = thor_data.get_robot_pose()
-    args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
-        thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
+    args.robot_room_coord = taskplan.real_world_utils.utils.get_robots_room_coords(
+        init_robot_pose, thor_data.rooms, return_idx=False, map_data=thor_data
+    )
+    # args.robot_room_coord = taskplan.utilities.utils.get_robots_room_coords(
+    #     thor_data.occupancy_grid, init_robot_pose, thor_data.rooms)
 
     # Get the whole graph from data
     whole_graph = thor_data.get_graph()
 
     # Initialize the PartialMap with whole graph
-    partial_map = taskplan.core.PartialMap(whole_graph, grid)
+    partial_map = taskplan.core.PartialMap(whole_graph, thor_data.occupancy_grid)
     partial_map.map_data = thor_data
     partial_map.set_room_info(init_robot_pose, thor_data.rooms)
     # print('From test demo')
@@ -80,7 +84,7 @@ def test_delivery():
     executed_actions, robot_poses, action_cost = taskplan.planners.task_loop.run(
         plan, pddl, partial_map, init_robot_pose, args)
 
-    distance, trajectory = taskplan.core.compute_path_cost(partial_map.grid, robot_poses)
+    distance, trajectory = taskplan.core.compute_path_cost(grid, robot_poses)
     distance += action_cost
     print(f"Planning cost: {distance}")
 
