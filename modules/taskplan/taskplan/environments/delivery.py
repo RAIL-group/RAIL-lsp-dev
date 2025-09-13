@@ -22,10 +22,26 @@ class DeliveryEnvironment:
         self.scenegraph.nodes = graph['nodes']
         self.scenegraph.edges = graph['edge_index']
         self.scenegraph.asset_id_to_node_idx_map = graph['idx_map']
+        for key, value in self.scenegraph.asset_id_to_node_idx_map.items():
+            print(self.scenegraph.nodes[value])
+
+        self.known_cost_coords = {}
+        for (key1, key2), d in self.container_distances.items():
+            if key1 == 'initial_robot_pose':
+                c1_position = self.get_robot_pose()
+            else:
+                c1_position = self.scenegraph.nodes[self.scenegraph.asset_id_to_node_idx_map[key1]]['position']
+            if key2 == 'initial_robot_pose':
+                c2_position = self.get_robot_pose()
+            else:
+                c2_position = self.scenegraph.nodes[self.scenegraph.asset_id_to_node_idx_map[key2]]['position']
+            self.known_cost_coords[(c1_position, c2_position)] = d
+            self.known_cost_coords[(c2_position, c1_position)] = d
 
     def get_robot_pose(self):
-        # return (50, 150)  # Decide for left and right
-        return (31, 190)  # for the real environment, start in front of fridge
+        return (430, 150)  # Decide for left and right
+        # return (31, 190)  # for the real environment, start in front of fridge
+        # return (-4.485677650429344, 1.132334096599578)
 
     def get_top_down_frame(self):
         return self.occupancy_grid
@@ -57,6 +73,7 @@ class DeliveryEnvironment:
                 'position': room['position'],
                 'type': [0, 1, 0, 0]
             }
+            assetId_idx_map[room['id']] = node_count
             edges.append(tuple([0, node_count]))
             node_count += 1
 
@@ -224,7 +241,7 @@ def get_occupancy_grid():
 
 def get_rooms():
     kitchen = {
-        'id': 'kitchen|0|1',
+        'id': 'kitchen|1|0',
         'roomType': 'kitchen',
         'position': (200, 150)
     }
@@ -234,7 +251,7 @@ def get_rooms():
     #     'position': (600, 150)
     # }
     bedroom = {
-        'id': 'bedroom|0|2',
+        'id': 'bedroom|2|0',
         'roomType': 'bedroom',
         'position': (950, 150)
     }
@@ -360,6 +377,6 @@ def get_real_cost(json_file="/data/test_logs/spot_init_fluents_renamed.json"):
     # room_names = ['kitchen|0|1', 'bedroom|0|2']
     # container_distances[(room_names[0], room_names[1])] = 6.5
     # container_distances[(room_names[1], room_names[0])] = 6.5
-    print("Known cost:", known_cost)
-    print("==============")
+    # print("Known cost:", known_cost)
+    # print("==============")
     return known_cost, container_distances, find_costs

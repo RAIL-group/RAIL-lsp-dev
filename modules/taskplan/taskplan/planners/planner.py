@@ -187,4 +187,5 @@ class LearnedPlanner(Planner):
                 self.destination,
                 num_frontiers_max=NUM_MAX_FRONTIERS,
                 alternate_sampling=True))
+
         return frontier_ordering[0]

@@ -20,6 +20,7 @@ import gridmap.utils
 import lsp_accel
 from taskplan.utilities.utils import get_action_costs
 
+
 IS_FROM_LAST_CHOSEN_REWARD = 0 * 10.0
 
 
@@ -561,7 +562,6 @@ class FState(object):
     def __lt__(self, other):
         return self.cost < other.cost
 
-
 def get_ordering_cost(subgoals, distances):
     """A helper function to compute the expected cost of a particular ordering.
     The function takes an ordered list of subgoals (the order in which the robot
@@ -643,6 +643,9 @@ def get_lowest_cost_ordering(subgoals, distances, do_sort=True):
     cost, ordering = lsp_accel.get_lowest_cost_ordering(
         s_cpp, rd_cpp, gd_cpp, fd_cpp)
     ordering = [s_dict[sid] for sid in ordering]
+    # print("++++++++++++++++++++++")
+    # print(cost)
+    # print(ordering)
 
     return cost, ordering
 

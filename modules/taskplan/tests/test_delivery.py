@@ -13,7 +13,7 @@ from procthor import utils
 
 def get_args():
     args = lambda: None
-    args.current_seed = 6
+    args.current_seed = 109
     args.resolution = 0.05
     args.goal_type = 'breakfast_coffee'
     args.cache_path = '/data/.cache'

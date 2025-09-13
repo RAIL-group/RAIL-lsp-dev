@@ -1,54 +1,55 @@
 import random
 
+from procthor.utils import get_cost, get_generic_name
+
 import taskplan
-from taskplan.planners.planner import LearnedPlanner
+from taskplan.planners.planner import NUM_MAX_FRONTIERS, LearnedPlanner
+# from taskplan.real_world_utils.utils import get_robots_room_coords
 from taskplan.utilities.utils import get_action_costs
-from procthor.utils import get_generic_name, get_cost
-from taskplan.planners.planner import NUM_MAX_FRONTIERS
 
 
 def generate_pddl_problem_from_struct(struct):
-    '''struck has keys: 'domain_name', 'problem_name', 'objects', 
+    """Struck has keys: 'domain_name', 'problem_name', 'objects',
     'init_predicates', 'init_fluents', 'goal_states', 'metric'
     init_predicates is a list of strings but init fluents is a dictionary
-    '''
+    """
     # Start the problem definition
     problem_str = f"(define (problem {struct['problem_name']})\n"
     problem_str += f"    (:domain {struct['domain_name']})\n"
 
     # Define objects
     problem_str += "    (:objects\n"
-    for obj_type, obj_names in struct['objects'].items():
+    for obj_type, obj_names in struct["objects"].items():
         problem_str += "        " + " ".join(obj_names) + " - " + obj_type + "\n"
     problem_str += "    )\n"
 
     # Define states
     # Define initial predicates first
     problem_str += "    (:init\n"
-    for predicate in struct['init_predicates']:
-        if predicate[0] == 'not':
-            str_predicate = 'not (' + ' '.join(predicate[1:]) + ')'
-        elif predicate[0] == 'obj-type':
-            str_predicate = f'obj-type-{predicate[1]} {predicate[2]}'
+    for predicate in struct["init_predicates"]:
+        if predicate[0] == "not":
+            str_predicate = "not (" + " ".join(predicate[1:]) + ")"
+        elif predicate[0] == "obj-type":
+            str_predicate = f"obj-type-{predicate[1]} {predicate[2]}"
         else:
-            str_predicate = ' '.join(predicate)
+            str_predicate = " ".join(predicate)
         problem_str += f"        ({str_predicate})\n"
     # Define initial fluents next
-    for fluent, values in struct['init_fluents'].items():
-        str_fluent = ' '.join(fluent)
+    for fluent, values in struct["init_fluents"].items():
+        str_fluent = " ".join(fluent)
         problem_str += f"        (= ({str_fluent}) {values})\n"
     problem_str += "    )\n"
 
     # Define goal state
     problem_str += "    (:goal\n"
     problem_str += "        (and\n"
-    for state in struct['goal_states']:
+    for state in struct["goal_states"]:
         problem_str += "            " + state + "\n"
     problem_str += "        )\n"
     problem_str += "    )\n"
 
     # Define metric
-    if 'metric' in struct:
+    if "metric" in struct:
         problem_str += f"    (:metric {struct['metric']})\n"
     else:
         problem_str += "    (:metric minimize (total-cost))\n"
@@ -61,39 +62,49 @@ def generate_pddl_problem_from_struct(struct):
 
 def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # Initialize the environment setting which containers are undiscovered
-    if args.cost_type == 'known':
+    if args.cost_type == "known":
         init_subgoals_idx = []
-    elif args.goal_for == 'demo_breakfast_coffee':
-        init_subgoals_idx = [4, 5, 6, 7, 9, 10, 11, 12]
-    elif args.goal_for == 'demo_delivery':
-        init_subgoals_idx = whole_graph['cnt_node_idx'].copy()
+    elif args.goal_for == "demo_breakfast_coffee" or args.goal_for == "demo_delivery":
+        init_subgoals_idx = map_data.scenegraph.container_indices
     else:
         init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
-            whole_graph['cnt_node_idx'], args.current_seed)
-    subgoal_IDs = taskplan.utilities.utils.get_container_ID(
-        whole_graph['nodes'], init_subgoals_idx)
+            whole_graph["cnt_node_idx"],
+            args.current_seed,
+        )
+    subgoal_IDs = taskplan.utilities.utils.get_container_ID(whole_graph["nodes"], init_subgoals_idx)
     if learned_data:
-        learned_data['subgoals'] = init_subgoals_idx
+        learned_data["subgoals"] = init_subgoals_idx
 
     # initialize pddl related contents
     pddl = {}
-    pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
-    pddl['problem_struct'], pddl['goal'] = taskplan.pddl.problem.get_problem(
-        map_data=map_data, unvisited=subgoal_IDs,
-        seed=args.current_seed, cost_type=args.cost_type,
-        goal_type=args.goal_type, learned_data=learned_data, goal_for=args.goal_for)
-    pddl['planner'] = 'ff-astar1'  # 'max-astar'
-    pddl['subgoals'] = init_subgoals_idx
+    pddl["domain"] = taskplan.pddl.domain.get_domain(whole_graph)
+    pddl["problem_struct"], pddl["goal"] = taskplan.pddl.problem.get_problem(
+        map_data=map_data,
+        unvisited=subgoal_IDs,
+        seed=args.current_seed,
+        cost_type=args.cost_type,
+        goal_type=args.goal_type,
+        learned_data=learned_data,
+        goal_for=args.goal_for,
+    )
+    pddl["planner"] = "ff-astar1"  # 'max-astar'
+    pddl["subgoals"] = init_subgoals_idx
     return pddl
 
 
-def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
-                                 robot_pose, destination,
-                                 learned_net, sub_pred=None):
-    ''' This function calculates and returns the expected cost of finding an object
+def get_expected_cost_of_finding(
+    partial_map,
+    subgoals,
+    obj_name,
+    robot_pose,
+    destination,
+    learned_net,
+    sub_pred=None,
+):
+    """This function calculates and returns the expected cost of finding an object
     given the partial map, initial subgoals, object name, initial robot pose, and a
     learned network path
-    '''
+    """
     obj_idx = partial_map.idx_map[obj_name]
     partial_map.target_obj = obj_idx
     # avoid re-computing the subgoals predictions if already computed for obj_name
@@ -101,40 +112,37 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
         graph, subgoals = partial_map.update_graph_and_subgoals(subgoals)
         args = lambda: None
         args.network_file = learned_net
-        planner = LearnedPlanner(args, partial_map, verbose=False,
-                                 destination=destination)
+        planner = LearnedPlanner(args, partial_map, verbose=False, destination=destination)
         planner.update(graph, subgoals, robot_pose)
         sub_pred = planner.subgoals
-    exp_cost, _ = (
-        taskplan.core.get_best_expected_cost_and_frontier_list(
-            sub_pred,
-            partial_map,
-            robot_pose,
-            destination,
-            num_frontiers_max=NUM_MAX_FRONTIERS,
-            alternate_sampling=True))
+    exp_cost, _ = taskplan.core.get_best_expected_cost_and_frontier_list(
+        sub_pred,
+        partial_map,
+        robot_pose,
+        destination,
+        num_frontiers_max=NUM_MAX_FRONTIERS,
+        alternate_sampling=True,
+    )
     return round(exp_cost, 4), sub_pred
 
 
-def update_find_costs(struct, partial_map, network_file,
-                      subgoals, init_r, init_room_coord):
-    ''' This function updates the costs of finding objects in the problem structure
+def update_find_costs(struct, partial_map, network_file, subgoals, init_r, init_room_coord):
+    """This function updates the costs of finding objects in the problem structure
     based on the initial robot pose and the learned network file.
-    '''
+    """
     costs = get_action_costs()
     pre_compute = {}
     grid_cost = {}
-    cnt_names = ['initial_robot_pose']
-    idx2assetID = {partial_map.idx_map[assetID]: assetID
-                   for assetID in partial_map.idx_map}
+    cnt_names = ["initial_robot_pose"]
+    idx2assetID = {partial_map.idx_map[assetID]: assetID for assetID in partial_map.idx_map}
     for idx in partial_map.cnt_node_idx:
         cnt_names.append(idx2assetID[idx])
 
-    for obj in struct['missing_objects']:
+    for obj in struct["missing_objects"]:
         pred_sub = None
         for from_loc in cnt_names:
             for to_loc in cnt_names:
-                if from_loc == 'initial_robot_pose':
+                if from_loc == "initial_robot_pose":
                     from_coord = init_r
                     from_room_coords = init_room_coord
                 else:
@@ -144,7 +152,7 @@ def update_find_costs(struct, partial_map, network_file,
                     room_idx = partial_map.org_edge_index[0][room_idx_pos]
                     from_room_coords = partial_map.node_coords[room_idx]
 
-                if to_loc == 'initial_robot_pose':
+                if to_loc == "initial_robot_pose":
                     to_coord = init_r
                     to_room_coords = init_room_coord
                 else:
@@ -165,166 +173,171 @@ def update_find_costs(struct, partial_map, network_file,
                         from_room_coords,  # robot_pose
                         to_room_coords,  # destination_pose
                         network_file,
-                        pred_sub)
+                        pred_sub,
+                    )
                     pre_compute[(gen_obj_name, from_room_coords, to_room_coords)] = intermediate_d
                 if (from_coord, from_room_coords) in grid_cost:
                     part_from = grid_cost[(from_coord, from_room_coords)]
                 else:
-                    part_from = get_cost(partial_map.grid, from_coord, from_room_coords)
+                    part_from = partial_map.map_data.known_cost_coords[
+                        (from_coord, from_room_coords)
+                    ]
+                    # part_from = get_cost(partial_map.grid, from_coord, from_room_coords)
                     grid_cost[(from_coord, from_room_coords)] = part_from
 
                 if (to_coord, to_room_coords) in grid_cost:
                     part_to = grid_cost[(to_coord, to_room_coords)]
                 else:
-                    part_to = get_cost(partial_map.grid, to_coord, to_room_coords)
+                    part_to = partial_map.map_data.known_cost_coords[(to_coord, to_room_coords)]
+                    # part_to = get_cost(partial_map.grid, to_coord, to_room_coords)
                     grid_cost[(to_coord, to_room_coords)] = part_to
-                d = costs['find'] + part_from + intermediate_d + part_to
-                struct['init_fluents'][('find-cost', obj, from_loc, to_loc)] = round(d, 4)
+                d = costs["find"] + part_from + intermediate_d + part_to
+                struct["init_fluents"][("find-cost", obj, from_loc, to_loc)] = round(d, 4)
 
 
 def update_problem_move(problem, end):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred[0] == 'rob-at':
+    for pred in problem["init_predicates"]:
+        if pred[0] == "rob-at":
             continue
         # if pred == ('not', 'ban-move'):
         #     continue
         # if pred == ('not', 'ban-find'):
         #     continue
         init_preds.append(pred)
-    init_preds.append(('rob-at', end))
+    init_preds.append(("rob-at", end))
 
-    if ('ban-move',) not in problem['init_predicates']:
-        init_preds.append(('ban-move',))
-    if ('ban-find',) not in problem['init_predicates']:
-        init_preds.append(('ban-find',))
-    problem['init_predicates'] = init_preds
+    if ("ban-move",) not in problem["init_predicates"]:
+        init_preds.append(("ban-move",))
+    if ("ban-find",) not in problem["init_predicates"]:
+        init_preds.append(("ban-find",))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_pick(problem, obj, loc):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('hand-is-free',):
+    for pred in problem["init_predicates"]:
+        if pred == ("hand-is-free",):
             continue
-        if pred == ('is-at', obj, loc):
+        if pred == ("is-at", obj, loc):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
-        if pred == ('ban-find',):
+        if pred == ("ban-find",):
             continue
         init_preds.append(pred)
-    init_preds.append(('is-holding', obj))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("is-holding", obj))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_place(problem, obj, loc):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('not', 'hand-is-free'):
+    for pred in problem["init_predicates"]:
+        if pred == ("not", "hand-is-free"):
             continue
-        if pred == ('is-holding', obj):
+        if pred == ("is-holding", obj):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
-        if pred == ('ban-find',):
+        if pred == ("ban-find",):
             continue
         init_preds.append(pred)
-    init_preds.append(('hand-is-free',))
-    init_preds.append(('is-at', obj, loc))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("hand-is-free",))
+    init_preds.append(("is-at", obj, loc))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_pourwater(problem, p_from, p_to):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
-        if pred == ('filled-with-water', p_from):
+        if pred == ("filled-with-water", p_from):
             continue
         init_preds.append(pred)
-    init_preds.append(('filled-with-water', p_to))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("filled-with-water", p_to))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_pourcoffee(problem, p_from, p_to):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
-        if pred == ('filled-with-coffee', p_from):
+        if pred == ("filled-with-coffee", p_from):
             continue
         init_preds.append(pred)
-    init_preds.append(('filled-with-coffee', p_to))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("filled-with-coffee", p_to))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_makecoffee(problem, obj):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
-        if pred == ('filled-with-water', obj):
+        if pred == ("filled-with-water", obj):
             continue
         init_preds.append(pred)
-    init_preds.append(('filled-with-coffee', obj))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("filled-with-coffee", obj))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_boil(problem, obj):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
         init_preds.append(pred)
-    init_preds.append(('is-boiled', obj))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("is-boiled", obj))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_peel(problem, obj):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
         init_preds.append(pred)
-    init_preds.append(('is-peeled', obj))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("is-peeled", obj))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_toast(problem, obj):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('ban-find',):
+    for pred in problem["init_predicates"]:
+        if pred == ("ban-find",):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
         init_preds.append(pred)
-    init_preds.append(('is-toasted', obj))
-    problem['init_predicates'] = init_preds
+    init_preds.append(("is-toasted", obj))
+    problem["init_predicates"] = init_preds
 
 
 def update_problem_find(problem, objs, loc, prev_rob):
     init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('rob-at', prev_rob):
+    for pred in problem["init_predicates"]:
+        if pred == ("rob-at", prev_rob):
             continue
-        if pred == ('ban-move',):
+        if pred == ("ban-move",):
             continue
         init_preds.append(pred)
-    init_preds.append(('rob-at', loc))
+    init_preds.append(("rob-at", loc))
     for obj in objs:
-        init_preds.append(('is-located', obj))
-        init_preds.append(('is-at', obj, loc))
-    problem['init_predicates'] = init_preds
+        init_preds.append(("is-located", obj))
+        init_preds.append(("is-at", obj, loc))
+    problem["init_predicates"] = init_preds
 
 
 def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
@@ -386,8 +399,8 @@ def get_goals_for_three(seed, cnt_of_interest, obj_of_interest):
 def get_goals_for_breakfast(seed, cnt_of_interest, objects):
     random.seed(seed)
     object_relations = {
-        'bowl': ['egg'],
-        'plate': ['apple', 'bread', 'tomato', 'potato']
+        "bowl": ["egg"],
+        "plate": ["apple", "bread", "tomato", "potato"],
     }
     pairs = []
     for object in object_relations:
@@ -399,9 +412,10 @@ def get_goals_for_breakfast(seed, cnt_of_interest, objects):
                     pair = (choice1, choice2)
                     pairs.append(pair)
 
-    preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
-    compatible_containers = [cnt for cnt in cnt_of_interest
-                             if cnt.split('|')[0] in preferred_containers]
+    preferred_containers = ["diningtable", "chair", "sofa", "bed", "countertop"]
+    compatible_containers = [
+        cnt for cnt in cnt_of_interest if cnt.split("|")[0] in preferred_containers
+    ]
 
     if compatible_containers == [] or len(pairs) == 0:
         return None
@@ -419,16 +433,17 @@ def get_goals_for_breakfast(seed, cnt_of_interest, objects):
 
 def get_goals_for_coffee(seed, cnt_of_interest, objects):
     random.seed(seed)
-    receptacles = ['mug', 'cup']
+    receptacles = ["mug", "cup"]
     compatible_receptacles = []
     for object in receptacles:
         if object in objects:
             compatible_receptacles.append(object)
             break
 
-    preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
-    compatible_containers = [cnt for cnt in cnt_of_interest
-                             if cnt.split('|')[0] in preferred_containers]
+    preferred_containers = ["diningtable", "chair", "sofa", "bed", "countertop"]
+    compatible_containers = [
+        cnt for cnt in cnt_of_interest if cnt.split("|")[0] in preferred_containers
+    ]
 
     if compatible_containers == [] or len(compatible_receptacles) == 0:
         return None
@@ -447,8 +462,8 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
     random.seed(seed)
     # breakfast part
     object_relations = {
-        'bowl': ['egg'],
-        'plate': ['apple', 'bread', 'tomato', 'potato']
+        "bowl": ["egg"],
+        "plate": ["apple", "bread", "tomato", "potato"],
     }
     pairs = []
     for object in object_relations:
@@ -461,16 +476,17 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
                     pairs.append(pair)
 
     # coffee part
-    receptacles = ['mug', 'cup']
+    receptacles = ["mug", "cup"]
     compatible_receptacles = []
     for object in receptacles:
         if object in objects:
             compatible_receptacles.append(object)
             break
 
-    preferred_containers = ['diningtable', 'chair', 'sofa', 'bed', 'countertop']
-    compatible_containers = [cnt for cnt in cnt_of_interest
-                             if cnt.split('|')[0] in preferred_containers]
+    preferred_containers = ["diningtable", "chair", "sofa", "bed", "countertop"]
+    compatible_containers = [
+        cnt for cnt in cnt_of_interest if cnt.split("|")[0] in preferred_containers
+    ]
 
     if compatible_containers == [] or len(pairs) == 0 or len(compatible_receptacles) == 0:
         return None
@@ -479,12 +495,10 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
     task = []
     # add a coffee-part to all breakfast pairs
     for receptacle in compatible_receptacles:
-        coffee_goal = taskplan.pddl.task.get_coffee_task(
-            goal_cnt, receptacle, combine=False)
+        coffee_goal = taskplan.pddl.task.get_coffee_task(goal_cnt, receptacle, combine=False)
         for pair in pairs:
-            breakfast_goal = taskplan.pddl.task.get_related_goal(
-                goal_cnt, pair, combine=False)
-            task.append(f'(and {breakfast_goal} {coffee_goal})')
+            breakfast_goal = taskplan.pddl.task.get_related_goal(goal_cnt, pair, combine=False)
+            task.append(f"(and {breakfast_goal} {coffee_goal})")
 
     task = taskplan.pddl.task.multiple_goal(task)
     return task
@@ -493,7 +507,7 @@ def get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects):
 def get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest):
     gen_names = []
     for obj in obj_of_interest:
-        g_name = obj.split('|')[0]
+        g_name = obj.split("|")[0]
         if g_name not in gen_names:
             gen_names.append(g_name)
     if len(gen_names) < 3 or len(cnt_of_interest) < 3:
@@ -503,11 +517,11 @@ def get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest):
     random.seed(seed)
     while len(chosen) < 3:
         goal_obj = random.sample(obj_of_interest, 1)
-        g_name = goal_obj[0].split('|')[0]
+        g_name = goal_obj[0].split("|")[0]
         if g_name not in chosen:
             chosen[g_name] = goal_obj
     chosen = list(chosen.values())
-    goal_cnt = ['initial_robot_pose']
+    goal_cnt = ["initial_robot_pose"]
     goal_obj = chosen[0]
     task1 = taskplan.pddl.task.place_one_object(goal_cnt, goal_obj)
 
@@ -522,19 +536,19 @@ def get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest):
 
 
 def goal_provider(seed, cnt_of_interest, obj_of_interest, objects, goal_type):
-    if goal_type == '1object':
+    if goal_type == "1object":
         task = get_goals_for_one(seed, cnt_of_interest, obj_of_interest)
-    elif goal_type == '2object':
+    elif goal_type == "2object":
         task = get_goals_for_two(seed, cnt_of_interest, obj_of_interest)
-    elif goal_type == '3object':
+    elif goal_type == "3object":
         task = get_goals_for_three(seed, cnt_of_interest, obj_of_interest)
-    elif goal_type == 'breakfast':
+    elif goal_type == "breakfast":
         task = get_goals_for_breakfast(seed, cnt_of_interest, objects)
-    elif goal_type == 'coffee':
+    elif goal_type == "coffee":
         task = get_goals_for_coffee(seed, cnt_of_interest, objects)
-    elif goal_type == 'breakfast_coffee':
+    elif goal_type == "breakfast_coffee":
         task = get_goals_for_breakfast_coffee(seed, cnt_of_interest, objects)
-    elif goal_type == 'any3':
+    elif goal_type == "any3":
         task = get_goals_for_any_of_three(seed, cnt_of_interest, obj_of_interest)
 
     return task
