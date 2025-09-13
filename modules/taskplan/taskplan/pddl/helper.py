@@ -66,7 +66,7 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     elif args.goal_for == 'demo_breakfast_coffee':
         init_subgoals_idx = [4, 5, 6, 7, 9, 10, 11, 12]
     elif args.goal_for == 'demo_delivery':
-        init_subgoals_idx = whole_graph['cnt_node_idx']
+        init_subgoals_idx = whole_graph['cnt_node_idx'].copy()
     else:
         init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
             whole_graph['cnt_node_idx'], args.current_seed)
