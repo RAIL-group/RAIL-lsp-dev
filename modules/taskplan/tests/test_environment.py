@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
-from taskplan.environments.breakfast import Breakfast
+from modules.taskplan.taskplan.environments.delivery import DeliveryEnvironment
 
 
-def test_environment():
-    thor_data = Breakfast()
+def test_deliver():
+    thor_data = DeliveryEnvironment()
 
     grid = thor_data.occupancy_grid
     init_robot_pose = thor_data.get_robot_pose()

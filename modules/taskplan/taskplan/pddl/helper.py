@@ -1,47 +1,57 @@
 import random
-from pddlstream.algorithms.search import solve_from_pddl
 
 import taskplan
 from taskplan.planners.planner import LearnedPlanner
+from taskplan.utilities.utils import get_action_costs
+from procthor.utils import get_generic_name, get_cost
+from taskplan.planners.planner import NUM_MAX_FRONTIERS
 
 
-def generate_pddl_problem(domain_name, problem_name, objects, init_states,
-                          goal_states):
-    """
-    Generates a PDDL problem file content.
-
-    :param domain_name: Name of the PDDL domain.
-    :param problem_name: Name of the PDDL problem.
-    :param objects: Dictionary of objects, where keys are types and values are lists of object names.
-    :param init_states: List of strings representing the initial states.
-    :param goal_states: List of strings representing the goal states.
-    :return: A string representing the content of a PDDL problem file.
-    """
+def generate_pddl_problem_from_struct(struct):
+    '''struck has keys: 'domain_name', 'problem_name', 'objects', 
+    'init_predicates', 'init_fluents', 'goal_states', 'metric'
+    init_predicates is a list of strings but init fluents is a dictionary
+    '''
     # Start the problem definition
-    problem_str = f"(define (problem {problem_name})\n"
-    problem_str += f"    (:domain {domain_name})\n"
+    problem_str = f"(define (problem {struct['problem_name']})\n"
+    problem_str += f"    (:domain {struct['domain_name']})\n"
 
     # Define objects
     problem_str += "    (:objects\n"
-    for obj_type, obj_names in objects.items():
+    for obj_type, obj_names in struct['objects'].items():
         problem_str += "        " + " ".join(obj_names) + " - " + obj_type + "\n"
     problem_str += "    )\n"
 
-    # Define initial state
+    # Define states
+    # Define initial predicates first
     problem_str += "    (:init\n"
-    for state in init_states:
-        problem_str += "        " + state + "\n"
+    for predicate in struct['init_predicates']:
+        if predicate[0] == 'not':
+            str_predicate = 'not (' + ' '.join(predicate[1:]) + ')'
+        elif predicate[0] == 'obj-type':
+            str_predicate = f'obj-type-{predicate[1]} {predicate[2]}'
+        else:
+            str_predicate = ' '.join(predicate)
+        problem_str += f"        ({str_predicate})\n"
+    # Define initial fluents next
+    for fluent, values in struct['init_fluents'].items():
+        str_fluent = ' '.join(fluent)
+        problem_str += f"        (= ({str_fluent}) {values})\n"
     problem_str += "    )\n"
 
     # Define goal state
     problem_str += "    (:goal\n"
     problem_str += "        (and\n"
-    for state in goal_states:
+    for state in struct['goal_states']:
         problem_str += "            " + state + "\n"
     problem_str += "        )\n"
     problem_str += "    )\n"
 
-    problem_str += "    (:metric minimize (total-cost))\n"
+    # Define metric
+    if 'metric' in struct:
+        problem_str += f"    (:metric {struct['metric']})\n"
+    else:
+        problem_str += "    (:metric minimize (total-cost))\n"
 
     # Close the problem definition
     problem_str += ")\n"
@@ -53,6 +63,10 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # Initialize the environment setting which containers are undiscovered
     if args.cost_type == 'known':
         init_subgoals_idx = []
+    elif args.goal_for == 'demo_breakfast_coffee':
+        init_subgoals_idx = [4, 5, 6, 7, 9, 10, 11, 12]
+    elif args.goal_for == 'demo_delivery':
+        init_subgoals_idx = [4, 5, 6, 7, 8, 9, 10, 11, 12]
     else:
         init_subgoals_idx = taskplan.utilities.utils.initialize_environment(
             whole_graph['cnt_node_idx'], args.current_seed)
@@ -64,11 +78,11 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
     # initialize pddl related contents
     pddl = {}
     pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
-    pddl['problem'], pddl['goal'] = taskplan.pddl.problem.get_problem(
+    pddl['problem_struct'], pddl['goal'] = taskplan.pddl.problem.get_problem(
         map_data=map_data, unvisited=subgoal_IDs,
         seed=args.current_seed, cost_type=args.cost_type,
-        goal_type=args.goal_type, learned_data=learned_data)
-    pddl['planner'] = 'ff-astar2'  # 'max-astar'
+        goal_type=args.goal_type, learned_data=learned_data, goal_for=args.goal_for)
+    pddl['planner'] = 'ff-astar1'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
     return pddl
 
@@ -97,342 +111,220 @@ def get_expected_cost_of_finding(partial_map, subgoals, obj_name,
             partial_map,
             robot_pose,
             destination,
-            num_frontiers_max=8,
+            num_frontiers_max=NUM_MAX_FRONTIERS,
             alternate_sampling=True))
     return round(exp_cost, 4), sub_pred
 
 
-def update_problem(problem, obj, from_loc, to_loc, distance):
-    x = f'(= (find-cost {obj} {from_loc} {to_loc}) '
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if x in line:
-            line = '        ' + x + f'{distance})'
-            lines[line_idx] = line
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
-
-
-def get_learning_informed_pddl(pddl, partial_map, subgoals, init_robot_pose, learned_net):
-    ''' This function takes input of a PDDL instance, the partial map,
-    the subgoals, and the current robot pose, args for nn-file.
+def update_find_costs(struct, partial_map, network_file,
+                      subgoals, init_r, init_room_coord):
+    ''' This function updates the costs of finding objects in the problem structure
+    based on the initial robot pose and the learned network file.
     '''
-    idx2assetID = {partial_map.idx_map[assetID]: assetID for assetID in partial_map.idx_map}
+    costs = get_action_costs()
+    pre_compute = {}
+    grid_cost = {}
+    cnt_names = ['initial_robot_pose']
+    idx2assetID = {partial_map.idx_map[assetID]: assetID
+                   for assetID in partial_map.idx_map}
+    for idx in partial_map.cnt_node_idx:
+        cnt_names.append(idx2assetID[idx])
 
-    for obj_idx in partial_map.obj_node_idx:
-        obj_cnt_idx = partial_map.org_edge_index[0][partial_map.org_edge_index[1].index(obj_idx)]
-        obj_name = idx2assetID[obj_idx]
+    for obj in struct['missing_objects']:
+        pred_sub = None
+        for from_loc in cnt_names:
+            for to_loc in cnt_names:
+                if from_loc == 'initial_robot_pose':
+                    from_coord = init_r
+                    from_room_coords = init_room_coord
+                else:
+                    from_coord = partial_map.node_coords[partial_map.idx_map[from_loc]]
+                    from_cnt_idx = partial_map.idx_map[from_loc]
+                    room_idx_pos = partial_map.org_edge_index[1].index(from_cnt_idx)
+                    room_idx = partial_map.org_edge_index[0][room_idx_pos]
+                    from_room_coords = partial_map.node_coords[room_idx]
 
-        cnt_names = ['initial_robot_pose']
-        cnt_names += [idx2assetID[cnt_idx] for cnt_idx in partial_map.cnt_node_idx]
+                if to_loc == 'initial_robot_pose':
+                    to_coord = init_r
+                    to_room_coords = init_room_coord
+                else:
+                    to_coord = partial_map.node_coords[partial_map.idx_map[to_loc]]
+                    to_cnt_idx = partial_map.idx_map[to_loc]
+                    room_idx_pos = partial_map.org_edge_index[1].index(to_cnt_idx)
+                    room_idx = partial_map.org_edge_index[0][room_idx_pos]
+                    to_room_coords = partial_map.node_coords[room_idx]
 
-        cnt_coords = [init_robot_pose]
-        cnt_coords += [partial_map.node_coords[cnt_idx] for cnt_idx in partial_map.cnt_node_idx]
+                gen_obj_name = get_generic_name(obj)
+                if (gen_obj_name, from_room_coords, to_room_coords) in pre_compute:
+                    intermediate_d = pre_compute[(gen_obj_name, from_room_coords, to_room_coords)]
+                else:
+                    intermediate_d, pred_sub = get_expected_cost_of_finding(
+                        partial_map,
+                        subgoals,
+                        obj,
+                        from_room_coords,  # robot_pose
+                        to_room_coords,  # destination_pose
+                        network_file,
+                        pred_sub)
+                    pre_compute[(gen_obj_name, from_room_coords, to_room_coords)] = intermediate_d
+                if (from_coord, from_room_coords) in grid_cost:
+                    part_from = grid_cost[(from_coord, from_room_coords)]
+                else:
+                    part_from = get_cost(partial_map.grid, from_coord, from_room_coords)
+                    grid_cost[(from_coord, from_room_coords)] = part_from
 
-        if obj_cnt_idx in subgoals:
-            # Object whereabout is unknwon
-            for from_idx, from_loc in enumerate(cnt_names):
-                robot_pose = cnt_coords[from_idx]
-                for to_idx, to_loc in enumerate(cnt_names):
-                    destination_pose = cnt_coords[to_idx]
-                    distance_update = get_expected_cost_of_finding(
-                        partial_map, subgoals, obj_name, robot_pose, destination_pose, learned_net)
-                    pddl['problem'] = update_problem(
-                        pddl['problem'], obj_name, from_loc, to_loc, distance_update)
-
-    return pddl
-
-
-def get_learning_informed_plan(pddl, partial_map, subgoals, init_robot_pose, learned_net):
-    ''' This function takes input of a PDDL instance, the partial map,
-    the subgoals, and the current robot pose, args for nn-file.
-    '''
-    idx2assetID = {partial_map.idx_map[assetID]: assetID for assetID in partial_map.idx_map}
-
-    for obj_idx in partial_map.obj_node_idx:
-        obj_cnt_idx = partial_map.org_edge_index[0][partial_map.org_edge_index[1].index(obj_idx)]
-        obj_name = idx2assetID[obj_idx]
-
-        cnt_names = ['initial_robot_pose']
-        cnt_names += [idx2assetID[cnt_idx] for cnt_idx in partial_map.cnt_node_idx]
-
-        cnt_coords = [init_robot_pose]
-        cnt_coords += [partial_map.node_coords[cnt_idx] for cnt_idx in partial_map.cnt_node_idx]
-
-        if obj_cnt_idx in subgoals:
-            # Object whereabout is unknwon
-            for from_idx, from_loc in enumerate(cnt_names):
-                robot_pose = cnt_coords[from_idx]
-                for to_idx, to_loc in enumerate(cnt_names):
-                    destination_pose = cnt_coords[to_idx]
-                    distance_update = get_expected_cost_of_finding(
-                        partial_map, subgoals, obj_name, robot_pose, destination_pose, learned_net)
-                    pddl['problem'] = update_problem(
-                        pddl['problem'], obj_name, from_loc, to_loc, distance_update)
-
-    plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                 planner=pddl['planner'], max_planner_time=300)
-
-    return plan, cost
+                if (to_coord, to_room_coords) in grid_cost:
+                    part_to = grid_cost[(to_coord, to_room_coords)]
+                else:
+                    part_to = get_cost(partial_map.grid, to_coord, to_room_coords)
+                    grid_cost[(to_coord, to_room_coords)] = part_to
+                d = costs['find'] + part_from + intermediate_d + part_to
+                struct['init_fluents'][('find-cost', obj, from_loc, to_loc)] = round(d, 4)
 
 
 def update_problem_move(problem, end):
-    x = '(rob-at '
-    y = '(not (ban-move))'
-    w = '(not (ban-find))'
-    insert_z = None
-    replaced = False
-    replaced_w = False
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if x in line:
-            line = '        ' + x + f'{end})'
-            lines[line_idx] = line
-            insert_z = line_idx + 1
-        if y in line:
-            line = '        (ban-move)'
-            replaced = True
-        if w in line:
-            line = '        (ban-find)'
-            replaced_w = True
-    if not replaced:
-        lines.insert(insert_z, '        (ban-move)')
-    if not replaced_w:
-        lines.insert(insert_z, '        (ban-find)')
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred[0] == 'rob-at':
+            continue
+        # if pred == ('not', 'ban-move'):
+        #     continue
+        # if pred == ('not', 'ban-find'):
+        #     continue
+        init_preds.append(pred)
+    init_preds.append(('rob-at', end))
+
+    if ('ban-move',) not in problem['init_predicates']:
+        init_preds.append(('ban-move',))
+    if ('ban-find',) not in problem['init_predicates']:
+        init_preds.append(('ban-find',))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pick(problem, obj, loc):
-    v = '        (ban-find)'
-    w = '        (ban-move)'
-    x = f'        (is-holding {obj})'
-    insert_x = None
-    y = '        (hand-is-free)'
-    z = f'        (is-at {obj} {loc})'
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif y in line:
-            line = '        ' + f'(not (hand-is-free))'
-            lines[line_idx] = line
-        elif z in line:
-            line = '        ' + f'(not (is-at {obj} {loc}))'
-            lines[line_idx] = line
-            insert_x = line_idx + 1
-    if insert_x:
-        lines.insert(insert_x, x)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('hand-is-free',):
+            continue
+        if pred == ('is-at', obj, loc):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('ban-find',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-holding', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_place(problem, obj, loc):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = '(not (hand-is-free))'
-    y = f'(not (is-at {obj} '
-    z = f'(is-holding {obj})'
-    delete_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            line = '        ' + '(hand-is-free)'
-            lines[line_idx] = line
-        elif y in line:
-            line = '        ' + f'(is-at {obj} {loc})'
-            lines[line_idx] = line
-        elif z in line:
-            line = '        ' + f'(not {z})'
-            delete_z = line_idx
-    if delete_z:
-        del lines[delete_z]
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('not', 'hand-is-free'):
+            continue
+        if pred == ('is-holding', obj):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('ban-find',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('hand-is-free',))
+    init_preds.append(('is-at', obj, loc))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pourwater(problem, p_from, p_to):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-water {p_from})'
-    y = f'        (is-located {p_to})'
-    z = f'        (filled-with-water {p_to})'
-    delete_x = None
-    insert_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            delete_x = line_idx
-        elif y in line:
-            insert_z = line_idx + 1
-    if delete_x < insert_z:
-        lines.insert(insert_z, z)
-        del lines[delete_x]
-    else:
-        del lines[delete_x]
-        lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-water', p_from):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-water', p_to))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_pourcoffee(problem, p_from, p_to):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-coffee {p_from})'
-    y = f'        (is-located {p_to})'
-    z = f'        (filled-with-coffee {p_to})'
-    delete_x = None
-    insert_z = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            delete_x = line_idx
-        elif y in line:
-            insert_z = line_idx + 1
-    if delete_x < insert_z:
-        lines.insert(insert_z, z)
-        del lines[delete_x]
-    else:
-        del lines[delete_x]
-        lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-coffee', p_from):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-coffee', p_to))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_makecoffee(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'        (filled-with-water {obj})'
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            line = '        ' + f'(filled-with-coffee {obj})'
-            lines[line_idx] = line
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('filled-with-water', obj):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('filled-with-coffee', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_boil(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-boilable {obj})'
-    y = f'(is-boiled {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-boiled', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_peel(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-peelable {obj})'
-    y = f'(is-peeled {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-peeled', obj))
+    problem['init_predicates'] = init_preds
 
 
 def update_problem_toast(problem, obj):
-    v = '        (ban-find)'
-    w = '(ban-move)'
-    x = f'(is-toastable {obj})'
-    y = f'(is-toasted {obj})'
-    insert_y = None
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        (not (ban-find))'
-            lines[line_idx] = line
-        elif w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-        elif x in line:
-            insert_y = line_idx + 1
-    if insert_y:
-        lines.insert(insert_y, y)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('ban-find',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-toasted', obj))
+    problem['init_predicates'] = init_preds
 
 
-def update_problem_find(problem, objs, loc):
-    v = '(rob-at '
-    w = '        (ban-move)'
-    # first just update v and w in the lines
-    lines = problem.splitlines()
-    for line_idx, line in enumerate(lines):
-        if v in line:
-            line = '        ' + v + f'{loc})'
-            lines[line_idx] = line
-        if w in line:
-            line = '        (not (ban-move))'
-            lines[line_idx] = line
-
-    # then update the objects
+def update_problem_find(problem, objs, loc, prev_rob):
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('rob-at', prev_rob):
+            continue
+        if pred == ('ban-move',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('rob-at', loc))
     for obj in objs:
-        y = f'(not (is-located {obj}))'
-        z = f'        (is-at {obj} {loc})'
-        insert_z = None
-        for line_idx, line in enumerate(lines):
-            if y in line:
-                line = f'        (is-located {obj})'
-                lines[line_idx] = line
-                insert_z = line_idx + 1
-        if insert_z:
-            lines.insert(insert_z, z)
-    updated_pddl_problem = '\n'.join(lines)
-    return updated_pddl_problem
+        init_preds.append(('is-located', obj))
+        init_preds.append(('is-at', obj, loc))
+    problem['init_predicates'] = init_preds
 
 
 def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
