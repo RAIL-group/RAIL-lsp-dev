@@ -29,5 +29,5 @@ class Planner():
     def get_subgoal_distances(self, grid, subgoals):
         return core.get_frontier_distances(grid, subgoals)
 
-    def compute_selected_subgoal(self):
+    def compute_selected_subgoal(self, distances=None):
         raise NotImplementedError

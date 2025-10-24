@@ -52,3 +52,28 @@ def get_lowerbound_planner_costs(navigation_data, planner, args):
     optimistic_lb = net_motion
     simply_connected_lb = net_motion
     return optimistic_lb, simply_connected_lb
+
+
+def get_lowerbound_planner_costs_real_robot(navigation_data, planner, args):
+    partial_graph = navigation_data['graph'][-1]
+    partial_grid = navigation_data['final_partial_grid']
+    robot_pose = navigation_data['robot_pose']
+    target_obj_info = navigation_data['target_obj_info']
+    robot = object_search.robot.Robot(robot_pose)
+    simulator = OfflineReplay(navigation_data, partial_graph, args, target_obj_info, partial_grid)
+    planning_loop = PlanningLoop(target_obj_info, simulator, robot, args, verbose=True)
+    for counter, step_data in enumerate(planning_loop):
+        planner.update(step_data['observed_graph'],
+                       step_data['observed_grid'],
+                       step_data['subgoals'],
+                       step_data['robot_pose'])
+        chosen_subgoal = planner.compute_selected_subgoal()
+        planning_loop.set_chosen_subgoal(chosen_subgoal)
+
+        if args.do_plot:
+            pass
+    net_motion, _ = object_search.utils.compute_cost_and_trajectory(partial_grid, planning_loop.robot.all_poses,
+                                                                    args.resolution)
+    optimistic_lb = net_motion
+    simply_connected_lb = net_motion
+    return optimistic_lb, simply_connected_lb

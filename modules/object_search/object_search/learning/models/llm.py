@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from collections import Counter
 import hashlib
 
-load_dotenv(dotenv_path='/data/.env')
+load_dotenv(dotenv_path='/home/ab/lsp/data/.env')
 
 
 class LLM:

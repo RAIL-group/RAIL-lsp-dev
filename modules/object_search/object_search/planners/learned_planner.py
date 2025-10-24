@@ -17,6 +17,7 @@ class LearnedPlanner(Planner):
         self.destination = destination
         self.subgoal_property_net = subgoal_property_net
         self.preprocess_input_fn = preprocess_input_fn
+        self.distances = None
 
     def _update_subgoal_properties(self):
         nn_input_data = self.preprocess_input_fn(
@@ -39,6 +40,11 @@ class LearnedPlanner(Planner):
 
     def compute_selected_subgoal(self):
         subgoals = [s for s in self.subgoals if s.prob_feasible != 0]
+
+        if self.distances is not None:
+            min_cost, frontier_ordering = lsp.core.get_lowest_cost_ordering(subgoals, self.distances)
+            self.distances = None
+            return frontier_ordering[0]
 
         # Get robot distances
         robot_distances = self.get_robot_distances(

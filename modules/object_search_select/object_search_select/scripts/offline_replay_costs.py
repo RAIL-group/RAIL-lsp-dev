@@ -56,7 +56,7 @@ def eval_main(args):
         chosen_subgoal = planner.compute_selected_subgoal()
         planning_loop.set_chosen_subgoal(chosen_subgoal)
 
-    cost, trajectory = object_search.utils.compute_cost_and_trajectory(known_grid, robot.all_poses, args.resolution)
+    cost, trajectory = object_search.utils.compute_cost_and_trajectory(known_grid, robot.all_poses, resolution=1, use_robot_model=True)
 
     plt.figure(figsize=(8, 8))
     known_locations = [known_graph.get_node_name_by_idx(idx) for idx in target_obj_info['container_idxs']]
@@ -111,6 +111,18 @@ if __name__ == "__main__":
     parser.add_argument('--chosen_planner', choices=planner_names)
     parser.add_argument('--env', choices=['apartment'])
     args = parser.parse_args()
+
+    args.planner_cmaps = {
+        'optimistic': 'Reds',
+        'lspgptprompta': 'Greens',
+        'lspgptpromptb': 'Cividis',
+        'lspgptpromptminimal': 'Purples',
+        'lspgeminiprompta': 'Oranges',
+        'lspgeminipromptb': 'Greys',
+        'lspgeminipromptminimal': 'Pinks',
+        'fullgptpromptdirect': 'Blues',
+        'fullgeminipromptdirect': 'Inferno'
+    }
 
     random.seed(args.current_seed)
     np.random.seed(args.current_seed)

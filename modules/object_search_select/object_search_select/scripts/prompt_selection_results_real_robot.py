@@ -7,7 +7,7 @@ matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
-NUM_TRIALS = 7
+NUM_TRIALS = 5
 NUM_SAMPLING = 1
 RESOLUTION = 1
 EXPLORATION_C = 100 * 0.05
@@ -196,9 +196,9 @@ if __name__ == "__main__":
 
     planners = [
         # 'optimistic',
-        'lspgptpromptminimal',
         # 'lspgptprompta',
         'lspgptpromptb',
+        'lspgptpromptminimal',
         # 'lspgeminipromptminimal',
         # 'lspgeminiprompta',
         # 'lspgeminipromptb',
@@ -207,9 +207,9 @@ if __name__ == "__main__":
     ]
     planner_names = [
         # 'OPTIMISTIC+MODEL',
-        'LLM+MODEL/P-MINIMAL/GPT-5',
         # 'LLM+MODEL/P-CONTEXT-A/GPT-5',
         'LLM+MODEL/P-CONTEXT-B/GPT-5',
+        'LLM+MODEL/P-MINIMAL/GPT-5',
         # 'LLM+MODEL/P-MINIMAL/Gemini',
         # 'LLM+MODEL/P-CONTEXT-A/Gemini',
         # 'LLM+MODEL/P-CONTEXT-B/Gemini',
@@ -229,13 +229,15 @@ if __name__ == "__main__":
 
     all_planners = '_'.join(planners)
 
-    trials_to_print = np.array([1, 2, 3]) - 1
+    trials_to_print = np.array([2, 3, 5]) - 1
+    # trials_to_print = []
+
     trial_markers = ['^', 'd', 's']
     trial_marker_size = 9
     ucb_color = 'tab:orange'
     best_policy_color = 'tab:green'
     fill_alpha = 0.08
-    xticks = list(range(0, NUM_TRIALS + 1, 20))
+    xticks = list(range(0, NUM_TRIALS + 1, 1))
     xticks[0] = 1
 
     env_planner_costs = {}
@@ -276,10 +278,16 @@ if __name__ == "__main__":
         dat = [compute_ucb_bandit_cost(env, planners, random_seed=seed) for seed in range(NUM_SAMPLING)]
         all_runs, pull_rates, all_chosen_indx = zip(*dat)
         print('Chosen planners for UCB:')
-        print([planner_names[idx] for idx in all_chosen_indx[0]])
+        chosen_planners_ucb = [planners[idx] for idx in all_chosen_indx[0]]
+        print(chosen_planners_ucb)
+        with open(results_dir / f'chosen_planners_ucb_{env}.txt', 'w') as f:
+            for planner in chosen_planners_ucb:
+                f.write(planner + '\n')
+
         avg_costs_ucb = np.mean(all_runs, axis=0)
         p10_costs_ucb = np.percentile(all_runs, 10, axis=0)
         p90_costs_ucb = np.percentile(all_runs, 90, axis=0)
+
 
         best_asymp_cost = min(env_planner_costs[i])
 
@@ -303,11 +311,11 @@ if __name__ == "__main__":
             print(f'Trial {trial + 1} Cost: {avg_costs_ucb[trial]:.2f}')
 
         plt.xticks(xticks, fontsize='x-large')
-        plt.xlim([1, NUM_TRIALS + 2])
+        plt.xlim([1, NUM_TRIALS + 0.05])
         plt.gca().set_xticklabels([])
         plt.ylabel('Avg. Navigation Cost', fontsize='x-large')
-        plt.ylim([210, 280])
-        plt.yticks(range(210, 281, 20), fontsize='x-large')
+        # plt.ylim([210, 280])
+        # plt.yticks(range(210, 281, 20), fontsize='x-large')
 
         regrets_ucb = np.cumsum(all_runs - best_asymp_cost, axis=1)
         avg_regrets_ucb = regrets_ucb.mean(0)
@@ -345,10 +353,10 @@ if __name__ == "__main__":
 
         plt.xlabel(f'Num of Trials ({r"$k$"})', fontsize='x-large')
         plt.xticks(xticks, fontsize='x-large')
-        plt.xlim([1, NUM_TRIALS + 2])
+        plt.xlim([1, NUM_TRIALS + 0.05])
         plt.ylabel('Cumulative Regret', fontsize='x-large')
-        plt.ylim([0, 4000])
-        plt.yticks(range(0, 4000, 1000), fontsize='x-large')
+        # plt.ylim([0, 4000])
+        # plt.yticks(range(0, 4000, 1000), fontsize='x-large')
 
         print('----------------------Replay Selection Results--------------------------')
         for k, p_short in enumerate(probs):
@@ -357,7 +365,11 @@ if __name__ == "__main__":
                    for seed in range(NUM_SAMPLING)]
             all_runs, pull_rates, all_chosen_indx = zip(*dat)
             print('Chosen planners for Replay Selection:')
-            print([planner_names[idx] for idx in all_chosen_indx[0]])
+            chosen_planners_ours = [planners[idx] for idx in all_chosen_indx[0]]
+            print(chosen_planners_ours)
+            with open(results_dir / f'chosen_planners_ours_{env}.txt', 'w') as f:
+                for planner in chosen_planners_ours:
+                    f.write(planner + '\n')
             avg_costs_const_ucb = np.mean(all_runs, axis=0)
             p10_costs_const_ucb = np.percentile(all_runs, 10, axis=0)
             p90_costs_const_ucb = np.percentile(all_runs, 90, axis=0)
@@ -529,16 +541,21 @@ if __name__ == "__main__":
     for env in envs:
         costs_by_seed = get_planner_costs_by_seed(env, planners)
         seeds = np.arange(*env_seeds[env])
-        ranks_str = ','.join([f'Rank {i + 1}' for i in range(len(planners))])
+        header_str = ','.join([f'Rank{i + 1},Cost{i + 1}' for i in range(len(planners))])
         with open(results_dir / f'planner_ranks_{env}.csv', 'w') as f:
-            f.write(f"Seed,Best Cost,{ranks_str},Worst Cost\n")
+            f.write(f"Seed,{header_str}\n")
             for seed, costs in zip(seeds, costs_by_seed):
                 planner_order = np.argsort(costs)
                 planner_names_order = [planners[idx] for idx in planner_order]
-                best_cost = costs[planner_order[0]]
-                worst_cost = costs[planner_order[-1]]
-                planner_names_order_str = ','.join(planner_names_order)
-                f.write(f"{seed},{best_cost},{planner_names_order_str},{worst_cost}\n")
+                row_data = f"{seed},"
+                for p, c in zip(planner_names_order, costs[planner_order]):
+                    row_data += f"{p},{c:4f},"
+                row_data += "\n"
+                f.write(row_data)
+                # best_cost = costs[planner_order[0]]
+                # worst_cost = costs[planner_order[-1]]
+                # planner_names_order_str = ','.join(planner_names_order)
+                # f.write(f"{seed},{best_cost},{planner_names_order_str},{worst_cost}\n")
 
     print(f'Results plots saved in {results_dir} as '
           f'results_costs.png, results_regret.png and results_rates.png')
