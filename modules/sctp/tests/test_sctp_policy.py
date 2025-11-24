@@ -16,7 +16,7 @@ def test_sctp_policy_lg():
     # ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=10000)
     
     ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=100,\
-                                                rollout_fn=core.sctp_rollout)
+                                                rollout_fn=core.sctp_rollout3)
     for p in pc[0]:
         print(p)
     for c in pc[1]:

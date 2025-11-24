@@ -46,15 +46,19 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
     # with open(logfile, 'w') as f:
     #     pass    
     # total_cost = 0.0
+    max_tree_depth = 0
     root = POUCTNode(state)
     assert len(root.unexplored_actions) > 0
     for i in range(n_iterations):
         leaf, sa = traverse(root, C=C, max_depth=depth)
+        # if leaf.state.depth > max_tree_depth:
+        #     max_tree_depth = leaf.state.depth
+            # print(f"New max tree depth: {max_tree_depth}")
         simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
         
-        targets = [a.target for a in sa]
+        # targets = [a.target for a in sa]
         # total_cost += simulation_result
         # with open(logfile, "a+") as f:
         #     f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | HEU-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
@@ -64,9 +68,9 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
     return best_action, cost, [path_ordering, cost_ordering]
 
 def traverse(node, C=1.0, max_depth=100):
-    # first_action = True
     save_action = []
     while node.is_fully_expanded() and not node.is_terminal_node():
+        # if node.state.depth > max_depth or node.state.going_back:
         if node.state.depth > max_depth:
             return node, save_action
         action = node.get_best_uct_action(C=C)
@@ -102,7 +106,6 @@ def rollout(node, rollout_fn=None):
         else:
             reach_goal = False
             block = False
-        # print(f"Rollout value: {rollout_value:4.2f} | Reach goal: {int(reach_goal)} | Block: {int(block)} | cur_robot pos {node.state.robot.last_node} | goal node: {node.state.goalID}")
         return node.cost + rollout_value, reach_goal, block, rollout_value #ollout_fn(node.state)
     else:
         # do a random rollout
@@ -148,16 +151,23 @@ def get_best_action(node):
         best_action_idx = min(best_action_idxs, key=lambda x: action_values[x])
     else:
         best_action_idx = best_action_idxs[0]
-
+    
     best_action = actions[best_action_idx]
+    # print(f"Best action: {best_action}")
+    # print(f"Selected time {action_n[best_action_idx]} out of {node.total_n} simulations")
+    # print(f"Node visited: {node.action_n}")
+    # print(f"Node target: {[a.target for a in actions]}")
     best_action_cost = action_values[best_action_idx] / action_n[best_action_idx]
+    
     return best_action, best_action_cost
 
 def get_best_path(root):
     paths = []
     costs = []
     node = root
+    count = 0
     while not node.is_terminal_node():
+        count += 1
         if node.total_n == 1 \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break
@@ -167,6 +177,7 @@ def get_best_path(root):
         children = list(node.action_outcomes[best_action].keys())
         node = max(children, key=lambda x: x.total_n)
         # pdb.set_trace()
+    # print(f"The depth of the best path is {count}")
     return paths, costs
 
 def get_best_path_sctp(root):
@@ -187,8 +198,5 @@ def get_best_path_sctp(root):
         if root.state.uavs == []:
             node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
         else:
-            # if node.prev_action and node.prev_action.rtype == RobotType.Ground:
-            #     node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
-            # else: 
             node = max(children, key=lambda x: x.total_n)        
     return paths, costs

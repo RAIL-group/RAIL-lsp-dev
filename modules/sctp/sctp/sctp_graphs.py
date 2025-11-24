@@ -7,19 +7,25 @@ from sctp import graph as g
 import math
 
 
-def random_graph(n_vertex=8, xmin=0, ymin=0):
+def random_graph(n_vertex=8, xmin=0, ymin=0, SG_pairs=1):
     """Generate a random graph with Delaunay triangulation and weighted edges."""    
     count = 0
     while True:
-        start, goal, graph = g.generate_random_graph(n_vertex=n_vertex, xmin=xmin, ymin=ymin,\
-                                max_edge_len=MAX_EDGE_LENGTH, min_edge_len=MIN_EDGE_LENGTH)
-        if g.check_graph_valid(startID=start.id, goalID=goal.id, graph=graph):
+        starts, goals, graph = g.generate_random_graph(n_vertex=n_vertex, xmin=xmin, ymin=ymin,\
+                                max_edge_len=MAX_EDGE_LENGTH, min_edge_len=MIN_EDGE_LENGTH, num_sg=SG_pairs)
+        start_goal_connected = True
+        for i, start in enumerate(starts):
+            if not g.check_graph_valid(startID=start.id, goalID=goals[i].id, graph=graph):
+                start_goal_connected = False
+                break
+        if start_goal_connected:
             break
+        
         count += 1
-        if count > 10000:
+        if count > 15000:
             print("Cannot find a valid graph, try other seed ranges")
             raise ValueError("Cannot find a valid graph, try other seed ranges")
-    return start, goal, graph
+    return starts, goals, graph
 
 def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
     count = 0
@@ -60,6 +66,7 @@ def random_bridges_graph(n_bridge=3):
     return start, goal, graph
 
 def create_3bridges_graph():
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(-10.0, 0.0)) # start node
     node2 = g.Vertex(coord=(np.random.uniform(8.5,11.5), np.random.uniform(-1.0,1.5)))
     node3 = g.Vertex(coord=(np.random.uniform(19.0,21.5), np.random.uniform(-1.0,1.5)))
@@ -100,6 +107,7 @@ def create_3bridges_graph():
     return node1, node4, graph
 
 def linear_graph_unc():
+    g.Vertex.reset_id_counter()
     start_node = g.Vertex(coord=(0.0, 0.0))
     node1 = g.Vertex(coord=(5.0, 0.0))
     goal_node = g.Vertex(coord=(15.0, 0.0))
@@ -115,6 +123,7 @@ def linear_graph_unc():
 def disjoint_unc():  # edge 34 is blocked
     # this disjoint graph have 4 nodes (1,2,3,4) and 4 edges: (1,4), (1,2), (3,4), (2,3)
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 0.0))
     nodes.append(node1)
     node2 =  g.Vertex(coord=(4.0, 0.0))
@@ -138,6 +147,7 @@ def disjoint_unc():  # edge 34 is blocked
 def s_graph_unc():
     """Generate a simple graph for testing purposes."""
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 0.0)) # start node
     nodes.append(node1)
     node2 = g.Vertex(coord=(4.0, 4.0))
@@ -162,44 +172,60 @@ def s_graph_unc():
 def m_graph_unc():
     """Generate a simple graph for testing purposes."""
     nodes = []
-    node1 = g.Vertex(coord=(-3.0, 4.0)) # start node
+    g.Vertex.reset_id_counter()
+    node1 = g.Vertex(coord=(-4.0, 6.0)) # start node 1
     nodes.append(node1)
-    node2 = g.Vertex(coord=(-4.0, 8.5))
+    node2 = g.Vertex(coord=(-3.0, 4.0)) # start node 2
     nodes.append(node2)
-    node3 = g.Vertex(coord=(0.0, 2.0))
+    node3 = g.Vertex(coord=(-2.0, 8.0)) # start node 3
     nodes.append(node3)
-    node4 = g.Vertex(coord=(4.0, 0.0))
+    node4 = g.Vertex(coord=(0.0, 2.0))
     nodes.append(node4)
-    node5 = g.Vertex(coord=(4.0, 4.0))
+    node5 = g.Vertex(coord=(4.0, 0.0))
     nodes.append(node5)
-    node6 = g.Vertex(coord=(4.0, 8.0))
+    node6 = g.Vertex(coord=(4.0, 4.0))
     nodes.append(node6)
-    node7 = g.Vertex(coord=(8.0, 4.0)) # goal node
+    node7 = g.Vertex(coord=(4.0, 7.0))
     nodes.append(node7)
+    node8 = g.Vertex(coord=(7.0, 2.0)) # goal node 1
+    nodes.append(node8) 
+    node9 = g.Vertex(coord=(8.0, 0.0)) # goal node 2
+    nodes.append(node9)
+    node10 = g.Vertex(coord=(8.0, 4.0)) # goal node 3
+    nodes.append(node10)
+    
 
     graph = g.Graph(nodes)
     graph.edges.clear()
 
     # add edges
-    graph.add_edge(node1, node2, 0.1) #8
-    graph.add_edge(node1, node3, 0.1) #9
-    graph.add_edge(node2, node3, 0.1) #10
-    graph.add_edge(node2, node5, 0.1) #11
-    graph.add_edge(node2, node6, 0.1)#12
-    graph.add_edge(node3, node4, 0.1) #13
-    graph.add_edge(node3, node5, 0.1) #14
-    graph.add_edge(node4, node5, 0.1) #15
-    graph.add_edge(node4, node7, 0.90) #16
-    graph.add_edge(node5, node7, 0.90) #17
-    graph.add_edge(node6, node7, 0.1) #18
-    graph.add_edge(node6, node5, 0.1) #19
-    paths.dijkstra(graph=graph, goal=node7)
-    return node1, node7, graph
+    graph.add_edge(node1, node2, 0.1) #11
+    graph.add_edge(node1, node3, 0.1) #12
+    graph.add_edge(node2, node3, 0.1) #13
+    graph.add_edge(node2, node4, 0.1) #14
+    graph.add_edge(node2, node6, 0.8) #15
+    graph.add_edge(node3, node6, 0.1) #16
+    graph.add_edge(node3, node7, 0.1) #17
+    graph.add_edge(node4, node5, 0.1) #18
+    graph.add_edge(node4, node6, 0.90) #19
+    graph.add_edge(node5, node6, 0.20) #20
+    graph.add_edge(node5, node8, 0.90) #21
+    graph.add_edge(node5, node9, 0.90) #22
+    graph.add_edge(node6, node7, 0.1) #23
+    graph.add_edge(node6, node8, 0.1) #24
+    graph.add_edge(node6, node10, 0.1) #25
+    graph.add_edge(node7, node10, 0.1) #26
+    graph.add_edge(node8, node9, 0.1) #27
+    graph.add_edge(node8, node10, 0.1) #28
+    graph.add_edge(node9, node10, 0.1) #29
+    # paths.dijkstra(graph=graph, goal=node7)
+    return [node1, node2, node3], [node8, node9, node10], graph
 
 
 def graph_stuck():
     """Generate a simple graph for testing purposes."""
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 0.0)) # start node
     nodes.append(node1)
     # node2 = Vertex(coord=(0.2, 5.0))
@@ -230,6 +256,7 @@ def graph_stuck():
 def island_sgraph():
     """Generate a simple graph for testing purposes."""
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 0.0)) # start node
     nodes.append(node1)
     node2 = g.Vertex(coord=(4.0, 3.0))
@@ -268,6 +295,7 @@ def island_sgraph():
 def island_mgraph():
     """Generate a simple graph for testing purposes."""
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 3.0)) # start node
     nodes.append(node1)
     node2 = g.Vertex(coord=(4.0, 3.0))
@@ -307,6 +335,7 @@ def island_mgraph():
 def island_m2graph():
     """Generate a simple graph for testing purposes."""
     nodes = []
+    g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(0.0, 3.0)) # start node
     nodes.append(node1)
     node2 = g.Vertex(coord=(4.0, 3.0))

@@ -11,58 +11,25 @@ from pathlib import Path
 from sctp.planners import sctp_planner as planner
 from sctp.planners import sctp_plan_exe as plan_loop
 
-def sgraph_init():
-    start, goal, graph = graphs.s_graph_unc()
-    for poi in graph.pois:
-        assert poi.block_prob != 0.0
-        assert poi.block_prob != 1.0
-        if poi.id == 6 or poi.id==8 or poi.id==7:
-            poi.block_status = int(0)
-        if poi.id == 5 or poi.id==9:
-            poi.block_status = int(1)
-    return start, goal, graph
-
-def mgraph_init():
-    start, goal, graph = graphs.m_graph_unc()
-    for poi in graph.pois:
-        assert poi.block_prob != 0.0
-        assert poi.block_prob != 1.0
-        if poi.id == 8 or poi.id==9 or poi.id==14 or poi.id==19 or poi.id==18:
-            poi.block_status = int(0)
-    return start, goal, graph
-
 
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    # start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
-    start, goal, graph = graphs.random_bridges_graph()
+    start, goal, graph = graphs.random_island_graph(n_island=5)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
     planner_robot = robot.copy()
     param.IV_SAMPLE_SIZE = 1000
+    print(f"Island graph -number of rollouts: {args.num_iterations}")
     if args.planner == 'base':
         drones = []
-        print(f"Running CTP with num_iterations {args.num_iterations}")
         param.REVISIT_PEN = 6.0
     elif args.planner =='sctp':
-        print(f"Running SCTP and num_iterations {args.num_iterations}")
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-    # elif args.planner =='sctpfk':
-    #     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-    
     elif args.planner == 'sctpiv':
-        print(f"Running SCTP with IV and num_iterations {args.num_iterations}")
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
         param.ADD_IV = True
-    # elif args.planner == 'sctpivthractfk':
-    #     print(f"Using SCTP with IV with num_iterations {args.num_iterations}")
-    #     drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-    #     param.ADD_IV = True
-    #     param.MAX_UAV_ACTION = 3
-        # args.num_iterations = 4000
-    
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     

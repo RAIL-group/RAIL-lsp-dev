@@ -5,35 +5,47 @@ from matplotlib.colors import LinearSegmentedColormap
 from sctp.param import RobotType
 from scipy.stats import gaussian_kde
 
-def plot_plan_exec(graph, plt, name="Graph", gpath=[], dpaths = [], graph_plot=None,
-               start_coord=None, goal_coord=None, seed=None, cost=0.0, verbose=False):
+def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths = [], graph_plot=None,
+               start_coords=None, goal_coords=None, seed=None, cost=0.0, verbose=False):
     """Plot graph using matplotlib."""
     fig, ax = plt.subplots(1,2,figsize=(12,6))
-    if graph_plot is not None:
-        ax[0].scatter(start_coord[0], start_coord[1], marker='o', color='r')
-        ax[0].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
-        ax[0].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
-        ax[0].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
+    if graph_plot is not None:        
+        for i, start in enumerate(start_coords):
+            ax[0].scatter(start[0], start[1], marker='o', color='r')
+            ax[0].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
+        for i, goal in enumerate(goal_coords):
+            ax[0].scatter(goal[0], goal[1], marker='x', color='r')
+            ax[0].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
+        
         box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose)
         ax[0].set_aspect('equal', adjustable='box')
         ax[0].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
         ax[0].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
         ax[0].set_title(f'Seed: {seed} | Initial Graph')
+    
+    for i, start in enumerate(start_coords):
+        ax[1].scatter(start[0], start[1], marker='o', color='r')
+        ax[1].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
+    for i, goal in enumerate(goal_coords):
+        ax[1].scatter(goal[0], goal[1], marker='x', color='r')
+        ax[1].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
         
-    ax[1].scatter(start_coord[0], start_coord[1], marker='o', color='r')
-    ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
-    ax[1].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
-    ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
-    box = plot_sctpgraph(graph, ax[1], verbose=verbose)
-    if len(gpath[0]) > 1: 
-        g_colors = ['orange', 'green']
-        ax[1].scatter(gpath[0], gpath[1], marker='P', s=4.5, alpha=1.0)
-        plot_path_fromPoints(ax=ax[1], xy=gpath, colors=g_colors)
+    # ax[1].scatter(start_coord[0], start_coord[1], marker='o', color='r')
+    # ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
+    # ax[1].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
+    # ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
+    box = plot_sctpgraph(graph, ax[1])
+    if len(gpaths[0][0]) > 1: 
+        g_colors = [['black', 'gray'], ['blue', 'green'], ['maroon','brown'],]
+        for i, path in enumerate(gpaths):
+            ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)
+            plot_path_fromPoints(ax=ax[1], xy=path, colors=g_colors[i])
+    
     if dpaths != [] and len(dpaths[0][0]) >1:
-        for path in dpaths:
-            d_colors = ['blue', 'purple']
+        d_colors = [['purple', 'pink'], ['yellow', 'olive'], ['cyan', 'magenta']]
+        for i, path in enumerate(dpaths):
             ax[1].scatter(path[0],path[1], marker='s', s=4.5)
-            plot_path_fromPoints(ax=ax[1], xy=path, colors=d_colors)
+            plot_path_fromPoints(ax=ax[1], xy=path, colors=d_colors[i])
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
     ax[1].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
@@ -166,9 +178,7 @@ def plot_sctpgraph(graph, plt, textsize=7, verbose=False):
     count = 0
     for edge in graph.edges:
         x_values = [edge.v1.coord[0], edge.v2.coord[0]]
-        y_values = [edge.v1.coord[1], edge.v2.coord[1]]
-        
-        # print(f"Edge {count}: {edge.v1.id}-{edge.v2.id}")
+        y_values = [edge.v1.coord[1], edge.v2.coord[1]]        
         count += 1
         plt.plot(x_values, y_values, 'b-', linewidth=1.0, alpha=1.0)
         # Display block probability

@@ -351,4 +351,24 @@ def test_sctp_bridges_graph():
     plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
     
     plt.show()
+
+def test_sctp_randomgraph_sgpairs():
+    seed = 3003
+    np.random.seed(seed)
+    random.seed(seed)
+    verbose = False
+    starts, goals, graph = graphs.random_graph(n_vertex=18, SG_pairs=5)
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal', adjustable='box')
+    count =1
+    for start, goal in zip(starts, goals):
+        plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+        plt.text(start.coord[0]-0.8, start.coord[1], f'S_{count}', fontsize=8)
+        # plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+        # plt.text(start.coord[0]-0.3, start.coord[1]-1.0, 'D_s', fontsize=8)
+        plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
+        plt.text(goal.coord[0]+0.4, goal.coord[1], f'G_{count}', fontsize=8)
+        count += 1
+    plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
+    plt.show()
     

@@ -7,9 +7,9 @@ from sctp.param import RobotType
 
 
 class SCTPPlanner(object):
-    def __init__(self, args, init_graph, goalID, robot, drones=[], rollout_fn = None, 
-                tree_depth = 500, n_maps=100, verbose=False):
-        self.args = args
+    def __init__(self, init_graph, goalID, robot, drones=[], C=100.0, rollout_num = 500, 
+                 rollout_fn = None, tree_depth = 50, n_maps=100, verbose=False):
+        self.rollout_num = rollout_num
         self.verbose = verbose
         self.observed_graph = init_graph
         self.robot = robot 
@@ -19,7 +19,7 @@ class SCTPPlanner(object):
         self.goalNeighbors = []
         self.max_depth = tree_depth
         self.n_maps = n_maps
-        # print(f"The number of iterations of MCTS is {self.args.num_iterations} with revisit_pen is {param.REVISIT_PEN}")
+        self.C = C
         
     def reached_goal(self):
         if not self.robot.at_node:
@@ -62,13 +62,15 @@ class SCTPPlanner(object):
         else:
             drones = [drone.copy() for drone in self.drones]
                 
+        assert self.n_maps == 80
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
-                                        robot=robot,
-                                        drones=drones,
+                                        robot=robot, drones=drones,
                                         n_maps=self.n_maps)
+        # assert self.rollout_num == 800
         action, cost, [ordering, costs] = pouct_planner.core.po_mcts(sctpstate, \
-                        n_iterations=self.args.num_iterations, C=self.args.C, depth= self.max_depth, \
+                        n_iterations=self.rollout_num, C=self.C, depth= self.max_depth, \
                         rollout_fn=self.rollout_fn)
+        
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]

@@ -11,6 +11,7 @@ class Graph():
         self.vertices = vertices
         self.edges = edges
         self.pois = []
+        self.poiIDs = []
 
     def add_vertex(self, vertex):
         if isinstance(vertex, list):
@@ -21,10 +22,10 @@ class Graph():
     def add_edge(self, vertex1, vertex2, block_prob=0.0):
         if vertex1 not in self.vertices or vertex2 not in self.vertices:
             raise ValueError("Vertices not in graph. Add vertices before adding edges.")
-        # print(f"Connecting vertex {vertex1.id} and vertex {vertex2.id}")
         poi_coord = (0.5*(vertex1.coord[0]+vertex2.coord[0]),0.5*(vertex1.coord[1]+vertex2.coord[1]))
         POI = Vertex(coord=poi_coord, block_prob=block_prob)
         self.pois.append(POI)
+        self.poiIDs.append(POI.id)
         rand_cost = np.random.randint(1,10)
 
         edge1 = Edge(vertex1, POI)
@@ -78,6 +79,10 @@ class Graph():
 
 class Vertex:
     _id_counter = 1
+    @classmethod
+    def reset_id_counter(cls):
+        cls._id_counter = 1
+        
     def __init__(self, coord, block_prob=float(0.0)):
         self.id = Vertex._id_counter
         Vertex._id_counter += 1
@@ -89,10 +94,8 @@ class Vertex:
             self.block_status = int(0)
         else:
             self.block_status = int(0) if np.random.random() > block_prob else int(1)
-
     def get_id(self):
         return self.id
-
     def copy(self):
         new_vertex = Vertex(coord=(self.coord[0], self.coord[1]), block_prob=self.block_prob)
         new_vertex.id = self.id
@@ -101,10 +104,8 @@ class Vertex:
         new_vertex.block_status = self.block_status
         new_vertex.block_prob = self.block_prob
         return new_vertex
-
     def __eq__(self, other):
         return self.id == other.id
-
     def __hash__(self):
         return hash(self.id) + hash(str(self.coord))
 
@@ -118,30 +119,25 @@ class Edge:
             np.array((v1.coord[0], v1.coord[1])) - np.array((v2.coord[0], v2.coord[1])))
         self.cost = self.dist
         self.ran_cost = 0
-
     def get_cost(self) -> float:
         return self.cost
-    
-
     def __eq__(self, other):
         return self.hash_id == other.hash_id
 
     def __hash__(self):
         return hash(self.v1) + hash(self.v2)
-    # def copy(self, ref_v1, ref_v2):
-    #     return Edge(ref_v1, ref_v2)
-
+    
 
 def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
     points = []
     attempts = 0
-    max_attempts = 10000
+    max_attempts = 20000
     while len(points) < n and attempts < max_attempts:
         point = np.array([np.random.uniform(xmin, xmax), np.random.uniform(ymin, ymax)])
         if not points:
             points.append(point)
-            point = np.array([np.random.uniform(point[0]+min_dist, point[0]+min_dist+1.0), 
-                              np.random.uniform(point[1]+min_dist, point[1]+min_dist+1.0)])
+            point = np.array([np.random.uniform(point[0]+min_dist-4.5, point[0]+min_dist), 
+                              np.random.uniform(point[1]+min_dist-4.5, point[1]+min_dist)])
             points.append(point)
             continue
         dists = distance.cdist(np.array([point]), np.array(points)).flatten()
@@ -150,7 +146,7 @@ def generate_random_coordinates(n, xmin, ymin, xmax, ymax, min_dist, max_dist):
         attempts +=1
     
     if len(points) < n:
-        raise ValueError("Cannot get enough vertices")
+        raise ValueError("Cannot get enough random points")
     return points
 
 def calculate_triangle_angles(points, triangle):
@@ -171,10 +167,10 @@ def calculate_triangle_angles(points, triangle):
     
     return angle_A, angle_B, angle_C
 
-def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
-    size = (max_edge_len+min_edge_len) * (np.sqrt(n_vertex))
+def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len, num_sg=1):
+    size = 0.5*(max_edge_len+min_edge_len) * (np.sqrt(n_vertex))
     angle_min = 10.0
-    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.5*size, ymax=size,\
+    points = generate_random_coordinates(n_vertex, xmin=xmin, ymin=ymin, xmax=1.8*size, ymax=size,\
                                          min_dist=min_edge_len, max_dist=max_edge_len)
     tri = Delaunay(np.array(points))
     valid_triangles = []
@@ -182,7 +178,7 @@ def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
         angles = calculate_triangle_angles(np.array(points), simplex)
         if min(angles) > angle_min:
             valid_triangles.append(simplex)
-    
+    Vertex.reset_id_counter()
     graph = Graph(vertices=[Vertex(coord=point) for point in points])
     graph.edges.clear()
     edge_count = {}
@@ -205,12 +201,57 @@ def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len):
             graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.1, 0.6))
         else:
             graph.add_edge(graph.vertices[i], graph.vertices[j], np.random.uniform(0.6, 0.80))
+    # prune edges if they are too many
+    max_edges = n_vertex * 2
+    while len(graph.pois) > max_edges:
+        poi_to_remove = random.choice(graph.pois)
+        neighbor1 = graph.get_vertex_by_id(poi_to_remove.neighbors[0])
+        neighbor2 = graph.get_vertex_by_id(poi_to_remove.neighbors[1])
+        if len(neighbor1.neighbors) >=4 and len(neighbor2.neighbors) >=4:
+            graph.pois.remove(poi_to_remove)
+            graph.edges = [edge for edge in graph.edges if edge.v1.id != poi_to_remove.id and edge.v2.id != poi_to_remove.id]
+            neighbor1.neighbors.remove(poi_to_remove.id)
+            neighbor2.neighbors.remove(poi_to_remove.id)
+        
     startId = min(enumerate(points), key=lambda p: p[1][0])[0]
     start_pos = points[startId]
     goalId = max(enumerate(points), key=lambda p: np.linalg.norm(np.array(start_pos)- np.array(p[1])))[0]
     goal = graph.vertices[goalId]
     start = graph.vertices[startId]
-    return start, goal, graph
+    starts = get_n_neighbors(num_sg, start, graph)
+    goals = get_n_neighbors(num_sg, goal, graph)
+    return starts, goals, graph
+
+def get_neighbor_vertices(node, graph):
+    neighbors = []
+    poi_neighs = node.neighbors
+    for poi_id in poi_neighs:
+        v_neis = graph.get_poi(poi_id)
+        v_neis.block_prob = 0.0
+        v_neis.block_status = 0
+        neighs = v_neis.neighbors
+        
+        assert len(neighs) ==2
+        if neighs[0] != node.id:
+            neighbors.append(graph.get_vertex_by_id(neighs[0]))
+        else:
+            neighbors.append(graph.get_vertex_by_id(neighs[1]))            
+    return neighbors
+
+
+def get_n_neighbors(n, node, graph):
+    n_neighbors = [node]
+    count = 0
+    while len(n_neighbors) < n:
+        new_neighbors = get_neighbor_vertices(n_neighbors[count], graph)
+        for nei in new_neighbors:
+            if nei not in n_neighbors:
+                n_neighbors.append(nei)
+                if len(n_neighbors) >= n:
+                    break
+        count +=1
+    return n_neighbors
+        
 
 def generate_island_graph(xmin, ymin, max_edge_len, min_edge_len,n_islands=10):
     size = (max_edge_len+min_edge_len) * (np.sqrt(n_islands))
@@ -225,6 +266,7 @@ def generate_islands(points, min_dist, max_dist):
     graph_edges = []
     graph_pois = []
     graphs = []
+    Vertex.reset_id_counter()
     for point in points:
         ps = generate_points_around(point, min_dist=min_dist, max_dist=max_dist, num_points=5)
         graph = Graph(vertices=[Vertex(coord=coord) for coord in ps+[point]]) 
@@ -445,38 +487,43 @@ def modify_graph(graph, robot_edge, poiIDs=[]):
         p = [poi for poi in graph.pois if poi.id == poi_robot][0]
         block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
         return remove_edges(new_graph, redges=[[block_side, other_side]])
-        # if len(p.neighbors) == 2:
-            
-        #     new_graph.edges = [edge for edge in new_graph.edges if not ((edge.v1.id == poi_robot and edge.v2.id == block_side)
-        #                                                                 or (edge.v1.id == block_side and edge.v2.id == poi_robot))]
-        #     for vertex in new_graph.vertices:
-        #         if vertex.id == block_side:
-        #             vertex.neighbors = [nei for nei in vertex.neighbors if nei != poi_robot]
-        #             break 
-        #     for poi in new_graph.pois:
-        #         if poi.id == poi_robot:
-        #             poi.neighbors = [nei for nei in poi.neighbors if nei != block_side]
-        #             break
-        # return new_graph
+
+def modify_graph_multiDrones(graph, robot_edges, poiIDs=[]):
+    edge_pois = set([poi for edge in robot_edges for poi in edge])
+    new_poiIDs = [poiID for poiID in poiIDs if poiID not in edge_pois]
+    new_graph = remove_pois(graph=graph, poiIDs=new_poiIDs)
+    if len(poiIDs) == len(new_poiIDs): # if GV is not on a removed POI
+        return new_graph 
+    else:
+        edges = []
+        for edge in robot_edges:
+            poi_robot = [poi for poi in edge if poi in poiIDs][0]
+            other_side = edge[0] if poi_robot == edge[1] else edge[1]
+            p = [poi for poi in graph.pois if poi.id == poi_robot][0]
+            block_side = p.neighbors[0] if p.neighbors[1] == other_side else p.neighbors[1]
+            edges.append([block_side, other_side])
+        
+        return remove_edges(new_graph, redges=edges)
 
 
-def remove_edges(graph, redges=[]):
-    graph_copy = graph.copy()
+def remove_edges(graph, redges=None):
     if not redges:
-        return graph_copy
+        return graph.copy()
+    graph_copy = graph.copy()
+    vertex_map = {vertex.id: vertex for vertex in graph_copy.vertices+graph_copy.pois}
+    edges_to_keep = []
+    for edge in graph_copy.edges:
+        if not any((edge.v1.id == e[0] and edge.v2.id == e[1]) or (edge.v1.id == e[1] and edge.v2.id == e[0]) for e in redges):
+            edges_to_keep.append(edge)
+    graph_copy.edges = edges_to_keep
+    
     for e in redges:
-        graph_copy.edges = [edge for edge in graph_copy.edges if not ((edge.v1.id == e[0] and edge.v2.id == e[1])
-                                                                        or (edge.v1.id == e[1] and edge.v2.id == e[0]))]
-        count = 0
-        for vertex in graph_copy.vertices+graph_copy.pois:
-            if vertex.id == e[0]:
-                count += 1
-                vertex.neighbors = [nei for nei in vertex.neighbors if nei != e[1]]
-            if vertex.id == e[1]:
-                vertex.neighbors = [nei for nei in vertex.neighbors if nei != e[0]]
-                count += 1
-            if count >= 2:
-                break        
+        for e in redges:
+            v1, v2 = vertex_map.get(e[0]), vertex_map.get(e[1])
+            if v1:
+                v1.neighbors = [nei for nei in v1.neighbors if nei != e[1]]
+            if v2:
+                v2.neighbors = [nei for nei in v2.neighbors if nei != e[0]]        
     return graph_copy
 
 def get_poi_value(graph, poiID, startID, goalID):
