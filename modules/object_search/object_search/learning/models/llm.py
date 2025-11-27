@@ -6,7 +6,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from collections import Counter
 import hashlib
+import ollama
 
+MAX_LLM_TRIES = 5
 load_dotenv(dotenv_path='/data/.env')
 
 
@@ -24,9 +26,9 @@ class LLM:
     def query_llm(self, prompt):
         raise NotImplementedError
 
-    def get_response(self, prompt):
+    def get_response(self, prompt, override_cache=False):
         cached_response = self.get_cached_response(prompt)
-        if cached_response is not None:
+        if cached_response is not None and not override_cache:
             return cached_response
         response = self.query_llm(prompt)
         self.save_response_to_cache(prompt, response)
@@ -81,8 +83,16 @@ class LLM:
                                          subgoal_container_name,
                                          room_name,
                                          prompt_template_id)
-                response = llm_model.get_response(prompt)
-                prob_feasible_dict[subgoal] = parse_llm_response(response)
+                for i in range(MAX_LLM_TRIES):
+                    response = llm_model.get_response(prompt, override_cache=(i > 0))
+                    prob = parse_llm_response(response)
+                    if prob is not None:
+                        break
+                else:
+                    print(f"Failed to get valid response from LLM after {MAX_LLM_TRIES=} tries. "
+                          "Using minimum probability 0.01.")
+                    prob = 0.01
+                prob_feasible_dict[subgoal] = prob
             return prob_feasible_dict
 
         return get_properties
@@ -104,9 +114,14 @@ class LLM:
                                                                                 robot_distances,
                                                                                 prompt_template_id)
             response = llm_model.get_response(prompt)
-            chosen_subgoal = identify_subgoal_from_response(response, subgoal_description_to_idx)
-            if chosen_subgoal is None:
-                print("Using nearest subgoal as chosen subgoal.")
+            for i in range(MAX_LLM_TRIES):
+                response = llm_model.get_response(prompt, override_cache=(i > 0))
+                chosen_subgoal = identify_subgoal_from_response(response, subgoal_description_to_idx)
+                if chosen_subgoal is not None:
+                    break
+            else:
+                print(f"Failed to get valid subgoal from LLM after {MAX_LLM_TRIES=} tries. "
+                      "Using nearest subgoal as chosen subgoal.")
                 chosen_subgoal = min(subgoals, key=robot_distances.get)
             return chosen_subgoal
 
@@ -142,6 +157,38 @@ class Gemini(LLM):
             contents=prompt
         )
         response = result.text.strip()
+        return response
+
+
+class Llama3(LLM):
+    def __init__(self, model_name="llama3.2", prompt_cache_path=None):
+        client = None
+        super().__init__(client, model_name, prompt_cache_path)
+
+    def query_llm(self, prompt):
+        print(f"Querying Llama model {self.model_name}")
+        result = ollama.chat(
+            model=self.model_name,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        response = result['message']['content'].strip()
+        return response
+
+
+class GPTOSS(LLM):
+    def __init__(self, model_name="gpt-oss-120b", prompt_cache_path=None):
+        client = OpenAI(base_url="https://interestuarine-lilian-hyperbatically.ngrok-free.dev/v1",
+                        api_key="EMPTY")
+        super().__init__(client, model_name, prompt_cache_path)
+
+    def query_llm(self, prompt):
+        print(f"Querying GPT model {self.model_name}")
+        result = self.client.chat.completions.create(
+            model=f"openai/{self.model_name}",
+            messages=[{"role": "user", "content": prompt}],
+            reasoning_effort="medium"
+        )
+        response = result.choices[0].message.content.strip()
         return response
 
 
@@ -208,8 +255,8 @@ def parse_llm_response(response):
         numeric_value = float(response.strip())
         return max(numeric_value / 100.0, 0.01)
     except ValueError:
-        print(f'Failed to parse response: "{response}". Using 0.01 as probability value.')
-        return 0.01
+        print(f'Failed to parse response: "{response}". Returning None.')
+        return None
 
 
 def generate_description(graph):

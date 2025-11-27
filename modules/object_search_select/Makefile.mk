@@ -65,3 +65,38 @@ object-search-select-policy-selection-results:
 		--start_seeds $(apartment_start_seed) \
 		--num_seeds $(OBJECT_SEARCH_SELECT_NUM_SEEDS_DEPLOY) \
 		> $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OBJECT_SEARCH_SELECT_REPLAY_COSTS_SAVE_DIR)/results/results.txt
+
+OSS_LLM_RESULTS_DIR_NAME ?= gptoss_results
+# OSS_LLM_POLICIES ?= lspgptossprompta lspgptosspromptb lspgptosspromptminimal fullgptosspromptdirect
+OSS_LLM_POLICIES ?= lspgptossprompta lspgptosspromptb lspgptosspromptminimal fullgptosspromptdirect
+object-search-select-oss-llm-eval-seeds = $(foreach env,$(OBJECT_SEARCH_SELECT_ENVS), \
+											$(foreach policy,$(OSS_LLM_POLICIES), \
+												$(foreach seed,$(call object_search_select_get_seeds, $(env), $(OBJECT_SEARCH_SELECT_NUM_SEEDS_DEPLOY)), \
+													$(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME)/target_plcy_$(policy)_envrnmnt_$(env)_$(seed).txt)))
+
+object-search-select-oss-llm-eval: $(object-search-select-oss-llm-eval-seeds)
+$(object-search-select-oss-llm-eval-seeds): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(object-search-select-oss-llm-eval-seeds): policy = $(shell echo $@ | grep -oE 'plcy_[Aa-Zz]+' | cut -d'_' -f2)
+$(object-search-select-oss-llm-eval-seeds): env = $(shell echo $@ | grep -oE 'envrnmnt_[Aa-Zz]+' | cut -d'_' -f2)
+$(object-search-select-oss-llm-eval-seeds): DOCKER_ARGS ?= --network="host"
+$(object-search-select-oss-llm-eval-seeds):
+	$(call xhost_activate)
+	@echo "Evaluating OSS LLM Policy [$(policy) | $(env) | seed: $(seed)]"
+	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME)
+	@$(DOCKER_PYTHON) -m object_search_select.scripts.oss_llm_eval \
+		$(OBJECT_SEARCH_SELECT_CORE_ARGS) \
+	 	--current_seed $(seed) \
+		--save_dir /data/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME) \
+		--chosen_planner $(policy) \
+		--env $(env) \
+		> $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME)/stdout_$(policy)_$(env)_$(seed).txt
+
+object-search-select-oss-llm-results: DOCKER_ARGS ?= -it
+object-search-select-oss-llm-results: xhost-activate
+object-search-select-oss-llm-results:
+	@mkdir -p $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME)/results
+	@$(DOCKER_PYTHON) -m object_search_select.scripts.oss_llm_results \
+		--save_dir /data/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME) \
+		--start_seeds $(apartment_start_seed) \
+		--num_seeds $(OBJECT_SEARCH_SELECT_NUM_SEEDS_DEPLOY) \
+		> $(DATA_BASE_DIR)/$(OBJECT_SEARCH_SELECT_BASENAME)/$(OSS_LLM_RESULTS_DIR_NAME)/results/results.txt

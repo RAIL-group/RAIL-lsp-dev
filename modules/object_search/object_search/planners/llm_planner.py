@@ -1,5 +1,5 @@
 from object_search.planners import LearnedPlanner
-from object_search.learning.models.llm import GPT, Gemini
+from object_search.learning.models.llm import GPT, Gemini, Llama3, GPTOSS
 from object_search.core import Subgoal
 from object_search.learning import utils
 from object_search.core import get_frontier_distances, get_robot_distances
@@ -35,6 +35,48 @@ class LSPLLMGeminiPlanner(LearnedPlanner):
                                                   preprocess_input_fn,
                                                   destination,
                                                   verbose)
+
+
+class LSPLLMLlamaPlanner(LearnedPlanner):
+    def __init__(self, target_obj_info, args, destination=None, verbose=True,
+                 prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/lsp_llm' if use_prompt_caching else None
+
+        subgoal_property_net = Llama3.get_net_eval_fn(
+            prompt_template_id,
+            fake_llm_response_text,
+            prompt_cache_dir
+        )
+        preprocess_input_fn = utils.prepare_lspllm_input
+        super(LSPLLMLlamaPlanner, self).__init__(
+            target_obj_info,
+            args,
+            subgoal_property_net,
+            preprocess_input_fn,
+            destination,
+            verbose
+        )
+
+
+class LSPLLMGPTOSSPlanner(LearnedPlanner):
+    def __init__(self, target_obj_info, args, destination=None, verbose=True,
+                 prompt_template_id=0, fake_llm_response_text=None, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/lsp_llm' if use_prompt_caching else None
+
+        subgoal_property_net = GPTOSS.get_net_eval_fn(
+            prompt_template_id,
+            fake_llm_response_text,
+            prompt_cache_dir
+        )
+        preprocess_input_fn = utils.prepare_lspllm_input
+        super(LSPLLMGPTOSSPlanner, self).__init__(
+            target_obj_info,
+            args,
+            subgoal_property_net,
+            preprocess_input_fn,
+            destination,
+            verbose
+        )
 
 
 class FullLLMPlanner(LearnedPlanner):
@@ -105,3 +147,37 @@ class FullLLMGeminiPlanner(FullLLMPlanner):
                                                    subgoal_property_net,
                                                    destination,
                                                    verbose)
+
+
+class FullLLMLlamaPlanner(FullLLMPlanner):
+    def __init__(self, target_obj_info, args, destination=None, verbose=True,
+                 prompt_template_id=0, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/full_llm' if use_prompt_caching else None
+        subgoal_property_net = Llama3.get_search_action_fn(
+            prompt_template_id,
+            prompt_cache_dir
+        )
+        super(FullLLMLlamaPlanner, self).__init__(
+            target_obj_info,
+            args,
+            subgoal_property_net,
+            destination,
+            verbose
+        )
+
+
+class FullLLMGPTOSSPlanner(FullLLMPlanner):
+    def __init__(self, target_obj_info, args, destination=None, verbose=True,
+                 prompt_template_id=0, use_prompt_caching=True):
+        prompt_cache_dir = '/data/.cache/prompt_cache/full_llm' if use_prompt_caching else None
+        subgoal_property_net = GPTOSS.get_search_action_fn(
+            prompt_template_id,
+            prompt_cache_dir
+        )
+        super(FullLLMGPTOSSPlanner, self).__init__(
+            target_obj_info,
+            args,
+            subgoal_property_net,
+            destination,
+            verbose
+        )

@@ -4,7 +4,7 @@ from common import Pose
 import lsp
 
 
-def compute_cost_and_trajectory(grid, path, resolution=0.05, use_robot_model=False):
+def compute_cost_and_trajectory(grid, path, resolution=1.0, use_robot_model=False):
     '''This function returns the path cost, robot trajectory
     given the occupancy grid and the container poses the
     robot explored during object search.
