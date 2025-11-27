@@ -3,6 +3,9 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib
+import seaborn as sns
+import pandas as pd
+
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
@@ -226,19 +229,23 @@ if __name__ == "__main__":
     xticks[0] = 1
 
     env_planner_costs = {}
-
+    env_planner_costs_all_seeds = {}
     print('------------------------Base Planner Results----------------------------')
     for i, env in enumerate(envs):
         print(f'-------------------------------{env_names[i]}-------------------------------')
         dat = [compute_base_planner_costs(env, planners, seed=seed) for seed in range(NUM_SAMPLING)]
         dat = np.array(dat)
         planner_costs = []
+        planner_costs_all_seeds = []
         for j, planner in enumerate(planners):
             all_runs = dat[:, :, j]
             planner_avg_cost = np.mean(all_runs, axis=0)[-1]
+            planner_costs_all_seeds.append(all_runs[:, -1])
+            planner_std_cost = np.std(all_runs, axis=0)[-1]
             planner_costs.append(planner_avg_cost)
             print(f'Incurred Cost [{planner_names[j]:<20}]: {planner_avg_cost:.2f}')
         env_planner_costs[i] = np.array(planner_costs)
+        env_planner_costs_all_seeds[i] = np.array(planner_costs_all_seeds)
 
     probs = [0.0]
     tags = [r'$C^{lb}$']
@@ -522,6 +529,50 @@ if __name__ == "__main__":
                 planner_names_order_str = ','.join(planner_names_order)
                 f.write(f"{seed},{best_cost},{planner_names_order_str}\n")
 
-    print(f'Results plots saved in {results_dir} as '
-          f'results_costs.png, results_regret.png and results_rates.png')
+    # Violin plots
+    for i, env in enumerate(envs):
+        costs_all_seeds = env_planner_costs_all_seeds[i]
+        planner_names_sorted = [planner_names[j] for j in planner_plot_order]
+        costs_sorted = costs_all_seeds[planner_plot_order, :]
+
+        df = pd.DataFrame({
+            "planner": np.repeat(planner_names_sorted, costs_sorted.shape[1]),
+            "cost": costs_sorted.flatten()
+        })
+
+        fig, ax = plt.subplots(figsize=(9, 5))
+
+        sns.violinplot(
+            data=df,
+            y="planner",
+            x="cost",
+            orient="h",
+            bw_adjust=0.4,
+            color="0.8",
+            inner='quartile',
+            cut=0,
+            ax=ax
+        )
+
+        sns.stripplot(
+            data=df,
+            y="planner",
+            x="cost",
+            orient="h",
+            jitter=True,
+            size=3,
+            alpha=0.7,
+            ax=ax,
+            zorder=1
+        )
+
+        ax.set_xlabel("Navigation Cost", fontsize="x-large")
+        ax.set_ylabel("")
+        ax.set_yticklabels(planner_names_sorted, fontsize="medium")
+
+        plt.tight_layout()
+        fig.savefig(results_dir / f'planner_costs_violin_{env}.png')
+        fig.savefig(results_dir / f'planner_costs_violin_{env}.pdf')
+
+    print(f'Results plots saved in {results_dir}')
     # plt.show()
