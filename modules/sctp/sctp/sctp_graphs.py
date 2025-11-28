@@ -117,7 +117,7 @@ def linear_graph_unc():
     graph.add_edge(start_node, node1, 0.5)
     graph.add_edge(node1, goal_node, 0.3)
     paths.dijkstra(graph=graph, goal=goal_node)
-    return start_node, goal_node, graph
+    return [start_node], [goal_node], graph
 
 
 def disjoint_unc():  # edge 34 is blocked
@@ -141,7 +141,7 @@ def disjoint_unc():  # edge 34 is blocked
     graph.add_edge(node1, node4, 0.2)
     # vertices = graph.vertices + graph.pois
     paths.dijkstra(graph=graph, goal=node3)
-    return node1, node3, graph
+    return [node1], [node3], graph
 
 
 def s_graph_unc():
@@ -166,7 +166,35 @@ def s_graph_unc():
     graph.add_edge(node2, node4, 0.1)
     graph.add_edge(node3, node4, 0.9)
     paths.dijkstra(graph=graph, goal=node4)
-    return node1, node4, graph
+    return [node1], [node4], graph
+
+def s_graph_2goals():
+    """Generate a simple graph for testing purposes."""
+    nodes = []
+    g.Vertex.reset_id_counter()
+    node1 = g.Vertex(coord=(0.0, 0.0)) # start node
+    nodes.append(node1)
+    node2 = g.Vertex(coord=(4.0, 4.0))
+    nodes.append(node2)
+    node3 = g.Vertex(coord=(4.0, 0.0))
+    nodes.append(node3)
+    node4 = g.Vertex(coord=(8.0, 0.0)) # goal node
+    nodes.append(node4)
+    node5 = g.Vertex(coord=(8.0, 4.0)) # goal node
+    nodes.append(node5)
+    graph = g.Graph(nodes)
+    graph.edges.clear()
+
+    # adding edges
+    graph.add_edge(node1, node2, 0.1) # edge 1 - poi6 
+    graph.add_edge(node1, node3, 0.1) # edge 2 - poi7
+    graph.add_edge(node2, node3, 0.1) # edge 3 - poi8
+    graph.add_edge(node2, node4, 0.1) # edge 4 - poi9
+    graph.add_edge(node2, node5, 0.2) # edge 5 - poi10
+    graph.add_edge(node3, node4, 0.9) # edge 6 - poi11
+    graph.add_edge(node4, node5, 0.3) # edge 7 - poi12
+    paths.dijkstra(graph=graph, goal=node4)
+    return [node1, node1], [node4, node5], graph
 
 
 def m_graph_unc():

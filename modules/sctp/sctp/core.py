@@ -76,7 +76,7 @@ class SCTPState(object):
         self.uav_action_values = dict() # map action to its value
         self.behavior_change = dict() # map action to its value
         self.use_OptitHeur = True
-        assert param.ADD_IV == True
+        # assert param.ADD_IV == True
         if not iscopy:
             self.graph = graph
             self.goalID = goalID

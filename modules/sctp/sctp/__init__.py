@@ -5,4 +5,4 @@ from . import core  # noqa
 from . import comp
 from . import dstate_dec
 from . import gstate_dec
-from . import dstate_prior
+from . import dec_prior

@@ -72,7 +72,6 @@ def get_shortestPath_cost(graph, start, goal):
     queue = [(0.0, start, [start])]
     visited = set()
     costs = {start: 0.0}
-    # count = 0
     while queue:
         (path_cost, current_node, path) = heapq.heappop(queue)
         if current_node in visited:

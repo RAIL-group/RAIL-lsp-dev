@@ -3,7 +3,7 @@ from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 
 class Robot:
     _id_counter = 0
-    def __init__(self, position, cur_node=None, at_node=False, robot_type=RobotType.Ground, edge=None):
+    def __init__(self, position, cur_node=None, at_node=True, robot_type=RobotType.Ground, edge=None):
         self.id = Robot._id_counter
         Robot._id_counter += 1
         self.robot_type = robot_type
@@ -14,6 +14,7 @@ class Robot:
             self.edge = []
             self.at_node = True
         else:
+            assert edge is not None, 'Edge must be provided if robot is not at a node'
             self.edge = edge
             self.at_node = False
             # assert self.last_node == None
@@ -27,7 +28,8 @@ class Robot:
         self.remaining_time = 0.0
         self.direction = np.array([0.0, 0.0])
         self._cost_to_target = 0.0
-        self.visited_vertices = [self.last_node]
+        # self.visited_vertices = dict()
+        self.visited_vertices=[self.last_node]
         self.pl_vertex = self.last_node
         self.net_time = 0.0
         self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]

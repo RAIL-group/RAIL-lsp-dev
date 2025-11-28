@@ -181,7 +181,7 @@ def test_sctp_policy_rg_2007():
     baseline = True
     seed = 2007
     np.random.seed(seed)
-    random.seed(seed)
+    random.seedself.visited_vertices(seed)
     exp_param=30.0
     num_iters = 1000
     start, goal, graph = graphs.random_graph(n_vertex=8)

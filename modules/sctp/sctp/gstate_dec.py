@@ -7,7 +7,7 @@ from sctp import param, core
    
 
 class GroundState(object):
-    def __init__(self, graph=None, goalID=None, robot=None, iscopy=False, n_maps=100):
+    def __init__(self, graph=None, goalID=None, robot=None, iscopy=False, useOptHeur=True, n_maps=100):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.noway2goal = False
@@ -17,9 +17,9 @@ class GroundState(object):
         self.sampling_maps = n_maps
         self.actions = []
         self.robot = robot
-        # self.uavs = []
+        self.uavs = []
         self.going_back = False
-        self.use_OptHeur = True  
+        self.use_OptHeur = useOptHeur
         if not iscopy:
             self.graph = graph
             self.goalID = goalID
@@ -44,7 +44,7 @@ class GroundState(object):
                                 if self.history.get_action_outcome(action) != core.EventOutcome.BLOCK]
             self.update_heuristic()
             self.noway2goal = is_robot_stuck(self)
-        # assert self.uavs == []
+        assert self.uavs == []
     def init_history(self):
         for vertex in self.graph.vertices+self.graph.pois:
             action = core.Action(target=vertex.id)
@@ -69,6 +69,7 @@ class GroundState(object):
         new_state.noway2goal = self.noway2goal
         new_state.heuristic = self.heuristic
         new_state.robot = self.robot.copy()
+        # new_state.uavs = [uav.copy() for uav in self.uavs]
         new_state.actions = [action for action in self.actions]
         new_state.vertices_map = self.vertices_map
         for action in new_state.actions:
@@ -79,9 +80,13 @@ class GroundState(object):
         # assert self.sampling_maps == 80
         redge = [self.robot.last_node, self.robot.pl_vertex]
         block_pois = [key.target for key, value in self.history.get_data().items() if value == param.EventOutcome.BLOCK]
+        
         new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
         min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
         min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
+        # print("Heuristic distances:", min_dist1, min_dist2)
+        # if min_dist1 < 0 or min_dist2 < 0:
+        #     print(f"Two vertices: {redge}")
         assert (min_dist1 < 0) == (min_dist2 < 0)
         if min_dist1 < 0.0 and min_dist2 < 0.0:
             self.heuristic = param.STUCK_COST

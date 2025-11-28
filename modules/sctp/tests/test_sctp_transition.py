@@ -151,10 +151,11 @@ def test_sctp_transition_lg_noblock():
 
 
 def test_sctp_transition_lg_prob():
-    start, goal, l_graph, robots = graphs.linear_graph_unc()
-    init_state = core.SCTPState(graph=l_graph, goal=goal.id, robots=robots)
+    starts, goals, l_graph = graphs.linear_graph_unc()
+    robot = Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, at_node=True)
+    init_state = core.SCTPState(graph=l_graph, goalID=goals[0].id, robot=robot)
     state_actions = init_state.get_actions()
-    assert len(state_actions) == 2
+    assert len(state_actions) == 1
     # the first transitiopn - assign action 4 to the drone
     state_prob_cost = init_state.transition(state_actions[0])
     assert len(state_prob_cost) == 1
