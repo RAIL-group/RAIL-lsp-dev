@@ -48,7 +48,9 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
     # total_cost = 0.0
     max_tree_depth = 0
     root = POUCTNode(state)
-    assert len(root.unexplored_actions) > 0
+    if len(root.unexplored_actions) == 0:
+        print(f"Robot position: {root.state.robot.cur_pose} at node {root.state.robot.last_node}")
+    # assert len(root.unexplored_actions) > 0
     for i in range(n_iterations):
         leaf, sa = traverse(root, C=C, max_depth=depth)
         # if leaf.state.depth > max_tree_depth:
@@ -62,8 +64,8 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
         # total_cost += simulation_result
         # with open(logfile, "a+") as f:
         #     f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | HEU-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
+    # print(f"Action's num: {len(root.action_n)} and action_list {[a.target for a in  list(root.action_n.keys())]} action_visits: {list(root.action_n.values())}")
     best_action, cost = get_best_action(root)
-    # path_ordering, cost_ordering = get_best_path(root)
     path_ordering, cost_ordering = get_best_path_sctp(root)
     return best_action, cost, [path_ordering, cost_ordering]
 
@@ -150,14 +152,13 @@ def get_best_action(node):
     if len(best_action_idxs) > 1:
         best_action_idx = min(best_action_idxs, key=lambda x: action_values[x])
     else:
-        best_action_idx = best_action_idxs[0]
-    
+        best_action_idx = best_action_idxs[0]    
     best_action = actions[best_action_idx]
-    # print(f"Best action: {best_action}")
-    # print(f"Selected time {action_n[best_action_idx]} out of {node.total_n} simulations")
-    # print(f"Node visited: {node.action_n}")
-    # print(f"Node target: {[a.target for a in actions]}")
-    best_action_cost = action_values[best_action_idx] / action_n[best_action_idx]
+    if max_n == 0:
+        best_action_cost = 1e3
+        best_action = np.random.choice(actions)
+    else:
+        best_action_cost = action_values[best_action_idx] / action_n[best_action_idx]
     
     return best_action, best_action_cost
 
@@ -168,6 +169,7 @@ def get_best_path(root):
     count = 0
     while not node.is_terminal_node():
         count += 1
+        # print(f"The total visits of this node is {node.total_n}")
         if node.total_n == 1 \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break
@@ -177,7 +179,6 @@ def get_best_path(root):
         children = list(node.action_outcomes[best_action].keys())
         node = max(children, key=lambda x: x.total_n)
         # pdb.set_trace()
-    # print(f"The depth of the best path is {count}")
     return paths, costs
 
 def get_best_path_sctp(root):

@@ -466,9 +466,9 @@ def remove_poi(graph, poiID):
     return graph_copy
 
 def remove_pois(graph, poiIDs=[]):
-    graph_copy = graph.copy() #remove_blockEdges(graph=graph)
     if not poiIDs:
-        return graph_copy
+        return graph.copy()
+    graph_copy = graph.copy() #remove_blockEdges(graph=graph)
     graph_copy.pois = [poi for poi in graph_copy.pois if poi.id not in poiIDs]
     graph_copy.edges = [edge for edge in graph_copy.edges if edge.v1.id not in poiIDs and edge.v2.id not in poiIDs]
     for vertex in graph_copy.vertices:
@@ -518,12 +518,10 @@ def remove_edges(graph, redges=None):
     graph_copy.edges = edges_to_keep
     
     for e in redges:
-        for e in redges:
-            v1, v2 = vertex_map.get(e[0]), vertex_map.get(e[1])
-            if v1:
-                v1.neighbors = [nei for nei in v1.neighbors if nei != e[1]]
-            if v2:
-                v2.neighbors = [nei for nei in v2.neighbors if nei != e[0]]        
+        v1, v2 = vertex_map.get(e[0]), vertex_map.get(e[1])
+        assert v1 and v2
+        v1.neighbors = [nei for nei in v1.neighbors if nei != e[1]]
+        v2.neighbors = [nei for nei in v2.neighbors if nei != e[0]]
     return graph_copy
 
 def get_poi_value(graph, poiID, startID, goalID):

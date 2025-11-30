@@ -43,7 +43,7 @@ class GroundState(object):
             self.actions = [action for action in self.actions \
                                 if self.history.get_action_outcome(action) != core.EventOutcome.BLOCK]
             self.update_heuristic()
-            self.noway2goal = is_robot_stuck(self)
+            # self.noway2goal = is_robot_stuck(self)
         assert self.uavs == []
     def init_history(self):
         for vertex in self.graph.vertices+self.graph.pois:
@@ -78,26 +78,53 @@ class GroundState(object):
 
     def update_heuristic(self):
         # assert self.sampling_maps == 80
-        redge = [self.robot.last_node, self.robot.pl_vertex]
+        self.noway2goal = False
         block_pois = [key.target for key, value in self.history.get_data().items() if value == param.EventOutcome.BLOCK]
-        
-        new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)        
-        min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
-        min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
-        # print("Heuristic distances:", min_dist1, min_dist2)
-        # if min_dist1 < 0 or min_dist2 < 0:
-        #     print(f"Two vertices: {redge}")
-        assert (min_dist1 < 0) == (min_dist2 < 0)
-        if min_dist1 < 0.0 and min_dist2 < 0.0:
-            self.heuristic = param.STUCK_COST
-            return self.heuristic
-        if self.use_OptHeur:
-            self.heuristic = min(min_dist1, min_dist2)
+        if self.robot.at_node:
+            if self.robot.last_node in block_pois:
+                block_pois.remove(self.robot.last_node)
+            new_graph = g.remove_pois(graph=self.graph, poiIDs=block_pois)
+            heuristic, _ = paths.get_shortestPath_cost(graph=new_graph, start=self.robot.last_node, goal=self.goalID)
+            if heuristic < 0.0:
+                self.heuristic = param.STUCK_COST
+                self.noway2goal = True
+            else:
+                self.heuristic = heuristic
+            return heuristic
+            
         else:
-            d2 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[1]].coord))
-            d1 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[0]].coord))
-            self.heuristic = core.sampling_rollout(new_graph, redge, d1, d2, self.goalID, self.robot.at_node, 
-                                            startNode=self.robot.last_node, n_maps=self.sampling_maps)        
+            redge = [self.robot.edge[0], self.robot.edge[1]]
+            new_pois = [p for p in block_pois if p != redge[0] and p != redge[1]]
+            # new_graph = g.modify_graph(graph=self.graph, robot_edge=redge, poiIDs=block_pois)
+            new_graph = g.remove_pois(graph=self.graph, poiIDs=new_pois)        
+            min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalID)
+            min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalID)
+            # if min_dist1 < 0.0 or min_dist2 < 0.0:
+            #     print(f"in Gstate_dect check the edge {redge} with dist1={min_dist1} and dist2={min_dist2}")
+            #     print(f"inputed blocked pois: {block_pois} and new pois: {new_pois}")
+            #     print(f"remained edges: {[{edge.v1.id, edge.v2.id} for edge in new_graph.edges]}")
+            #     for v in self.graph.vertices+self.graph.pois:
+            #         if v.id == redge[0] or v.id == redge[1]:
+            #             print(f"In the input graph: Vertex {v.id} with block prob {v.block_prob} and neighbors {v.neighbors}")
+
+                
+            #     for v in new_graph.vertices+new_graph.pois:
+            #         if v.id == redge[0] or v.id == redge[1]:
+            #             print(f"In the modified graph: Vertex {v.id} with block prob {v.block_prob} and neighbors {v.neighbors}")
+
+            assert (min_dist1 < 0.0) == (min_dist2 < 0.0)
+            # print("in Gstate_dect  -- Satisfied assertion for min_dist1 and min_dist2")
+            if min_dist1 < 0.0 and min_dist2 < 0.0:
+                self.heuristic = param.STUCK_COST
+                self.noway2goal = True
+                return self.heuristic
+            if self.use_OptHeur:
+                self.heuristic = min(min_dist1, min_dist2)
+            else:
+                d2 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[1]].coord))
+                d1 = np.linalg.norm(np.array(self.robot.cur_pose)-np.array(self.vertices_map[redge[0]].coord))
+                self.heuristic = core.sampling_rollout(new_graph, redge, d1, d2, self.goalID, self.robot.at_node, 
+                                                startNode=self.robot.last_node, n_maps=self.sampling_maps)        
         return self.heuristic
     
     @property
@@ -146,7 +173,7 @@ def advance_state(state):
                         state.robot.cur_pose[1])) for neighbor in cur_node.neighbors if neighbor !=state.robot.pl_vertex]
         state.actions = [action for action in state.actions \
                                     if state.history.get_action_outcome(action) != param.EventOutcome.BLOCK]
-        state.noway2goal = is_robot_stuck(state)
+        # state.noway2goal = is_robot_stuck(state)
         # update the cost if revisiting the vertex
         state.action_cost += (state.visited_vertices.get(state.robot.last_node, 0)-1) * param.REVISIT_PEN
         state.update_heuristic()
@@ -172,7 +199,7 @@ def get_new_robot_node(state, blocked=False):
         neighbors = [node for node in state.graph.pois if node.id == state.robot.last_node][0].neighbors
         new_state.actions = [core.Action(target=neighbor,start_pose=(state.robot.cur_pose[0],state.robot.cur_pose[1])) \
                                     for neighbor in neighbors if neighbor != state.robot.pl_vertex]
-    new_state.noway2goal = is_robot_stuck(new_state)
+    # new_state.noway2goal = is_robot_stuck(new_state)
     new_state.update_heuristic()
     return new_state
 

@@ -163,4 +163,12 @@ def test_heuristic_sampling_sgraph():
     b2 = 0.9*(0.1*8+ 0.9*(b21 + b22))
     print(f"heuristic: {heuristic} --- true value: {b1+b2}")
     assert heuristic == pytest.approx(b1+b2, abs=0.5)
+
+def test_shortestPath_veriry_dgraph():
+    starts, goals, graph = graphs.disjoint_unc()
+    robot = [Robot(position=[0.0, 0.0], cur_node=starts[i].id, at_node=True) for i in range(1)]
+    edge = [1, 8]
+    
+    
+    
     
