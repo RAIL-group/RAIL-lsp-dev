@@ -588,7 +588,6 @@ def get_action_value(bc, action, drone_pose, graph):
     return bc - np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/VEL_RATIO
 
 def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=False):
-    # noway_penalty = 200.0
     block_pois = [poi.id for poi in graph.pois if poi.id != action.target and random.random() <= poi.block_prob ] 
     if block_edge:
         modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois+[action.target])

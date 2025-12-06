@@ -1,5 +1,6 @@
 import numpy as np
 from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
+import pytest
 
 class Robot:
     _id_counter = 0
@@ -38,10 +39,13 @@ class Robot:
         advance_distance = self.vel * delta_time
         self._cost_to_target -= advance_distance
         self.remaining_time -= delta_time
-        if self.remaining_time < APPROX_TIME:
+        if self.remaining_time < 0.0:
+            print(f'Error: Remaining time should not be negative: robot-type {self.robot_type} robot ID {self.id} with {self.remaining_time}')
+        assert self.remaining_time >= -APPROX_TIME, 'Remaining time cannot be negative'
+        if self.remaining_time <= APPROX_TIME:
             self.remaining_time = 0.0
             self._cost_to_target = 0.0
-        assert self.remaining_time >= 0.0, 'Remaining time cannot be negative'
+        
         if self.remaining_time == 0.0:
             self.need_action = True
             self.at_node = True
@@ -76,9 +80,10 @@ class Robot:
         return new_robot
 
     def retarget(self, new_action, distance, direction):
-        if not self.remaining_time == 0.0:
-            raise NotImplementedError('Time remaining must be 0 for now. '
-                                      'Drones cannot switch mid-action')
+        if not (self.remaining_time <= APPROX_TIME):
+            raise NotImplementedError(f'Time remaining must be 0 for now. '
+                                      f'Robot type: {self.robot_type} and ID: {self.id} and time remain: {self.remaining_time}')
+        self.remaining_time = 0.0
         self.direction = direction
         self._update_time_to_target(distance)
         # Store the new action

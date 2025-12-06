@@ -6,7 +6,7 @@ from sctp.core import Action
 from sctp.param import RobotType
 
 
-class SCTPPlanner(object):
+class DecPriorPlanner(object):
     def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 500, 
                  rollout_fn = None, tree_depth = 50, n_maps=100, verbose=False):
         self.rollout_num = rollout_num
@@ -22,7 +22,7 @@ class SCTPPlanner(object):
         self.C = C
         
     def reached_goal(self):
-        return all([ugv.last_node== self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
+        return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
     
     def update(self, observations, ugv_data, uav_data=None):
         if observations:
@@ -36,13 +36,6 @@ class SCTPPlanner(object):
             ugv.remaining_time = 0.0
             ugv.need_action = True
             
-        # self.robot.cur_pose = np.array([robot_data[0][0],robot_data[0][1]])
-        # self.robot.at_node = robot_data[1]
-        # self.robot.edge = robot_data[2].copy()
-        # self.robot.last_node = robot_data[3]
-        # self.robot.pl_vertex = robot_data[4]
-        # self.robot.remaining_time = 0.0
-        # self.robot.need_action = True
         if uav_data:
             for i, drone in enumerate(self.uavs):
                 drone.cur_pose = np.array([uav_data[i][0][0], uav_data[i][0][1]])
@@ -50,6 +43,7 @@ class SCTPPlanner(object):
                 drone.edge = []
                 drone.last_node = uav_data[i][2]
                 drone.unfinished_action = uav_data[i][3]
+                # drone.unfinished_action = None
                 drone.remaining_time = 0.0
                 drone.need_action = True    
 
@@ -70,7 +64,7 @@ class SCTPPlanner(object):
         else:
             uavs = [uav.copy() for uav in self.uavs]
                 
-        assert self.n_maps == 80
+        # assert self.n_maps == 80
         state = sctp.dec_prior.StateDecPrior(graph=self.observed_graph, goalIDs=self.goalIDs, drones=uavs, ugvs=ugvs)
     
     
@@ -84,5 +78,6 @@ class SCTPPlanner(object):
         # if len(ordering) < robot_num:
         #     ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(robot_num - len(ordering))]
         if self.verbose:
-            print("action ordering=", [f"{action}" for action in ordering[:robot_num]])
+            print("action ordering=", [f"{action}" for action in ordering])
+        # print(f"All action: ", [f"{action}" for action in ordering])
         return ordering, costs

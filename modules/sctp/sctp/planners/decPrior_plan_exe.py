@@ -1,6 +1,6 @@
 import numpy as np
 import sctp
-from sctp.param import VEL_RATIO, RobotType
+from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 
 class DecPriorPlanExe(object):
     def __init__(self, graph, reached_goal, goalIDs, ugvs, uavs=[], verbose=True):
@@ -22,7 +22,7 @@ class DecPriorPlanExe(object):
     def __iter__(self):
         while True:
             # print(f"The drone unfinished action is {self.drones[0].unfinished_action}")
-            if len(self.drones) > 0:
+            if len(self.uavs) > 0:
                 yield {
                     "ugvs": ([[ugv.cur_pose, ugv.at_node, ugv.edge, ugv.last_node, ugv.pl_vertex] for ugv in self.ugvs]),
                     "uavs": ([[uav.cur_pose, uav.at_node, uav.last_node, uav.unfinished_action] for uav in self.uavs]),
@@ -40,7 +40,7 @@ class DecPriorPlanExe(object):
                 if self.verbose:
                     print(f"Robot's positions: {[ugv.cur_pose for ugv in self.ugvs]}")
                     if len(self.uavs) > 0:
-                        print(f"Drone position: ", [drone.cur_pose for drone in self.drones])
+                        print(f"Drone position: ", [drone.cur_pose for drone in self.uavs])
                 break
             if self.counter > self.max_counter:
                 self.success = False
@@ -65,10 +65,24 @@ class DecPriorPlanExe(object):
     def team_move(self, actions_list):
         need_replan = True
         # if actions_list[0].rtype == RobotType.Drone:
+        # print("The Team is navigating...")
         self.action_cost = self.update_joint_action(actions_list[:len(self.uavs)+len(self.ugvs)])    
         self.transition_robots()
         self.transition_drones()
         actions_list = actions_list[len(self.uavs)+len(self.ugvs):]
+        if any([action.rtype == RobotType.Drone for action in actions_list]):
+            need_replan = True
+        else:
+            need_replan = False
+            while actions_list != [] and not all([ugv.last_node ==self.goalIDs[i] for i, ugv in enumerate(self.ugvs)]):
+                actions_list = self.update_onlyugv_action(actions_list)
+                print("-------------------------------------------------------")
+                print(f"Current action of robot 0: {self.ugvs[0].action}")
+                print(f"Remaining actions {len(actions_list)}")
+                print(f"Remaining time of robot 0: {self.ugvs[0].remaining_time} and robot 1: {self.ugvs[1].remaining_time}")
+                self.action_cost = min([ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]])
+                self.transition_robots()
+                print(f"UGV positions: {[ugv.cur_pose for ugv in self.ugvs]} at node: {[ugv.last_node for ugv in self.ugvs]}")
         # Reset the robot and drones
         if need_replan:
             for ugv in self.ugvs:
@@ -166,31 +180,52 @@ class DecPriorPlanExe(object):
         # in this function, all robots need action -
         if joint_action is None:
             return
-        # for the robot
-        for i, ugv in enumerate(self.ugvs):
-            if ugv.need_action:
+        min_time = float('inf')
+        for action in joint_action:
+            robot_id = action.robotID
+            if action.rtype == RobotType.Ground:
+                ugv = self.ugvs[robot_id]
+                assert ugv.need_action == True
                 assert ugv.remaining_time == 0.0
-                // need to work on this
-                end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[-1].target][0].coord
+                if ugv.last_node == self.goalIDs[robot_id]:
+                    continue
+                end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
                 distance = np.linalg.norm(np.array(ugv.cur_pose) - np.array(end_pos))
                 direction = (np.array([end_pos[0], end_pos[1]]) - ugv.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
                 
-                // check check 
-                ugv.retarget(joint_action[-1], distance, direction)
-                min_time = distance
+                ugv.retarget(action, distance, direction)
+                min_time = min(distance, min_time)
+            elif action.rtype == RobotType.Drone:
+                drone = self.uavs[robot_id]
+                assert drone.need_action == True
+                assert drone.remaining_time == 0.0
+                if drone.last_node == self.goalIDs[0]:
+                    continue
+                end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+                distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
+                direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+                drone.retarget(action, distance, direction)
+                min_time = min(distance/VEL_RATIO, min_time)
             else:
-                min_time = self.robot.remaining_time
-            
-        # for drones
-        for i, drone in enumerate(self.drones):
-            if drone.last_node == self.goalID:
-                continue
-            assert drone.remaining_time == 0.0
-            assert drone.need_action == True
-            end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[i].target][0].coord
-            distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
-            direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
-            drone.retarget(joint_action[i], distance, direction)
-            if distance > 0.0 and (distance/VEL_RATIO) < min_time:
-                min_time = distance/VEL_RATIO
+                raise ValueError("Unknown robot type in joint action")
         return min_time
+
+
+    def update_onlyugv_action(self, ugv_actions):
+        assert ugv_actions is not None 
+        if all ([ugv.remaining_time > 0.0 for ugv in self.ugvs]):
+            return ugv_actions
+        while any([ugv.need_action for ugv in self.ugvs]):
+            action = ugv_actions[0]
+            ugv_actions = ugv_actions[1:]
+            robot_id = action.robotID
+            assert action.rtype == RobotType.Ground
+            ugv = self.ugvs[robot_id]
+            assert ugv.need_action == True
+            assert ugv.remaining_time <= APPROX_TIME
+            end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+            distance = np.linalg.norm(np.array(ugv.cur_pose) - np.array(end_pos))
+            direction = (np.array([end_pos[0], end_pos[1]]) - ugv.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])            
+            ugv.retarget(action, distance, direction)
+        return ugv_actions
+        

@@ -129,7 +129,7 @@ class GroundState(object):
     
     @property
     def is_goal_state(self):
-        return (self.robot.last_node == self.goalID) or self.noway2goal
+        return (self.robot.last_node == self.goalID) or self.noway2goal or self.actions == []
 
     @property
     def is_block_state(self):

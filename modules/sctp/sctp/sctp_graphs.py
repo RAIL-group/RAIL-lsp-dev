@@ -246,7 +246,9 @@ def m_graph_unc():
     graph.add_edge(node8, node9, 0.1) #27
     graph.add_edge(node8, node10, 0.1) #28
     graph.add_edge(node9, node10, 0.1) #29
-    # paths.dijkstra(graph=graph, goal=node7)
+    for poi in graph.pois:
+        if poi.id in [11,12,13,27,28,29,16,25]:
+            poi.block_status = 0
     return [node1, node2, node3], [node8, node9, node10], graph
 
 

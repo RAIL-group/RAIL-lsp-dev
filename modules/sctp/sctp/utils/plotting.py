@@ -11,35 +11,43 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths = [], graph_plot=
     fig, ax = plt.subplots(1,2,figsize=(12,6))
     if graph_plot is not None:        
         for i, start in enumerate(start_coords):
+            if i >= len(gpaths):
+                break
             ax[0].scatter(start[0], start[1], marker='o', color='r')
             ax[0].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
         for i, goal in enumerate(goal_coords):
+            if i >= len(gpaths):
+                break
             ax[0].scatter(goal[0], goal[1], marker='x', color='r')
             ax[0].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
         
-        box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose)
+        box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=True)
         ax[0].set_aspect('equal', adjustable='box')
         ax[0].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
         ax[0].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
         ax[0].set_title(f'Seed: {seed} | Initial Graph')
     
     for i, start in enumerate(start_coords):
+        if i >= len(gpaths):
+            break
         ax[1].scatter(start[0], start[1], marker='o', color='r')
         ax[1].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
     for i, goal in enumerate(goal_coords):
+        if i >= len(gpaths):
+            break
         ax[1].scatter(goal[0], goal[1], marker='x', color='r')
         ax[1].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
         
-    # ax[1].scatter(start_coord[0], start_coord[1], marker='o', color='r')
-    # ax[1].text(start_coord[0]-1.0, start_coord[1],'Start',color='blue', fontsize=8)
-    # ax[1].scatter(goal_coord[0], goal_coord[1], marker='x', color='r')
-    # ax[1].text(goal_coord[0]+0.2, goal_coord[1],'Goal',color='r', fontsize=8)
     box = plot_sctpgraph(graph, ax[1])
     if len(gpaths[0][0]) > 1: 
-        g_colors = [['black', 'gray'], ['blue', 'green'], ['maroon','brown'],]
+        # g_colors = [['black', 'gray'], ['blue', 'green'], ['maroon','brown'],]
+        g_colors = ['navy', 'blue', 'green']
         for i, path in enumerate(gpaths):
             ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)
-            plot_path_fromPoints(ax=ax[1], xy=path, colors=g_colors[i])
+            # print(f"The X coordinates: {path[0]}")
+            # print(f"The Y coordinates: {path[1]}")
+            
+            plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=g_colors[i])
     
     if dpaths != [] and len(dpaths[0][0]) >1:
         d_colors = [['purple', 'pink'], ['yellow', 'olive'], ['cyan', 'magenta']]
@@ -119,14 +127,14 @@ def plot_firstAction(graph, action, name="First Action",
     plt.show()
 
     
-def plot_path_fromPoints(ax, xy, colors):
+def plot_path_fromPoints(ax, xy, colors, ugv=False):
     dist = 0.0
-    rev = 0.2
+    rev = 0.15
     x = xy[0]
     y = xy[1]
     for i in range(len(x)-1):
         dist += np.linalg.norm(np.array([x[i],y[i]]) - np.array(np.array([x[i+1],y[i+1]])))
-    plot_lines_varyWidthColor(ax, [x, y], dist, rev, colors)
+    plot_lines_varyWidthColor(ax, [x, y], dist, rev, colors, ugv)
 
 def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
     g_cost = 0.0
@@ -166,7 +174,7 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
 
 
 
-def plot_sctpgraph(graph, plt, textsize=7, verbose=False):
+def plot_sctpgraph(graph, plt, textsize=7, verbose=False, initG=False):
     x_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
     x_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[0])[1].coord[0]
     y_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
@@ -202,6 +210,8 @@ def plot_sctpgraph(graph, plt, textsize=7, verbose=False):
             plt.scatter(poi.coord[0], poi.coord[1], color='white', s=8)
         if verbose:
             plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
+        elif initG:
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"{poi.block_prob:.2f}", color='blue', fontsize=textsize)
     return [[x_min, y_min], [x_max, y_max]]
         
 
@@ -252,7 +262,7 @@ def make_scatter_plot(ax, cost_x, cost_y, max_val):
     ax.set_ylim(0, max_val)
 
 
-def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange', 'green']):
+def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange', 'green'],ugv=False):
     n_points = int(total_dist/rev)
     counter = 0
     # Define color gradient (red to blue)
@@ -278,3 +288,95 @@ def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange',
         ax.add_collection(lc)
         counter += seg_points
     ax.scatter(x, y, marker='P', color='orange',s=10)
+
+from matplotlib.path import Path
+from matplotlib.patches import PathPatch
+import matplotlib.colors as mcolors
+
+def get_arrowHollow(start, end,
+                         width_func,
+                         n_points=100,
+                         edgecolor='tab:blue',
+                         facecolor='white',
+                         alpha=0.9,
+                         edgewidth=3.0):
+    """
+    Draw an arrow from start to end with continuously varying width.
+    
+    Parameters:
+        width_func: function(t) where t in [0,1] → returns width at that point
+        n_points:   resolution along the path (more = smoother)
+    """
+    start = np.array(start, dtype=float)
+    end   = np.array(end, dtype=float)
+    vec = end - start
+    length = np.linalg.norm(vec)
+    if length == 0:
+        return None
+
+    # Parameter t from 0 to 1 along the segment
+    t = np.linspace(0, 1, n_points)
+    points = start + np.outer(t, vec)          # centerline points
+    widths = np.array([width_func(ti) for ti in t])
+
+    # Unit tangent and perpendicular
+    tangents = vec / length
+    perp = np.array([-tangents[1], tangents[0]])
+
+    # Left and right boundaries
+    left  = points + perp * widths[:, np.newaxis] / 2
+    right = points - perp * widths[:, np.newaxis] / 2
+
+    # Build closed path: forward on left → tip → back on right → close
+    verts = np.concatenate([
+        left,                   # go forward along left side
+        [end],                  # sharp tip
+        right[::-1],            # go back along right side
+    ])
+
+    codes = [Path.MOVETO] + [Path.LINETO]*(len(left)-1) + \
+            [Path.LINETO, Path.LINETO] + \
+            [Path.LINETO]*(len(right)-2) + \
+            [Path.CLOSEPOLY]
+
+    path = Path(verts, codes)
+    patch = PathPatch(path,
+                      facecolor=facecolor,
+                      edgecolor=edgecolor,
+                      linewidth=edgewidth,
+                      capstyle='round',
+                      joinstyle='round',
+                      alpha=alpha,
+                      zorder=2)
+    return patch
+
+def sharp_arrow(t):       return 0.3 * (1 - t**0.8)                  # very sharp tip
+
+def plot_pathArrowHollow(points, ax, color='white'):
+    colors = ['navy', 'blue', 'cyan', 'lime', 'green']
+    if color=='navy':
+        colors = ['navy', 'navy']
+    elif color== 'blue':
+        colors = ['blue', 'blue']
+    elif color =='green':
+        colors = ['green', 'green']
+    # print(f"The coordinates: {points}")
+    col = mcolors.LinearSegmentedColormap.from_list(color, colors)
+    # Now use it exactly like plt.cm.magma:
+    cmap = col
+    for i in range(len(points)-1):
+        if points[i] == points[i+1]:
+            continue    
+        arrow = get_arrowHollow(
+            start=points[i],
+            end=points[i+1],
+            width_func=sharp_arrow,
+            n_points=200,
+            # edgecolor=plt.cm.magma(i / (len(points)-1)),
+            edgecolor=cmap(i / (len(points)-1)),
+            facecolor='white',
+            alpha=0.95,
+            edgewidth=2.5
+        )
+        ax.add_patch(arrow)    
+

@@ -169,7 +169,6 @@ def get_best_path(root):
     count = 0
     while not node.is_terminal_node():
         count += 1
-        # print(f"The total visits of this node is {node.total_n}")
         if node.total_n == 1 \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break
@@ -189,7 +188,7 @@ def get_best_path_sctp(root):
         if uav.action is not None:
             paths.append(uav.action)
     while not node.is_terminal_node():
-        if node.total_n <5 \
+        if node.total_n <5 or node.action_n=={} \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
             break
         best_action, cost = get_best_action(node)
