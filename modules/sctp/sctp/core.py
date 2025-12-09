@@ -317,8 +317,6 @@ def get_new_nodes_grobot(state, last_node, last_edge):
     # update the uav action set.
     state.uav_actions = [action for action in state.uav_actions if action.target != state.robot.last_node]
     action = Action(target=state.robot.last_node)
-    # if param.ADD_IV and len(state.uavs) > 0 and action in state.uav_action_values:
-    #     del state.uav_action_values[action]
         
     if param.ADD_IV and len(state.uavs) >0:
         if  action in state.uav_action_values:
@@ -335,12 +333,6 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         state.state_actions = [action for action in state.robot_actions]
         state.depth += 1
         state.update_heuristic2()
-        # if param.ADD_IV and len(state.uavs) > 0: # Nothing to do for drones' actions
-        #     if len(state.uav_actions) <= param.IV_SAMPLE_SIZE and len(state.uav_action_values) >0:
-        #         actions = list(state.uav_action_values.keys())[:min(param.IV_SAMPLE_SIZE, len(state.uav_action_values))]
-        #         state.uav_actions.extend(actions) # [list(state.uav_action_values.keys())[0]]
-        #         for action in actions:
-        #             state.uav_action_values.pop(action)
         return {state: (1.0, state.action_cost)}
     # if edge_status is traversable, return action traversable (state) with traversable cost
     elif vertex_status == EventOutcome.TRAV: 

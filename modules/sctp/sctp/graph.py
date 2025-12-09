@@ -534,3 +534,31 @@ def get_poi_value(graph, poiID, startID, goalID):
     if sp_wopoi<0.0: # without this edge/action, no way to goal - should check first
         return 10.0
     return sp_wopoi - sp_wpoi
+
+
+def get_removedEdges_allrobots(graph, robots, block_pois):
+    vertices_connectRobot = set()
+    edges = []
+    for robot in robots:
+        if robot.at_node == True:
+            vertices_connectRobot.add(robot.last_node)
+            if robot.last_node in block_pois:
+                neighbors = [node for node in graph.pois if node.id == robot.last_node][0].neighbors
+                other_side = [n for n in neighbors if n != robot.pl_vertex][0]
+                edges.append([robot.last_node, other_side])
+        else:
+            vertices_connectRobot.add(robot.edge[0])
+            vertices_connectRobot.add(robot.edge[1])
+            if robot.edge[0] in block_pois:
+                neighbors = [node for node in graph.pois if node.id == robot.last_node][0].neighbors
+                other_side = [n for n in neighbors if n != robot.action.target][0]
+                edges.append([robot.last_node, other_side])
+            if robot.edge[1] in block_pois:
+                neighbors = [node for node in graph.pois if node.id == robot.action.target][0].neighbors
+                other_side = [n for n in neighbors if n != robot.last_node][0]
+                edges.append([robot.action.target, other_side])
+    # be sure no robot on the edges to be removed
+    for robot in robots:
+        if not robot.at_node and (robot.edge in edges or [robot.edge[1], robot.edge[0]] in edges):
+            edges.remove(robot.edge) if robot.edge in edges else edges.remove([robot.edge[1], robot.edge[0]])
+    return edges, vertices_connectRobot

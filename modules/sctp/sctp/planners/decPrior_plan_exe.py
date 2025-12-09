@@ -64,8 +64,6 @@ class DecPriorPlanExe(object):
             
     def team_move(self, actions_list):
         need_replan = True
-        # if actions_list[0].rtype == RobotType.Drone:
-        # print("The Team is navigating...")
         self.action_cost = self.update_joint_action(actions_list[:len(self.uavs)+len(self.ugvs)])    
         self.transition_robots()
         self.transition_drones()
@@ -79,7 +77,7 @@ class DecPriorPlanExe(object):
                 print("-------------------------------------------------------")
                 print(f"Current action of robot 0: {self.ugvs[0].action}")
                 print(f"Remaining actions {len(actions_list)}")
-                print(f"Remaining time of robot 0: {self.ugvs[0].remaining_time} and robot 1: {self.ugvs[1].remaining_time}")
+                # print(f"Remaining time of robot 0: {self.ugvs[0].remaining_time} and robot 1: {self.ugvs[1].remaining_time}")
                 self.action_cost = min([ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]])
                 self.transition_robots()
                 print(f"UGV positions: {[ugv.cur_pose for ugv in self.ugvs]} at node: {[ugv.last_node for ugv in self.ugvs]}")

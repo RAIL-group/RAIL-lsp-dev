@@ -51,12 +51,16 @@ def test_decPrior_plan_exec_lg():
         poi.block_status = 0
     
     plotGraph = graph.copy()
+    use_2AG = True 
+    max_uanum = 1
+    
     
     robots = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, at_node=True)]
     drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone, at_node=True)]
     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, verbose=True)
+                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
+                                            max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=decPriorplanner.reached_goal)
 
@@ -118,12 +122,14 @@ def test_decPrior_plan_exec_dg():
             poi.block_status = 1
     
     plotGraph = graph.copy()
-    
+    use_2AG = True 
+    max_uanum = 1
     robots = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, at_node=True)]
     drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone, at_node=True)]
     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, verbose=True)
+                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
+                                            max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=decPriorplanner.reached_goal)
 
@@ -186,14 +192,16 @@ def test_decPrior_plan_exec_sgraph_2goals():
             poi.block_status = 1
     
     plotGraph = graph.copy()
-    
+    use_2AG = True 
+    max_uanum = 3
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(num_ugv)]
     drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(num_uav)]
     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, verbose=True)
+                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
+                                            max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=decPriorplanner.reached_goal)
 
@@ -208,6 +216,9 @@ def test_decPrior_plan_exec_sgraph_2goals():
             step_data['uavs']
         )
         time1 = time.perf_counter()
+        # if (count_steps==1):
+        #     print("Done to the first loop:")
+            
         joint_action, cost = decPriorplanner.compute_joint_action()
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
@@ -250,14 +261,16 @@ def test_decPrior_plan_exec_mgraph():
     num_ugv = 3
     
     plotGraph = graph.copy()
-    
+    use_2AG = True 
+    max_uanum = 1
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(num_ugv)]
     drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(num_uav)]
     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, verbose=True)
+                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
+                                            max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=decPriorplanner.reached_goal)
 

@@ -39,7 +39,7 @@ class Robot:
         advance_distance = self.vel * delta_time
         self._cost_to_target -= advance_distance
         self.remaining_time -= delta_time
-        if self.remaining_time < 0.0:
+        if self.remaining_time < -APPROX_TIME:
             print(f'Error: Remaining time should not be negative: robot-type {self.robot_type} robot ID {self.id} with {self.remaining_time}')
         assert self.remaining_time >= -APPROX_TIME, 'Remaining time cannot be negative'
         if self.remaining_time <= APPROX_TIME:

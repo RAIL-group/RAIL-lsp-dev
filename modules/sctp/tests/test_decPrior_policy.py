@@ -67,6 +67,38 @@ def test_decPrior_policy_sgraph2goals():
     print(cost)
     print([[a.target, a.start_pose] for a in path_cost[0]])  
     print([c for c in path_cost[1]])  
+    
+def test_decPrior_policy_sgraph_2uavs2ugvs():
+    print()
+    C=200.0
+    num_iterations=800
+    uav_num = 2
+    ugv_num = 2
+    starts, goals, graph = graphs.s_graph_2goals()
+    
+    for poi in graph.pois:
+        if poi.id == 9 or poi.id==6 or poi.id==10:
+            poi.block_status = 0
+        elif poi.id == 11:
+            poi.block_status = 1
+            
+    uav1 = Robot(position=[7.76, 1.94], cur_node=1, at_node=False, robot_type=param.RobotType.Drone)
+    uav2 = Robot(position=[8.0, 0.0], cur_node=4, at_node=True, robot_type=param.RobotType.Drone)
+    uavs = [uav1, uav2]
+    ugvs = [Robot(position=[1.886, 1.886], cur_node=1, at_node=False, edge=[1,6]) for i in range(ugv_num)]
+    use_2AG = True 
+    max_uanum = 1
+    
+    for drone in uavs:
+        drone.unfinished_action = None
+    state = dec_prior.StateDecPrior(graph=graph, goalIDs=[goal.id for goal in goals], drones=uavs, ugvs=ugvs,
+                                    use_2AG=use_2AG, max_uanum=max_uanum)
+    
+    best_action, cost, path_cost  = policy.po_mcts(state, C=C, n_iterations=num_iterations, rollout_fn= dec_prior.decsctp_rollout)
+    print(best_action)
+    print(cost)
+    print([[a.target, a.start_pose] for a in path_cost[0]])  
+    print([c for c in path_cost[1]])  
 
 
 def test_decPrior_policy_mgraph3goals():

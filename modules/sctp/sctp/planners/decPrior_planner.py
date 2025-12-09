@@ -8,7 +8,8 @@ from sctp.param import RobotType
 
 class DecPriorPlanner(object):
     def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 500, 
-                 rollout_fn = None, tree_depth = 50, n_maps=100, verbose=False):
+                 rollout_fn = None, tree_depth = 50, n_maps=100, use_2AG = False,
+                 max_uanum=5, verbose=False):
         self.rollout_num = rollout_num
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -20,6 +21,8 @@ class DecPriorPlanner(object):
         self.max_depth = tree_depth
         self.n_maps = n_maps
         self.C = C
+        self.use_2AG = use_2AG
+        self.max_uanum = max_uanum
         
     def reached_goal(self):
         return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
@@ -65,7 +68,8 @@ class DecPriorPlanner(object):
             uavs = [uav.copy() for uav in self.uavs]
                 
         # assert self.n_maps == 80
-        state = sctp.dec_prior.StateDecPrior(graph=self.observed_graph, goalIDs=self.goalIDs, drones=uavs, ugvs=ugvs)
+        state = sctp.dec_prior.StateDecPrior(graph=self.observed_graph, goalIDs=self.goalIDs, 
+                                             drones=uavs, ugvs=ugvs, use2AG=self.use_2AG, max_uanum=self.max_uanum)
     
     
         # assert self.rollout_num == 800
