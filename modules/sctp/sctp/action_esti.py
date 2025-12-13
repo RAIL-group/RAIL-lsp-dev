@@ -7,10 +7,6 @@ import pytest
 
 def get_uav_action_2ag(state, uav_index):
     actions = []
-    # if len(state.action_values) == 0:
-    #     actions = [core.Action(target=state.goalIDs[0], rtype=param.RobotType.Drone, 
-    #                                 start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]        
-    # else:
     for act in list(state.behavior_change.keys()):
         state.action_values[act] = get_action_value(state.behavior_change[act], act, 
                                                     state.uavs[uav_index].cur_pose, state.graph)
@@ -46,34 +42,6 @@ def get_uav_action_2ag(state, uav_index):
 #             for action in state.uav_actions:
 #                 action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
 #             state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
-
-
-# def get_removedEdges_allrobots(graph, robots, block_pois):
-#     vertices_connectRobot = set()
-#     edges = []
-#     for robot in robots:
-#         if robot.at_node == True:
-#             vertices_connectRobot.add(robot.last_node)
-#             if robot.last_node in block_pois:
-#                 neighbors = [node for node in graph.pois if node.id == robot.last_node][0].neighbors
-#                 other_side = [n for n in neighbors if n != robot.pl_vertex][0]
-#                 edges.append([robot.last_node, other_side])
-#         else:
-#             vertices_connectRobot.add(robot.edge[0])
-#             vertices_connectRobot.add(robot.edge[1])
-#             if robot.edge[0] in block_pois:
-#                 neighbors = [node for node in graph.pois if node.id == robot.last_node][0].neighbors
-#                 other_side = [n for n in neighbors if n != robot.action.target][0]
-#                 edges.append([robot.last_node, other_side])
-#             if robot.edge[1] in block_pois:
-#                 neighbors = [node for node in graph.pois if node.id == robot.action.target][0].neighbors
-#                 other_side = [n for n in neighbors if n != robot.last_node][0]
-#                 edges.append([robot.action.target, other_side])
-#     # be sure no robot on the edges to be removed
-#     for robot in robots:
-#         if not robot.at_node and (robot.edge in edges or [robot.edge[1], robot.edge[0]] in edges):
-#             edges.remove(robot.edge) if robot.edge in edges else edges.remove([robot.edge[1], robot.edge[0]])
-#     return edges, vertices_connectRobot
 
 
 def get_single_behavior_change(graph, action, robot_edge, d0, d1, goalID, atNode, cur_heuristic, n_samples=100):

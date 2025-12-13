@@ -7,7 +7,7 @@ from sctp import param, core
    
 
 class GroundState(object):
-    def __init__(self, graph=None, goalID=None, robot=None, iscopy=False, useOptHeur=True, n_maps=100):
+    def __init__(self, graph=None, goalID=None, robot=None, iscopy=False, useOptHeur=True, n_maps=100, revisit_pen=15.0):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.noway2goal = False
@@ -20,6 +20,7 @@ class GroundState(object):
         self.uavs = []
         self.going_back = False
         self.use_OptHeur = useOptHeur
+        self.revisit_pen = revisit_pen
         if not iscopy:
             self.graph = graph
             self.goalID = goalID
@@ -175,7 +176,7 @@ def advance_state(state):
                                     if state.history.get_action_outcome(action) != param.EventOutcome.BLOCK]
         # state.noway2goal = is_robot_stuck(state)
         # update the cost if revisiting the vertex
-        state.action_cost += (state.visited_vertices.get(state.robot.last_node, 0)-1) * param.REVISIT_PEN
+        state.action_cost += (state.visited_vertices.get(state.robot.last_node, 0)-1) * state.revisit_pen
         state.update_heuristic()
         return {state: (1.0, state.action_cost)}
     elif vertex_status == param.EventOutcome.CHANCE:

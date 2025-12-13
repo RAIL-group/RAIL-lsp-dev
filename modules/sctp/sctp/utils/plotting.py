@@ -39,21 +39,18 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths = [], graph_plot=
         ax[1].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
         
     box = plot_sctpgraph(graph, ax[1])
-    if len(gpaths[0][0]) > 1: 
-        # g_colors = [['black', 'gray'], ['blue', 'green'], ['maroon','brown'],]
-        g_colors = ['navy', 'blue', 'green']
+    if len(gpaths[0][0]) > 1:        
+        colors = [['purple', 'pink'], ['yellow', 'olive'], ['cyan', 'magenta']]
         for i, path in enumerate(gpaths):
-            ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)
-            # print(f"The X coordinates: {path[0]}")
-            # print(f"The Y coordinates: {path[1]}")
-            
-            plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=g_colors[i])
-    
-    if dpaths != [] and len(dpaths[0][0]) >1:
-        d_colors = [['purple', 'pink'], ['yellow', 'olive'], ['cyan', 'magenta']]
-        for i, path in enumerate(dpaths):
             ax[1].scatter(path[0],path[1], marker='s', s=4.5)
-            plot_path_fromPoints(ax=ax[1], xy=path, colors=d_colors[i])
+            plot_path_fromPoints(ax=ax[1], xy=path, colors=colors[i])
+
+    if dpaths != [] and len(dpaths[0][0]) >1:
+        colors = ['navy', 'blue', 'green']
+        for i, path in enumerate(dpaths):
+            ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)            
+            plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
+    
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
     ax[1].set_ylim(box[0][1]-0.5, box[1][1]+1.0)

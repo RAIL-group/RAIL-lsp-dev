@@ -68,19 +68,19 @@ class DecPriorPlanExe(object):
         self.transition_robots()
         self.transition_drones()
         actions_list = actions_list[len(self.uavs)+len(self.ugvs):]
-        if any([action.rtype == RobotType.Drone for action in actions_list]):
-            need_replan = True
-        else:
-            need_replan = False
-            while actions_list != [] and not all([ugv.last_node ==self.goalIDs[i] for i, ugv in enumerate(self.ugvs)]):
-                actions_list = self.update_onlyugv_action(actions_list)
-                print("-------------------------------------------------------")
-                print(f"Current action of robot 0: {self.ugvs[0].action}")
-                print(f"Remaining actions {len(actions_list)}")
-                # print(f"Remaining time of robot 0: {self.ugvs[0].remaining_time} and robot 1: {self.ugvs[1].remaining_time}")
-                self.action_cost = min([ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]])
-                self.transition_robots()
-                print(f"UGV positions: {[ugv.cur_pose for ugv in self.ugvs]} at node: {[ugv.last_node for ugv in self.ugvs]}")
+        # if any([action.rtype == RobotType.Drone for action in actions_list]):
+        #     need_replan = True
+        # else:
+        #     need_replan = False
+        #     while actions_list != [] and not all([ugv.last_node ==self.goalIDs[i] for i, ugv in enumerate(self.ugvs)]):
+        #         actions_list = self.update_onlyugv_action(actions_list)
+        #         print("############################## Only move the ground robots ########################")                
+        #         print(f"Remaining actions {len(actions_list)}")
+        #         print(f"The action left are: {[print (action) for action in  actions_list]}")
+        #         self.action_cost = min([ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]])
+        #         assert self.action_cost > 0.0
+        #         self.transition_robots()
+        #         print(f"UGV positions: {[ugv.cur_pose for ugv in self.ugvs]} at node: {[ugv.last_node for ugv in self.ugvs]}")
         # Reset the robot and drones
         if need_replan:
             for ugv in self.ugvs:
@@ -211,14 +211,22 @@ class DecPriorPlanExe(object):
 
     def update_onlyugv_action(self, ugv_actions):
         assert ugv_actions is not None 
-        if all ([ugv.remaining_time > 0.0 for ugv in self.ugvs]):
+        if all ([ugv.remaining_time > 0.0 for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]]):
+            print("All UGVs are still executing their actions.")
             return ugv_actions
         while any([ugv.need_action for ugv in self.ugvs]):
             action = ugv_actions[0]
+            if self.verbose:
+                print("Updating only UGV actions...")
+                print(f"Remaining UGV actions: {action}")
+            
             ugv_actions = ugv_actions[1:]
             robot_id = action.robotID
             assert action.rtype == RobotType.Ground
             ugv = self.ugvs[robot_id]
+            if ugv.need_action == False:
+                print("Something is wrong")
+                print(f"The robot ID is {robot_id} with need action {ugv.need_action} and remaining time {ugv.remaining_time}")
             assert ugv.need_action == True
             assert ugv.remaining_time <= APPROX_TIME
             end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord

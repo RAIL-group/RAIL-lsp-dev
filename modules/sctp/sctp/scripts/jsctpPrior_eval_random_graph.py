@@ -65,7 +65,6 @@ def _setup(args):
         )
         time1 = time.perf_counter()
         joint_actions, cost = sctpplanner.compute_joint_action()
-        # print
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
         planning_exe.save_joint_actions(joint_actions, cost)

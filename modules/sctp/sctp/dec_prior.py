@@ -76,12 +76,12 @@ class StateDecPrior(object):
                 self.uav_actions = [core.Action(target=poi.id, rtype=param.RobotType.Drone) for poi in self.graph.pois]                
                 self.uav_actions = [action for action in self.uav_actions \
                                     if self.history.get_action_outcome(action) == param.EventOutcome.CHANCE] # list unexplored pois
-                continue_actions = []
+                # continue_actions = []
                 for i, uav in enumerate(self.uavs):
                     # assert uav.unfinished_action is None
                     if uav.unfinished_action and uav.unfinished_action in self.uav_actions:
                         uav.action = uav.unfinished_action
-                        continue_actions.append(uav.action)
+                        # continue_actions.append(uav.action)
                         assert uav.action.rtype == param.RobotType.Drone
                         uav.unfinished_action = None
                         uav.need_action = False
@@ -95,15 +95,16 @@ class StateDecPrior(object):
                         uav.need_action = True
                         uav.action = None
                 
+                indices = [i for i, uav in enumerate(self.uavs) if uav.need_action]
                 if self.use_2AG:
                     self.behavior_change.clear()
                     self.action_values.clear()
                     # get the index of uavs  needing action index
-                    indices = [i for i, uav in enumerate(self.uavs) if uav.need_action]
                     if indices != []:
                         uav_idx = indices[0]
                         for act in self.uav_actions: # only for value information gain 118-127
-                            if act in continue_actions:
+                            # if act in continue_actions:
+                            if act.target in self.assigned_pois:
                                 continue
                             self.behavior_change[act] = ae.get_ugvs_behavior_change(state=self, action=act)
                             self.action_values[act] = ae.get_action_value(self.behavior_change[act], act, 
@@ -120,7 +121,13 @@ class StateDecPrior(object):
                             self.behavior_change.pop(first_key, None)
                          
                 if len(self.uav_actions) == 0:
-                    self.uav_actions = [core.Action(target=self.goalIDs[0], rtype=param.RobotType.Drone)]        
+                    self.uav_actions = [core.Action(target=self.goalIDs[0], rtype=param.RobotType.Drone)]
+                    if indices != []:
+                        self.uav_actions[0].update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
+                        self.uav_actions[0].update_robotID(indices[0])      
+                    else:
+                        self.uav_actions[0].update_pose((self.uavs[0].cur_pose[0], self.uavs[0].cur_pose[1]))
+                        self.uav_actions[0].update_robotID(0)
                 # check right here
                 assert isinstance(self.uav_actions[0], core.Action)
                 assert len(self.uav_actions) > 0
@@ -231,15 +238,22 @@ class StateDecPrior(object):
         new_state.state_actions = []
         # copy the robot
         new_state.ugvs = [ugv.copy() for ugv in self.ugvs]
-        new_state.ugvs_actions = [[core.Action(target=action.target, start_pose=action.start_pose) \
+        new_state.ugvs_actions = [[core.Action(target=action.target, start_pose=(action.start_pose[0],action.start_pose[1])) \
                                     for action in ugv_actions] for ugv_actions in self.ugvs_actions]
         for ii, actions in enumerate(new_state.ugvs_actions):
             for act in actions:
                 act.update_robotID(ii)
         if self.uavs != []:
             new_state.uavs = [uav.copy() for uav in self.uavs]
-            new_state.uav_actions = [core.Action(target=action.target, rtype=action.rtype) \
+            if self.use_2AG:
+                new_state.uav_actions = []
+            else:
+                new_state.uav_actions = [core.Action(target=action.target, rtype=action.rtype) \
                                     for action in self.uav_actions]
+                # for i, uav in enumerate(new_state.uavs):
+                #     if uav.need_action and uav.last_node != new_state.goalIDs[0]:
+                #         new_state.uav_actions[0].update_pose((uav.cur_pose[0], uav.cur_pose[1]))
+                #         new_state.uav_actions[0].update_robotID(i)
         else:
             new_state.uavs = []
             new_state.uav_actions = []
@@ -250,9 +264,13 @@ class StateDecPrior(object):
         anyrobot_action = False        
         if action.rtype == param.RobotType.Drone:
             uav_needs_action = [uav.need_action for uav in temp_state.uavs]
-            uav_idx = uav_needs_action.index(True)
             assert any(uav_needs_action) == True
-            assert action in temp_state.uav_actions
+            if self.use_2AG:
+                uav_idx = action.robotID
+            else:
+                uav_idx = uav_needs_action.index(True)
+                # if not self.use_2AG:
+                assert action in temp_state.uav_actions
             assert temp_state.cur_ugv_idx == -1
             if action.target in temp_state.assigned_pois:
                 print(f"Assigning action {action.target} to drone {uav_idx} that is in the assigned_pois {temp_state.assigned_pois}")
@@ -267,20 +285,28 @@ class StateDecPrior(object):
             temp_state.uavs[uav_idx].retarget(action, distance, direction)
             if action.target != temp_state.goalIDs[0]:
                 temp_state.assigned_pois.add(action.target)
-                # using action estimation
-                if self.use_2AG:
-                    temp_state.behavior_change.pop(action, None)
-                    temp_state.action_values.pop(action, None)
-                    if any ([uav.need_action for uav in temp_state.uavs]):
-                        self.action_values.clear()
-                        n_uav_idx = [i for i, uav in enumerate(temp_state.uavs) if uav.need_action][0]
-                        temp_state.uav_actions = ae.get_uav_action_2ag(temp_state, n_uav_idx)
-                else:
+                if not self.use_2AG:
                     temp_state.uav_actions.remove(action)
+            # using action estimation
+            if self.use_2AG:
+                temp_state.behavior_change.pop(action, None)
+                temp_state.action_values.pop(action, None)
+                if any ([uav.need_action for uav in temp_state.uavs]):
+                    self.action_values.clear()
+                    n_uav_idx = [i for i, uav in enumerate(temp_state.uavs) if uav.need_action][0]
+                    temp_state.uav_actions = ae.get_uav_action_2ag(temp_state, n_uav_idx)
             
             if len(temp_state.uav_actions) ==0:
                 rest_action = core.Action(target=temp_state.goalIDs[0], rtype=param.RobotType.Drone)
                 temp_state.uav_actions = [rest_action]
+                if self.use_2AG: 
+                    if any ([uav.need_action for uav in temp_state.uavs]):
+                        rest_action.update_pose((temp_state.uavs[n_uav_idx].cur_pose[0], temp_state.uavs[n_uav_idx].cur_pose[1]))
+                        rest_action.update_robotID(n_uav_idx)
+                    else:
+                        rest_action.update_pose((temp_state.uavs[0].cur_pose[0], temp_state.uavs[0].cur_pose[1]))
+                        rest_action.update_robotID(0)
+                
             anyrobot_action = True
         elif action.rtype == param.RobotType.Ground:
             assert temp_state.cur_ugv_idx > -1
@@ -318,6 +344,7 @@ def update_policy(state, ugv_idx, num_rollouts=1000):
     C = 200.0
     max_depth = 10
     useOptHeur = True
+    revisit_pen = 20.0
     
     new_graph  = state.graph.copy()
     for poi in new_graph.pois:
@@ -327,7 +354,7 @@ def update_policy(state, ugv_idx, num_rollouts=1000):
             poi.block_prob = 0.0
     robot = state.ugvs[ugv_idx].copy()
     sctpstate = GroundState(graph=new_graph, goalID=state.goalIDs[ugv_idx], robot=robot, \
-                            useOptHeur=useOptHeur, n_maps=state.sampling_maps)
+                            useOptHeur=useOptHeur, n_maps=state.sampling_maps, revisit_pen=revisit_pen)
     
     action, _, [ordering, costs] = pouct_planner.core.po_mcts(sctpstate, \
                     n_iterations=num_rollouts, C=C, depth= max_depth, \
@@ -337,9 +364,14 @@ def update_policy(state, ugv_idx, num_rollouts=1000):
 def advance_state(state, action):
     assert state.going_back == False
     # 1. if any robot needs action, determine its actions then return
-    if state.uavs != [] and any([uav.need_action for uav in state.uavs]):
+    if state.uavs != [] and any([uav.need_action for uav in state.uavs]) and action.rtype == param.RobotType.Drone:
         state.state_actions = [action for action in state.uav_actions]
         state.cur_ugv_idx = -1
+        if len(state.state_actions) == 0:
+            for robot in state.uavs+state.ugvs:
+                print(f"{robot.robot_type} {robot.id} need_action: {robot.need_action} is atNode?? {robot.at_node} at node {robot.last_node} at {robot.cur_pose} from {robot.pl_vertex}" )
+            ValueError("No available action for UAVs")
+            
         assert len(state.state_actions) > 0
         state.depth += 1
         return {state: (1.0, 0.0)}
@@ -431,7 +463,6 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
         if len(state.uavs) > 0:
             reset_uavs_action(state, robot_idx)
         # update the uav action set.
-        
         for i, ugv in enumerate(state.ugvs):
             if i != robot_idx:
                 ugv.need_action = False
@@ -476,11 +507,8 @@ def get_new_ugv_node(state, robot_idx, last_node=None, blocked=False):
     new_state.update_heuristic()
     if new_state.use_2AG:
         new_state.update_action_bc()
-    working on this part for uav in new_state.uavs:
-        if state.use_2AG:
-            pass 
-        else:
-            state.uav_actions = [action for action in state.uav_actions if action.target != state.ugvs[robot_idx].last_node]
+    else:
+        new_state.uav_actions = [action for action in state.uav_actions if action.target != state.ugvs[robot_idx].last_node]
     
     
     return new_state
@@ -492,7 +520,7 @@ def get_uav_belief(state, uav_index):
     # determine all actions related to the poi and remove it from the set.
     poi_id = state.uavs[uav_index].last_node
     assert poi_id == vertex.id
-    state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
+    # state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
     # if len(state.uav_actions) == 0:
     #     if state.use_2AG:
     #         state.update_action_bc()
@@ -509,15 +537,33 @@ def get_uav_belief(state, uav_index):
         robot.need_action = False
     state.cur_ugv_idx = -1
     if vertex_status == param.EventOutcome.BLOCK: # should not go here
-        ValueError("Drones should never visit this node")
+        # ValueError("Drones should never visit this node")
         state.depth += 1
+        if state.use_2AG:
+            state.update_action_bc()
+            state.update_action_values(uav_index)
+            state.uav_actions = ae.get_uav_action_2ag(state, uav_index)
+        else:
+            state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
         return {state: (1.0, state.action_cost)}
     elif vertex_status == param.EventOutcome.TRAV:  # only at goal
-        assert vertex.id == state.goalIDs[0]
         state.depth += 1
-        state.uav_actions = ae.get_uav_action_2ag(state, uav_index)
-        if len(state.uav_actions) == 0:
+        if vertex.id == state.goalIDs[0]:
             state.uav_actions = [core.Action(target=state.goalIDs[0], rtype=param.RobotType.Drone)]
+            state.uav_actions[0].update_pose((state.uavs[uav_index].cur_pose[0], state.uavs[uav_index].cur_pose[1]))
+            state.uav_actions[0].update_robotID(uav_index)
+        else:
+            if state.use_2AG:
+                state.update_action_bc()
+                state.update_action_values(uav_index)
+                state.uav_actions = ae.get_uav_action_2ag(state, uav_index)
+            else:
+                state.uav_actions = [action for action in state.uav_actions if action.target != poi_id]
+            if len(state.uav_actions) == 0:
+                state.uav_actions = [core.Action(target=state.goalIDs[0], rtype=param.RobotType.Drone)]
+                if state.use_2AG:
+                    state.uav_actions[0].update_pose((state.uavs[uav_index].cur_pose[0], state.uavs[uav_index].cur_pose[1]))
+                    state.uav_actions[0].update_robotID(uav_index)
         state.state_actions = [action for action in state.uav_actions]
         state.update_heuristic()
         return {state: (1.0, state.action_cost)}
@@ -552,6 +598,9 @@ def get_new_uav_node(state, uav_index, blocked=False):
         new_state.uav_actions = ae.get_uav_action_2ag(new_state, uav_index)
     if len(new_state.uav_actions)  == 0:
         state.uav_actions = [core.Action(target=state.goalIDs[0], rtype=param.RobotType.Drone)]
+        if state.use_2AG:
+            state.uav_actions[0].update_pose((state.uavs[uav_index].cur_pose[0], state.uavs[uav_index].cur_pose[1]))
+            state.uav_actions[0].update_robotID(uav_index)
     new_state.state_actions = [action for action in new_state.uav_actions]
     return new_state
 
@@ -580,13 +629,23 @@ def _get_robot_that_finishes_first(state):
     min_ugv_time = min(ugvs_remaining_times)
     if len(time_remaining_uavs)==0 or (min_ugv_time < min(time_remaining_uavs)-param.APPROX_TIME):
         remaining_times = [ugv.remaining_time for ugv in state.ugvs]
-        return ugv_finish_first, remaining_times.index(min_ugv_time), min_ugv_time
+        idx = -1
+        for ii, time in enumerate(remaining_times):
+            if state.ugvs[ii].last_node != state.goalIDs[ii] and time ==min_ugv_time:
+                idx = ii
+        assert idx >= 0
+        return ugv_finish_first, idx, min_ugv_time # remaining_times.index(min_ugv_time), min_ugv_time
     else:
         assert len(state.uavs) > 0
         min_uav_time = min(time_remaining_uavs)
         remaining_times = [uav.remaining_time for uav in state.uavs]
+        idx = -1
+        for ii, time in enumerate(remaining_times):
+            if state.uavs[ii].last_node != state.goalIDs[0] and time ==min_uav_time:
+                idx = ii
+        assert idx >= 0
         ugv_finish_first = False
-        return ugv_finish_first, remaining_times.index(min_uav_time), min_uav_time
+        return ugv_finish_first, idx, min_uav_time #remaining_times.index(min_uav_time), min_uav_time
 
 
 def decsctp_rollout(state):

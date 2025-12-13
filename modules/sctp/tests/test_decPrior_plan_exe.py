@@ -184,7 +184,7 @@ def test_decPrior_plan_exec_sgraph_2goals():
 
     starts, goals, graph = graphs.s_graph_2goals()
     num_uav = 2
-    num_ugv = 2
+    num_ugv = 1
     for poi in graph.pois:
         if poi.id == 9 or poi.id==6 or poi.id==10:
             poi.block_status = 0
@@ -193,7 +193,7 @@ def test_decPrior_plan_exec_sgraph_2goals():
     
     plotGraph = graph.copy()
     use_2AG = True 
-    max_uanum = 3
+    max_uanum = 1
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(num_ugv)]
     drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
@@ -252,12 +252,12 @@ def test_decPrior_plan_exec_mgraph():
     print()
     args = _get_args()
     args.planner = 'sctp'
-    args.num_iterations = 3000
+    args.num_iterations = 1000
     random.seed(args.seed)
     np.random.seed(args.seed)
 
     starts, goals, graph = graphs.m_graph_unc()
-    num_uav = 2
+    num_uav = 3
     num_ugv = 3
     
     plotGraph = graph.copy()
@@ -288,7 +288,6 @@ def test_decPrior_plan_exec_mgraph():
         joint_action, cost = decPriorplanner.compute_joint_action()
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
-        # print(f"First 4 actions: {joint_action[:4]}")
         plan_exec.save_joint_actions(joint_action, cost)
     
     cost_sum = np.sum([robot.net_time for robot in robots])
