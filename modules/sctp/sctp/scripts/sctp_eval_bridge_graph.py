@@ -11,32 +11,11 @@ from pathlib import Path
 from sctp.planners import sctp_planner as planner
 from sctp.planners import sctp_plan_exe as plan_loop
 
-# def sgraph_init():
-#     start, goal, graph = graphs.s_graph_unc()
-#     for poi in graph.pois:
-#         assert poi.block_prob != 0.0
-#         assert poi.block_prob != 1.0
-#         if poi.id == 6 or poi.id==8 or poi.id==7:
-#             poi.block_status = int(0)
-#         if poi.id == 5 or poi.id==9:
-#             poi.block_status = int(1)
-#     return start, goal, graph
-
-# def mgraph_init():
-#     start, goal, graph = graphs.m_graph_unc()
-#     for poi in graph.pois:
-#         assert poi.block_prob != 0.0
-#         assert poi.block_prob != 1.0
-#         if poi.id == 8 or poi.id==9 or poi.id==14 or poi.id==19 or poi.id==18:
-#             poi.block_status = int(0)
-#     return start, goal, graph
-
-
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     need_pdf = False
-    # print("Generating random bridges graph")
+    print(f"Number of rollouts: {args.num_iterations}, C: {args.C}, Max Depth: {args.max_depth}, Sampling Maps: {args.sampling_maps}")
     start, goal, graph = graphs.random_bridges_graph()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
@@ -48,12 +27,13 @@ def _setup(args):
         drones = []
         args.num_drones = 0
         param.ADD_IV = False
-        param.REVISIT_PEN = 6.0
-    elif args.planner =='jsctp1':
+        param.REVISIT_PEN = 20.0
+    elif args.planner =='jsap':
         args.num_drones = 1
         param.ADD_IV = False
+        param.REVISIT_PEN = 0.0
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
-    elif args.planner == 'sctpiv':
+    elif args.planner == 'jsapavp':
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
         param.ADD_IV = True
     else:
@@ -84,7 +64,10 @@ def _setup(args):
         planning_exe.save_joint_actions(joint_actions, cost)
         
     
-    cost = robot.net_time
+    # cost = robot.net_time
+    cost_sum = robot.net_time
+    cost_aver = robot.net_time
+    
     runtime = time.perf_counter() - start_time
     average_step_time /= count_steps
     gpaths = []
@@ -102,14 +85,18 @@ def _setup(args):
     starts_cords = [start.coord for start in [start]]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost, verbose=True)
+                        seed=args.seed, cost=cost_sum, verbose=True)
     if need_pdf:
         plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.pdf')
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
 
     logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGV.txt'
     with open(logfile, "a+") as f:
-        f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exe.success)} | COST: {cost:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f}\n")    
+        f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exe.success)} "
+        f"| COST_AVER: {cost_aver:0.3f} | COST_SUM: {cost_sum:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
+        f"| SAMP.TIME : {sctpplanner.sampling_time:0.2f} | SPOLICY.TIME : {sctpplanner.single_policy_time:0.2f}\n")    
+
+        # f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exe.success)} | COST: {cost:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f}\n")    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

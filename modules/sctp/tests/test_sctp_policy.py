@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from sctp import sctp_graphs as graphs
-from sctp import core
+from sctp import core, param
 from sctp.utils import plotting
 from pouct_planner import core as policy
 from sctp.robot import Robot
@@ -23,123 +23,101 @@ def test_sctp_policy_lg():
         print(c)
 
 def test_sctp_policy_dg():
-    baseline = True
+    baseline = False
     seed = 2000
+    param.REVISIT_PEN = 0.0
     np.random.seed(seed)
     random.seed(seed)
-    exp_param=300.0
-    num_iters = 20000
+    exp_param=200.0
+    num_iters = 1000
     print("")
-    start, goal, graph = graphs.disjoint_unc()
-    # graph.pois[0].block_prob = 0.9
-    # graph.pois[1].block_prob = 0.5
-    # graph.pois[2].block_prob = 0.9
-    # graph.pois[3].block_prob = 0.9
-    poi5 = [poi for poi in graph.pois+graph.vertices if poi.id==5][0]
-    poi6 = [poi for poi in graph.pois+graph.vertices if poi.id==6][0]
-    poi7 = [poi for poi in graph.pois+graph.vertices if poi.id==7][0]
-    poi8 = [poi for poi in graph.pois+graph.vertices if poi.id==8][0]
+    starts, goals, graph = graphs.disjoint_unc()
     
-    poi5.block_prob = 0.9
-    poi6.block_prob = 0.5
-    poi7.block_prob = 0.9
-    poi8.block_prob = 0.9
-    
-    
-    # robot = Robot(position=[graph.pois[0].coord[0], graph.pois[0].coord[1]], cur_node=graph.pois[0].id, at_node=True)
-    robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
+    robot = Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, at_node=True)
     if baseline:
         drones = []
     else:
-        drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone)]
-    init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone)]
+    init_state = core.SCTPState(graph=graph, goalID=goals[0].id, robot=robot, drones=drones)
     # assert init_state.history.get_data_length() == 4
     assert init_state.robot.need_action == True 
     tree_depth = 15
-    ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
+    ba, ec, path_cost_times  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
                                     depth=tree_depth, rollout_fn=core.sctp_rollout3)
-    # assert pc[0][0].target == 5
-    reach_goal = False
-    for p in pc[0]:
-        print(p)
-        if p.rtype==RobotType.Ground and p.target == goal.id:
-            reach_goal = True 
-    if reach_goal:
-        pc[0].append(core.Action(target=goal.id, rtype=RobotType.Ground, start_pose=goal.coord))
-        print("The ground robot reaches its goal")
-    plotting.plot_policy(graph, actions=pc[0], startID=start.id, \
-                               goalID=goal.id, seed=seed, verbose=True)
+    print("The list of actions: ", [f"{a}" for a in path_cost_times[0]])  
+    print("The cost are: ", [f"{c:.2f}"  for c in path_cost_times[1]])  
+    
+    plotting.plot_policy(graph, actions=path_cost_times[0], startID=starts[0].id, \
+                               goalID=goals[0].id, seed=seed, verbose=True)
     # plotting.plot_firstAction(graph, action=pc[0][0], startID=start.id, \
     #                            goalID=goal.id, seed=seed, verbose=True)
 
 
 def test_sctp_policy_sg():
-    baseline = True
+    print("")
+    baseline = False
     seed = 2000
     np.random.seed(seed)
     random.seed(seed)
-    exp_param=30.0
-    num_iters = 1000
-    start, goal, graph = graphs.s_graph_unc()
-    poi5 = graph.pois[0]
-    poi6 = graph.pois[1]
-    poi7 = graph.pois[2]
-    poi8 = graph.pois[3]
-    poi9 = graph.pois[4]
-    poi7.block_prob = random.random()
-    poi8.block_prob = random.random()
-    poi6.block_prob = random.random()
-    poi5.block_prob = random.random()
-
-    s = start
+    exp_param=200.0
+    num_iters = 1500
+    starts, goals, graph = graphs.s_graph_unc()
+    param.ADD_IV = True
+    param.MAX_UAV_ACTION = 1
+    planner = 'SCTP-AVP'
+    
+    s = starts[0]
     robot = Robot(position=[s.coord[0], s.coord[1]], cur_node=s.id, at_node=True)
     if baseline:
         drones = []
     else:
-        drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone)]
-    init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone)]
+    init_state = core.SCTPState(graph=graph, goalID=goals[0].id, robot=robot, drones=drones)
     
-    ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
-                                             rollout_fn=core.sctp_rollout3)
-    reach_goal = False
-    for p in pc[0]:
-        print(p)
-        if p.rtype==RobotType.Ground and p.target == goal.id:
-            reach_goal = True 
-    if reach_goal:
-        print("The ground robot reaches its goal")
-        pc[0].append(core.Action(target=goal.id, rtype=RobotType.Ground, start_pose=goal.coord))
-    plotting.plot_policy(graph, actions=pc[0], startID=s.id, \
-                               goalID=goal.id, seed=seed, verbose=True)
-
+    ba, ec, path_cost_times  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
+                                   depth=15, rollout_fn=core.sctp_rollout3)
+    print("The list of actions: ", [[a.target, a.start_pose] for a in path_cost_times[0]])  
+    print("The cost are: ", [f"{c:.2f}"  for c in path_cost_times[1]])  
+    if param.ADD_IV:
+        assert path_cost_times[2] > 0.0
+        print(f"The sampling time: {path_cost_times[2]:.2f} seconds using {planner} ")
+    else:
+        assert path_cost_times[2] == 0.0
+    plotting.plot_policy(graph, actions=path_cost_times[0], name=f"{planner} Policy", startID=starts[0].id, \
+                               goalID=goals[0].id, seed=seed, verbose=True)
     
 def test_sctp_policy_mg():
-    baseline = True
+    baseline = False
     seed = 2000
     np.random.seed(seed)
     random.seed(seed)
-    exp_param=30.0
+    exp_param=200.0
     num_iters = 1000
-    start, goal, graph = graphs.m_graph_unc()
-    robot = Robot(position=[start.coord[0],start.coord[1]], cur_node=start.id, at_node=True)
+    param.ADD_IV = True
+    param.MAX_UAV_ACTION = 1
+    planner = 'SCTP-AVP'
+    starts, goals, graph = graphs.m_graph_unc()
+    robot = Robot(position=[starts[0].coord[0],starts[0].coord[1]], cur_node=starts[0].id, at_node=True)
     if baseline:
         drones = []
     else:
-        drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]    
-    init_state = core.SCTPState(graph=graph, goalID=goal.id, robot=robot, drones=drones)
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone, at_node=True)]    
+    init_state = core.SCTPState(graph=graph, goalID=goals[0].id, robot=robot, drones=drones,
+                                n_maps=80)
     
-    ba, ec, pc  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
-                                             rollout_fn=core.sctp_rollout3)
-    reach_goal = False
-    for p in pc[0]:
-        print(p)
-        if p.rtype==RobotType.Ground and p.target == goal.id:
-            reach_goal = True 
-    if reach_goal:
-        print("The ground robot reaches its goal")
-        pc[0].append(core.Action(target=goal.id, rtype=RobotType.Ground, start_pose=goal.coord))
-    plotting.plot_policy(graph, actions=pc[0], startID=start.id, \
-                               goalID=goal.id, seed=seed, verbose=True)
+    ba, ec, path_cost_times  = policy.po_mcts(init_state, C=exp_param, n_iterations=num_iters,\
+                                             depth=25, rollout_fn=core.sctp_rollout3)
+
+    print("The list of actions: ", [[f"{a.target}", f"({a.start_pose[0]:.2f}, {a.start_pose[1]:.2f})"] for a in path_cost_times[0]])    
+    print("The cost are: ", [f"{c:.2f}"  for c in path_cost_times[1]])  
+    if param.ADD_IV:
+        assert path_cost_times[2] > 0.0
+        print(f"The sampling time: {path_cost_times[2]:.2f} seconds using {planner} ")
+    else:
+        assert path_cost_times[2] == 0.0
+    
+    plotting.plot_policy(graph, actions=path_cost_times[0], startID=starts[0].id, \
+                               goalID=goals[0].id, seed=seed, verbose=True)
 
 
 def test_baseline_policy_dg_case():

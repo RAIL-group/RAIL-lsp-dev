@@ -36,17 +36,16 @@ def sctp_costs_runtimes(file_path, ugv_num=1, drone_nums = [0,1,2,3]):
 
 def extract_costs(file_path):
     # print(f"Extr costs from {file_path}")
-    sctp_cost = []
+    jsap_cost = []
     base_cost = []
-    sctpig_cost = []
-    sctpfk_cost = []
-    sctpivfk_cost = []
+    jsapavp_cost = []
+    dsap_cost = []
+    dsapavp_cost = []
     base_runtime = []
-    sctp_runtime = []
-    sctpig_runtime = []
-    sctpfk_runtime = []
-    sctpivfk_runtime = []
-    sctpivtwoact_cost = []
+    jsap_runtime = []
+    jsapavp_runtime = []
+    dsap_runtime = []
+    dsapavp_runtime = []
     seed_costs = {}
     seed_runtimes = {}
     with open(file_path, 'r') as file:
@@ -57,43 +56,58 @@ def extract_costs(file_path):
             cost = float(parts[4].split(': ')[1].strip())
             runtime = float(parts[6].split(': ')[1].strip())
             if seed not in seed_costs:
-                seed_costs[seed] = {"jsctp1": None, "base": None, "jsctpig": None, "sctpfk": None, "sctpivfk": None, "sctpivtwoact": None}
-                seed_runtimes[seed] = {"jsctp1": None, "base": None, "jsctpig": None, "sctpfk": None, "sctpivfk": None, "sctpivtwoact": None}
+                seed_costs[seed] = {"ctp": None, "jsap": None, "jsapavp": None, "dsap": None, "dsapavp": None}
+                seed_runtimes[seed] = {"ctp": None, "jsap": None, "jsapavp": None, "dsap": None, "dsapavp": None}
             seed_costs[seed][planner] = cost
             seed_runtimes[seed][planner] = runtime
 
     for seed in sorted(seed_costs.keys()):
-        sctp_cost.append(seed_costs[seed]["jsctp1"])
-        base_cost.append(seed_costs[seed]["base"])
-        sctpig_cost.append(seed_costs[seed]["jsctpig"])
-        # sctpfk_cost.append(seed_costs[seed]["sctpfk"])
-        # sctpivfk_cost.append(seed_costs[seed]["sctpivfk"])
-        # sctpivtwoact_cost.append(seed_costs[seed]["sctpivtwoactfk"])
-        sctp_runtime.append(seed_runtimes[seed]["jsctp1"])
-        base_runtime.append(seed_runtimes[seed]["base"])
-        sctpig_runtime.append(seed_runtimes[seed]["jsctpig"])
-        # sctpfk_runtime.append(seed_runtimes[seed]["sctpfk"])
-        # sctpivfk_runtime.append(seed_runtimes[seed]["sctpivfk"])
+        jsap_cost.append(seed_costs[seed]["jsap"])
+        base_cost.append(seed_costs[seed]["ctp"])
+        jsapavp_cost.append(seed_costs[seed]["jsapavp"])
+        dsap_cost.append(seed_costs[seed]["dsap"])
+        dsapavp_cost.append(seed_costs[seed]["dsapavp"])
+        jsap_runtime.append(seed_runtimes[seed]["jsap"])
+        base_runtime.append(seed_runtimes[seed]["ctp"])
+        jsapavp_runtime.append(seed_runtimes[seed]["jsapavp"])
+        dsap_runtime.append(seed_runtimes[seed]["dsap"])
+        dsapavp_runtime.append(seed_runtimes[seed]["dsapavp"])
 
-    return base_cost, sctp_cost, sctpfk_cost, sctpig_cost, sctpivfk_cost, sctpivtwoact_cost, \
-           base_runtime, sctp_runtime, sctpfk_runtime, sctpig_runtime, sctpivfk_runtime,  \
+    return base_cost, jsap_cost, jsapavp_cost, dsap_cost, dsapavp_cost, \
+           base_runtime, jsap_runtime, jsapavp_runtime, dsap_runtime, dsapavp_runtime,  \
             seed_costs, seed_runtimes
 
 def plot_scatter_data(file_path):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
-    base_cost, sctp_cost, sctpfk_cost, sctpig_cost, sctpivfk_cost, sctpivtwoact_cost, \
-           base_runtime, sctp_runtime, sctpfk_runtime, sctpig_runtime, sctpivfk_runtime,  \
+    base, jsap, jsapavp, dsap, dsapavp, \
+    base_runtime, jsap_runtime, jsapavp_runtime, dsap_runtime, dsapavp_runtime,  \
             seed_costs, seed_runtimes = extract_costs(file_path)
-    assert len(sctp_cost) == len(base_cost)    
-    print(f"The number of data {len(sctp_cost)} {len(sctpig_cost)}")
+    assert len(jsap) == len(base)    
+    # print(f"The number of data {len(jsap)} {len(dsap)}")
     # plotting.make_scatter_plot_with_box(base_cost, sctp_cost, xlabel='Baseline', ylabel='SCTP')
     # image_name = Path(args.save_dir) / f'plot_cost_baseline_jstcp1.png'
     # plt.tight_layout()
     # plt.savefig(image_name)
-    plotting.make_scatter_plot_with_box(base_cost, sctpig_cost, xlabel='Baseline', ylabel='SCTPIG')
-    image_name = Path(args.save_dir) / f'plot_cost_baseline_jsctpig{args.num_drones}.png'
+    plotting.make_scatter_plot_with_box(base, jsap, xlabel='CTP', ylabel='JSAP')
+    image_name = Path(args.save_dir) / f'plot_cost_base_jsap_{args.num_drones}UAV.png'
     plt.tight_layout()
     plt.savefig(image_name)
+    
+    # plotting.make_scatter_plot_with_box(base, jsapavp, xlabel='Baseline', ylabel='JSAP-AVP')
+    # image_name = Path(args.save_dir) / f'plot_cost_base_jsapavp_{args.num_drones}UAV.png'
+    # plt.tight_layout()
+    # plt.savefig(image_name)
+    
+    # plotting.make_scatter_plot_with_box(base, dsap, xlabel='Baseline', ylabel='DSAP')
+    # image_name = Path(args.save_dir) / f'plot_cost_base_dsap{args.num_drones}.png'
+    # plt.tight_layout()
+    # plt.savefig(image_name)
+    
+    # plotting.make_scatter_plot_with_box(base, dsapavp, xlabel='Baseline', ylabel='DSAP-AVP')
+    # image_name = Path(args.save_dir) / f'plot_cost_base_dsapavp{args.num_drones}.png'
+    # plt.tight_layout()
+    # plt.savefig(image_name)
+    
     
 
 def plot_data_varying_drones(file_path, ugv_nums=[1,2], drone_nums = [0,1,2], plot_costs=True,

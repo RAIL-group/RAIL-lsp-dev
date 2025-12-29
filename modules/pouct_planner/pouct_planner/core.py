@@ -40,34 +40,30 @@ class POUCTNode(object):
         return action[np.argmax(uct_values)]
 
 def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
-    # save_dir='/data/sctp'
-    # num_drones = 1
-    # logfile = Path(save_dir) / f'debug_{num_drones}.txt'
-    # with open(logfile, 'w') as f:
-    #     pass    
-    # total_cost = 0.0
-    max_tree_depth = 0
+    # get more data
+    sampling_time = 0.0
+    s_policy_time = 0.0
     root = POUCTNode(state)
+    
     if len(root.unexplored_actions) == 0:
         print(f"Robot position: {root.state.robot.cur_pose} at node {root.state.robot.last_node}")
-    # assert len(root.unexplored_actions) > 0
+    # max_d = 0
     for i in range(n_iterations):
         leaf, sa = traverse(root, C=C, max_depth=depth)
-        # if leaf.state.depth > max_tree_depth:
-        #     max_tree_depth = leaf.state.depth
-            # print(f"New max tree depth: {max_tree_depth}")
+        if not leaf.is_terminal_node():
+            sampling_time += leaf.state.sampling_time
+            s_policy_time += leaf.state.s_policy_time
         simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
         
-        # targets = [a.target for a in sa]
-        # total_cost += simulation_result
-        # with open(logfile, "a+") as f:
-        #     f.write(f"R-GOAL: {int(g)} | BLOCK: {int(b)} | HEU-COST: {rl_cost:7.2f} | SIM-COST: {simulation_result:7.2f} | T-COST : {total_cost:8.2f} | ACTION: {targets} \n")
-    # print(f"Action's num: {len(root.action_n)} and action_list {[a.target for a in  list(root.action_n.keys())]} action_visits: {list(root.action_n.values())}")
+        # if leaf.state.depth > max_d:
+            # print(f"The current dept is: {leaf.state.depth} at iteration {i}")
+            # max_d = leaf.state.depth
+        
     best_action, cost = get_best_action(root)
     path_ordering, cost_ordering = get_best_path_sctp(root)
-    return best_action, cost, [path_ordering, cost_ordering]
+    return best_action, cost, [path_ordering, cost_ordering, sampling_time, s_policy_time]
 
 def traverse(node, C=1.0, max_depth=100):
     save_action = []
@@ -84,6 +80,7 @@ def traverse(node, C=1.0, max_depth=100):
         else:
             node = child_node
     if node.is_terminal_node():
+        
         return node, save_action
     # 1. pick a new action
     action = node.unexplored_actions.pop()
@@ -108,7 +105,7 @@ def rollout(node, rollout_fn=None):
         else:
             reach_goal = False
             block = False
-        return node.cost + rollout_value, reach_goal, block, rollout_value #ollout_fn(node.state)
+        return node.cost + rollout_value, reach_goal, block, rollout_value
     else:
         # do a random rollout
         rollout_cost = 0.0
@@ -184,13 +181,21 @@ def get_best_path_sctp(root):
     paths = []
     costs = []
     node = root
+    count = 0
     for uav in root.state.uavs:
         if uav.action is not None:
             paths.append(uav.action)
     while not node.is_terminal_node():
         if node.total_n <5 or node.action_n=={} \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
+            # if node.total_n <5:
+            #     print("MCTS's tree stops due to the number of visit less than 5")
+            # if node.action_n=={}:
+            #     print("MCTS's tree stops because no action is takens")
+            # if np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
+            #     print("MCTS's tree stops because all actions have zero visits")
             break
+        count += 1
         best_action, cost = get_best_action(node)
         paths.append(best_action)
         costs.append(cost)
@@ -199,4 +204,5 @@ def get_best_path_sctp(root):
             node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
         else:
             node = max(children, key=lambda x: x.total_n)        
+    # print("The dept of MCTS's Tree: ", count)
     return paths, costs

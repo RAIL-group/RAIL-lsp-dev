@@ -4,7 +4,8 @@ import pytest
 
 class Robot:
     _id_counter = 0
-    def __init__(self, position, cur_node=None, at_node=True, robot_type=RobotType.Ground, edge=None):
+    def __init__(self, position, cur_node=None, at_node=True, robot_type=RobotType.Ground, \
+                edge=None, iscopy =False):
         self.id = Robot._id_counter
         Robot._id_counter += 1
         self.robot_type = robot_type
@@ -15,7 +16,9 @@ class Robot:
             self.edge = []
             self.at_node = True
         else:
-            assert edge is not None, 'Edge must be provided if robot is not at a node'
+            if self.robot_type == RobotType.Ground:
+                assert edge != []
+                assert edge is not None, 'Edge must be provided if the UGV is not at a node'
             self.edge = edge
             self.at_node = False
             # assert self.last_node == None
@@ -33,14 +36,15 @@ class Robot:
         self.visited_vertices=[self.last_node]
         self.pl_vertex = self.last_node
         self.net_time = 0.0
-        self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
+        if not iscopy:
+            self.all_poses = [[self.cur_pose[0],self.cur_pose[1]]]
 
     def advance_time(self, delta_time):
         advance_distance = self.vel * delta_time
         self._cost_to_target -= advance_distance
         self.remaining_time -= delta_time
         if self.remaining_time < -APPROX_TIME:
-            print(f'Error: Remaining time should not be negative: robot-type {self.robot_type} robot ID {self.id} with {self.remaining_time}')
+            print(f'Error: Remaining time should not be negative: {self.robot_type} with ID {self.id} has remaining time of {self.remaining_time:.2f}')
         assert self.remaining_time >= -APPROX_TIME, 'Remaining time cannot be negative'
         if self.remaining_time <= APPROX_TIME:
             self.remaining_time = 0.0
@@ -53,10 +57,19 @@ class Robot:
             if self.last_node != self.action.target:
                 self.pl_vertex = self.last_node
                 self.last_node = self.action.target
-        else:
+        elif delta_time > 0.0:
             self.at_node = False
-            self.edge = [self.last_node, self.action.target]
+            if self.last_node != self.action.target:
+                self.edge = [self.last_node, self.action.target]
         
+        # else:
+        #     self.at_node = False
+        #     if self.last_node != self.action.target:
+        #         self.edge = [self.last_node, self.action.target]
+        #         if self.edge[0] == 10 and self.edge[1] == 6:
+        #             print("___#####++++++ The edge is updated on the the robot advance time() function")
+        #             print(f"The history of robot {self.id} is: {self.all_poses} and current pose {self.cur_pose}")
+        #             print(f"The action target is: {self.action.target} and last node is: {self.last_node}")
         self._get_coordinates_after_distance(advance_distance)
         self.net_time += delta_time
 
@@ -66,7 +79,7 @@ class Robot:
         self.all_poses.append([self.cur_pose[0],self.cur_pose[1]])
 
     def copy(self):
-        new_robot = Robot(position=self.cur_pose.copy(), cur_node=self.last_node, 
+        new_robot = Robot(position=self.cur_pose.copy(), cur_node=self.last_node, iscopy=True,
                           at_node=self.at_node, robot_type=self.robot_type, edge=self.edge)
         new_robot.need_action = self.need_action
         new_robot.action = self.action
@@ -77,6 +90,7 @@ class Robot:
         new_robot.direction = self.direction.copy()
         new_robot.visited_vertices = self.visited_vertices.copy()
         new_robot.unfinished_action = self.unfinished_action
+        new_robot.all_poses = self.all_poses.copy()
         return new_robot
 
     def retarget(self, new_action, distance, direction):
@@ -94,4 +108,7 @@ class Robot:
         self._cost_to_target = distance
         self.remaining_time = self._cost_to_target / self.vel
 
-    
+    def is_pose_on_edge(self, point1, point2):
+        return (self.cur_pose[0]*(point1[1]-point2[1])  \
+                + point1[0]*(point2[1]-self.cur_pose[1]) \
+                + point2[0]*(self.cur_pose[1] - point1[1]) == 0)    

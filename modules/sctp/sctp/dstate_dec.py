@@ -16,6 +16,8 @@ class DronesState(object):
         self.action_values = dict() # map action to its value
         self.behavior_change = dict() # map action to its value
         self.going_back = False
+        self.sampling_time = 0.0 # no using in this state
+        self.s_policy_time = 0.0 # no using in this state
         
         if not iscopy:
             assert actions is not None

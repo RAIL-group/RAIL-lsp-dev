@@ -76,6 +76,17 @@ class Graph():
         new_graph = Graph(vertices=new_vertices, edges=edges)
         new_graph.pois = new_pois
         return new_graph
+    
+    def print_graph_config(self):
+        for v in self.vertices:
+            print("Vertex ID: {}, Coord: ({:.2f},{:.2f}), Neighbors: {}".format(v.id, v.coord[0], v.coord[1], v.neighbors))
+        for p in self.pois:
+            print("POI ID: {}, Coord: ({:.2f},{:.2f}), Neighbors: {}, Block Prob: {:.2f}, Block Status: {}".format(\
+                p.id, p.coord[0], p.coord[1], p.neighbors, p.block_prob, p.block_status))
+        for e in self.edges:
+            print("Edge between Vertex {} and Vertex {}, Cost: {:.2f}".format(\
+                e.v1.id, e.v2.id, e.cost))
+        
 
 class Vertex:
     _id_counter = 1
@@ -538,7 +549,7 @@ def get_poi_value(graph, poiID, startID, goalID):
 
 def get_removedEdges_allrobots(graph, robots, block_pois):
     vertices_connectRobot = set()
-    edges = []
+    edges = [] # those edges to be removed
     for robot in robots:
         if robot.at_node == True:
             vertices_connectRobot.add(robot.last_node)
@@ -550,13 +561,18 @@ def get_removedEdges_allrobots(graph, robots, block_pois):
             vertices_connectRobot.add(robot.edge[0])
             vertices_connectRobot.add(robot.edge[1])
             if robot.edge[0] in block_pois:
-                neighbors = [node for node in graph.pois if node.id == robot.last_node][0].neighbors
-                other_side = [n for n in neighbors if n != robot.action.target][0]
-                edges.append([robot.last_node, other_side])
+                pois = [node for node in graph.pois if node.id == robot.edge[0]] #robot.last_node]
+                if pois != []:
+                    neighbors = pois[0].neighbors
+                    other_side = [n for n in neighbors if n != robot.edge[1]]
+                    if other_side is not None:
+                        edges.append([robot.edge[0], other_side[0]])
             if robot.edge[1] in block_pois:
-                neighbors = [node for node in graph.pois if node.id == robot.action.target][0].neighbors
-                other_side = [n for n in neighbors if n != robot.last_node][0]
-                edges.append([robot.action.target, other_side])
+                # neighbors = [node for node in graph.pois if node.id == robot.action.target][0].neighbors
+                neighbors = [node for node in graph.pois if node.id == robot.edge[1]][0].neighbors
+                other_side = [n for n in neighbors if n != robot.edge[0]]
+                if other_side is not None:
+                    edges.append([robot.edge[1], other_side[0]])
     # be sure no robot on the edges to be removed
     for robot in robots:
         if not robot.at_node and (robot.edge in edges or [robot.edge[1], robot.edge[0]] in edges):

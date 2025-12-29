@@ -3,9 +3,6 @@ from sctp.utils import paths, plotting
 import numpy as np
 from sctp import param, core
 
-
-   
-
 class GroundState(object):
     def __init__(self, graph=None, goalID=None, robot=None, iscopy=False, useOptHeur=True, n_maps=100, revisit_pen=15.0):
         self.action_cost = 0.0
@@ -21,6 +18,9 @@ class GroundState(object):
         self.going_back = False
         self.use_OptHeur = useOptHeur
         self.revisit_pen = revisit_pen
+        self.sampling_time = 0.0 # no using in this state
+        self.s_policy_time = 0.0 # no using in this state
+        
         if not iscopy:
             self.graph = graph
             self.goalID = goalID
@@ -158,7 +158,9 @@ class GroundState(object):
 def advance_state(state):
     state.depth += 1
     if state.robot.last_node != state.goalID:
+        state.action_cost = state.robot.remaining_time
         state.robot.advance_time(state.robot.remaining_time)
+    
     vertex_status = state.history.get_action_outcome(state.robot.action)
     vertex = [node for node in state.graph.vertices+state.graph.pois if node.id == state.robot.action.target][0]
     state.robot.visited_vertices.append(state.robot.last_node)

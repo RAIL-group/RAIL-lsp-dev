@@ -7,6 +7,8 @@ import pytest
 
 def get_uav_action_2ag(state, uav_index):
     actions = []
+    state.action_values.clear()
+    assert len(state.behavior_change) == len(state.avail_uav_actions)
     for act in list(state.behavior_change.keys()):
         state.action_values[act] = get_action_value(state.behavior_change[act], act, 
                                                     state.uavs[uav_index].cur_pose, state.graph)

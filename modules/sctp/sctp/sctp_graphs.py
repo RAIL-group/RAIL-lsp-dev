@@ -61,7 +61,6 @@ def random_bridges_graph(n_bridge=3):
             break
         count += 1
         if count > 10:
-            # print("Cannot find a valid graph, try other seed ranges")
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return start, goal, graph
 

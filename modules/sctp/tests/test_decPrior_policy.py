@@ -104,20 +104,33 @@ def test_decPrior_policy_sgraph_2uavs2ugvs():
 def test_decPrior_policy_mgraph3goals():
     print()
     C=200.0
-    num_iterations=1000
-    uav_num = 3
-    ugv_num = 3
+    num_iterations=1500
+    uav_num = 1
+    ugv_num = 1
+    useAVP = True
+    max_uanum = 1
     starts, goals, graph = graphs.m_graph_unc()
-    uavs = [Robot(position=[0.0, 0.0], cur_node=starts[i].id, at_node=True, robot_type=param.RobotType.Drone) for i in range(uav_num)]
-    ugvs = [Robot(position=[0.0, 0.0], cur_node=starts[i].id, at_node=True) for i in range(ugv_num)]
+    uavs = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, at_node=True, \
+                    robot_type=param.RobotType.Drone) for i in range(uav_num)]
+    
+    ugvs = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, at_node=True) \
+                    for i in range(ugv_num)]
+    
+    # uavs = [Robot(position=[0.0, 0.0], cur_node=starts[i].id, at_node=True, robot_type=param.RobotType.Drone) for i in range(uav_num)]
+    # ugvs = [Robot(position=[0.0, 0.0], cur_node=starts[i].id, at_node=True) for i in range(ugv_num)]
     
     
     for drone in uavs:
         drone.unfinished_action = None
-    state = dec_prior.StateDecPrior(graph=graph, goalIDs=[goal.id for goal in goals], drones=uavs, ugvs=ugvs)
+    state = dec_prior.StateDecPrior(graph=graph, goalIDs=[goal.id for goal in goals], drones=uavs, ugvs=ugvs,
+                                    n_maps=80, use2AG=useAVP, max_uanum=max_uanum, spolicy_rollouts=300)
     
-    best_action, cost, path_cost  = policy.po_mcts(state, C=C, n_iterations=num_iterations, rollout_fn= dec_prior.decsctp_rollout)
-    print(best_action)
-    print(cost)
-    print([[a.target, a.start_pose] for a in path_cost[0]])  
-    print([c for c in path_cost[1]])  
+    best_action, cost, path_cost, sampling_time, spolicy_time  = policy.po_mcts(state, C=C, \
+            n_iterations=num_iterations, depth=30, rollout_fn= dec_prior.decsctp_rollout)
+    
+    
+    print("The best action: ", best_action)
+    print(f"With cost: {cost:.2f}")
+    print("The sampling time: ", f"{sampling_time:.2f} seconds")
+    print("The list of actions: ", [[a.target, a.start_pose] for a in path_cost[0]])  
+    print("The cost are: ", [f"{c:.2f}"  for c in path_cost[1]])  

@@ -20,6 +20,8 @@ class SCTPPlanner(object):
         self.max_depth = tree_depth
         self.n_maps = n_maps
         self.C = C
+        self.sampling_time = 0.0
+        self.single_policy_time = 0.0
         
     def reached_goal(self):
         if not self.robot.at_node:
@@ -67,10 +69,11 @@ class SCTPPlanner(object):
                                         robot=robot, drones=drones,
                                         n_maps=self.n_maps)
         # assert self.rollout_num == 800
-        action, cost, [ordering, costs] = pouct_planner.core.po_mcts(sctpstate, \
+        action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(sctpstate, \
                         n_iterations=self.rollout_num, C=self.C, depth= self.max_depth, \
                         rollout_fn=self.rollout_fn)
-        
+        self.sampling_time += sampling_time
+        self.single_policy_time += s_policy_time
         # because replanning, so just take some first n+1 action
         if len(ordering) < 1+len(self.drones):
             ordering += [Action(target=self.goalID, rtype=RobotType.Drone) for _ in range(1+len(self.drones) - len(ordering))]

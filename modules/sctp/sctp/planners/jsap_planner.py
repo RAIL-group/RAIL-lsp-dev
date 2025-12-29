@@ -3,13 +3,14 @@ import pouct_planner
 import sctp
 from sctp import param
 from sctp.core import Action
+import sctp.jsap
 from sctp.param import RobotType
 
 
-class DecPriorPlanner(object):
-    def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 500, 
-                 rollout_fn = None, tree_depth = 50, n_maps=100, use_2AG = False,
-                 max_uanum=5, spolicy_rollouts=500, verbose=False):
+class JSAPPlanner(object):
+    def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 1000, 
+                 rollout_fn = None, tree_depth = 40, n_maps=80, use_AVP = False,
+                 max_uanum=3, verbose=False):
         self.rollout_num = rollout_num
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -21,11 +22,10 @@ class DecPriorPlanner(object):
         self.max_depth = tree_depth
         self.n_maps = n_maps
         self.C = C
-        self.use_2AG = use_2AG
+        self.use_AVP = use_AVP
         self.max_uanum = max_uanum
         self.sampling_time = 0.0
         self.single_policy_time = 0.0
-        self.spolicy_rollouts = spolicy_rollouts
         assert self.n_maps == 80
         
     def reached_goal(self):
@@ -71,20 +71,20 @@ class DecPriorPlanner(object):
             uavs = [uav.copy() for uav in self.uavs]
                 
         assert self.n_maps == 80
-        assert self.spolicy_rollouts == 300
-        assert self.max_uanum == 1
+        # assert self.spolicy_rollouts == 300
+        # assert self.max_uanum == 1
         # assert uavs != []
-        state = sctp.dec_prior.StateDecPrior(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
-                                             drones=uavs, ugvs=ugvs, use2AG=self.use_2AG, max_uanum=self.max_uanum,
-                                             spolicy_rollouts=self.spolicy_rollouts)
+        state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
+                                             drones=uavs, ugvs=ugvs, useAVP=self.use_AVP, max_uanum=self.max_uanum)
     
         # assert state.uavs != []
         # assert self.rollout_num == 800
-        action, cost, [ordering, costs], sampling_time, s_policy_time = pouct_planner.core.po_mcts(state, \
+        action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(state, \
                         n_iterations=self.rollout_num, C=self.C, depth= self.max_depth, \
                         rollout_fn=self.rollout_fn)
         self.sampling_time += sampling_time
         self.single_policy_time += s_policy_time
+        assert self.single_policy_time == 0.0
         if self.verbose:
             print("action ordering=", [f"{action}" for action in ordering])
         return ordering, costs

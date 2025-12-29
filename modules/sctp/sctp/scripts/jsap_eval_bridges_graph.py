@@ -4,12 +4,12 @@ from sctp.utils import plotting
 import random, time
 from sctp import sctp_graphs as graphs
 from sctp.robot import Robot
-from sctp import param, dec_prior
+from sctp import param, jsap
 import matplotlib.pyplot as plt
 from sctp.param import RobotType
 from pathlib import Path
-from sctp.planners import decPrior_planner as planner
-from sctp.planners import decPrior_plan_exe as plan_loop
+from sctp.planners import jsap_planner as planner
+from sctp.planners import jsap_plan_exe as plan_loop
 
 
 def _setup(args):
@@ -22,21 +22,30 @@ def _setup(args):
     
     num_uav = 1
     num_ugv = 1
-    assert args.num_ugvs == 1, "This script only supports 1 UGV"
+    assert args.num_drones == num_uav, "This script only supports 1 UAV"
+    assert args.num_ugvs == num_ugv, "This script only supports 1 UGV"
     
     starts = [start]
     goals = [goal]
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(args.num_ugvs)]
     
-    if args.planner =='dsap':
+    if args.planner =='ctp':
+        args.num_drones = 0
+        drones = []
+        # param.REVISIT_PEN = 20.0
+        args.num_iterations = 2000
+        use_AVP = False
+    elif args.planner =='jsap':
         args.num_drones = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         assert args.num_drones == 1, "This script only supports 1 UAV"
         param.REVISIT_PEN = 0.0
         use_AVP = False
-    elif args.planner == 'dsapavp':
+        assert args.num_iterations == 2000
+    
+    elif args.planner == 'jsapavp':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
@@ -52,26 +61,26 @@ def _setup(args):
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     assert args.sampling_maps == 80
-    assert args.num_iterations == 1000
-    decPriorplanner = planner.DecPriorPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
-                                              uavs=planner_drones, rollout_fn=dec_prior.decsctp_rollout, C=args.C, 
+    
+    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
+                                              uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
                                               rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
-                                              use_2AG=use_AVP, max_uanum=max_uanum, spolicy_rollouts=args.spolicy_rollouts, verbose=False)
-    plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
-                                                    reached_goal=decPriorplanner.reached_goal, verbose=False)
+                                              use_AVP=use_AVP, max_uanum=max_uanum, verbose=False)
+    plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
+                                                    reached_goal=jsapplanner.reached_goal, verbose=False)
 
     start_time = time.perf_counter() 
     average_step_time = 0.0
     count_steps = 0
     
     for step_data in plan_exec:
-        decPriorplanner.update(
+        jsapplanner.update(
             step_data['observed_pois'],
             step_data['ugvs'],
             step_data['uavs']
         )
         time1 = time.perf_counter()
-        joint_actions, cost = decPriorplanner.compute_joint_action()
+        joint_actions, cost = jsapplanner.compute_joint_action()
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
         plan_exec.save_joint_actions(joint_actions, cost)
@@ -96,7 +105,7 @@ def _setup(args):
     starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost, verbose=True)
+                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=True)
     
     if print_pdf:
         plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.pdf')    
@@ -106,7 +115,7 @@ def _setup(args):
     with open(logfile, "a+") as f:
         f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(plan_exec.success)} "
                 f"| COST_AVER: {cost_aver:0.3f} | COST_SUM: {cost_sum:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
-                f"| SAMP.TIME : {decPriorplanner.sampling_time:0.2f} | SPOLICY.TIME : {decPriorplanner.single_policy_time:0.2f}\n")    
+                f"| SAMP.TIME : {jsapplanner.sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
 
 
 if __name__ == '__main__':
@@ -122,7 +131,7 @@ if __name__ == '__main__':
     parser.add_argument('--sampling_maps', type=int, default=80)
     parser.add_argument('--n_vertex', type=int, default=14)
     parser.add_argument('--max_uanum', type=int, default=1)
-    parser.add_argument('--spolicy_rollouts', type=int, default=300)
+    # parser.add_argument('--spolicy_rollouts', type=int, default=300)
     args = parser.parse_args()
     args.current_seed = args.seed
 

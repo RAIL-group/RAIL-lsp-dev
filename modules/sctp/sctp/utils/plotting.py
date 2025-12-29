@@ -5,8 +5,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from sctp.param import RobotType
 from scipy.stats import gaussian_kde
 
-def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths = [], graph_plot=None,
-               start_coords=None, goal_coords=None, seed=None, cost=0.0, verbose=False):
+def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=None, start_coords=None, \
+                   goal_coords=None, seed=None, cost=0.0, ttime=None, stime=None, verbose=False):
     """Plot graph using matplotlib."""
     fig, ax = plt.subplots(1,2,figsize=(12,6))
     if graph_plot is not None:        
@@ -54,8 +54,10 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths = [], graph_plot=
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
     ax[1].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
-    ax[1].set_title(f'Seed: {seed} | Planner: {name} | Cost: {cost:.2f}')
-    # plt.title(f'Seed: {seed} | Planner: {name} | Cost: {cost:.2f}')
+    if ttime is None and stime is None:
+        ax[1].set_title(f'Seed: {seed} | Planner: {name} | Cost: {cost:.2f}')
+    else:
+        ax[1].set_title(f'S: {seed} | P: {name} | C: {cost:.2f}m | TT: {ttime:.2f}s | ST: {stime:.2f}s')
     
 def plot_policy(graph, name="Policy", actions=[], 
                startID=None, goalID=None, seed=None, verbose=False):
@@ -310,19 +312,23 @@ def get_arrowHollow(start, end,
     length = np.linalg.norm(vec)
     if length == 0:
         return None
-
+    
     # Parameter t from 0 to 1 along the segment
     t = np.linspace(0, 1, n_points)
     points = start + np.outer(t, vec)          # centerline points
     widths = np.array([width_func(ti) for ti in t])
-
+    # factor = 1.0 # testing graph
+    factor = 9.0 # bridges graph
+    
     # Unit tangent and perpendicular
-    tangents = vec / length
+    tangents = factor*vec / length
+    
     perp = np.array([-tangents[1], tangents[0]])
 
     # Left and right boundaries
     left  = points + perp * widths[:, np.newaxis] / 2
     right = points - perp * widths[:, np.newaxis] / 2
+    
 
     # Build closed path: forward on left → tip → back on right → close
     verts = np.concatenate([
@@ -357,10 +363,11 @@ def plot_pathArrowHollow(points, ax, color='white'):
         colors = ['blue', 'blue']
     elif color =='green':
         colors = ['green', 'green']
-    # print(f"The coordinates: {points}")
     col = mcolors.LinearSegmentedColormap.from_list(color, colors)
     # Now use it exactly like plt.cm.magma:
     cmap = col
+    # define edge width varying with the length of the path
+    edgewidth = 2.5
     for i in range(len(points)-1):
         if points[i] == points[i+1]:
             continue    
@@ -368,12 +375,12 @@ def plot_pathArrowHollow(points, ax, color='white'):
             start=points[i],
             end=points[i+1],
             width_func=sharp_arrow,
-            n_points=200,
+            n_points=100,
             # edgecolor=plt.cm.magma(i / (len(points)-1)),
             edgecolor=cmap(i / (len(points)-1)),
             facecolor='white',
             alpha=0.95,
-            edgewidth=2.5
+            edgewidth=edgewidth
         )
         ax.add_patch(arrow)    
 

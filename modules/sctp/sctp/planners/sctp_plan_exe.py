@@ -1,6 +1,6 @@
 import numpy as np
 import sctp
-from sctp.param import VEL_RATIO, RobotType
+from sctp.param import VEL_RATIO, RobotType, APPROX_TIME
 
 class SCTPPlanExecution(object):
     def __init__(self, graph, reached_goal, goalID, robot, drones=[], verbose=True):
@@ -56,7 +56,6 @@ class SCTPPlanExecution(object):
                 if self.drones == []:
                     need_replan, actions_list = self.baseline_move(actions_list)
                 else:
-                    # print(f"Multi-movements - step {count}, remaining actions {len(actions_list)}")
                     need_replan, actions_list = self.team_move(actions_list)
                 count += 1
                 if need_replan or len(actions_list) == 0:
@@ -194,7 +193,9 @@ class SCTPPlanExecution(object):
         for i, drone in enumerate(self.drones):
             if drone.last_node == self.goalID:
                 continue
-            assert drone.remaining_time == 0.0
+            if drone.remaining_time > APPROX_TIME:
+               print(f"Drone {i} has remaining time of {drone.remaining_time} with approx time: {APPROX_TIME}") 
+            assert drone.remaining_time <= APPROX_TIME
             assert drone.need_action == True
             end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == joint_action[i].target][0].coord
             distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))

@@ -1,5 +1,5 @@
-from enum import Enum
-import random
+# from enum import Enum
+import random, time
 import matplotlib.pyplot as plt
 from sctp import sctp_graphs  as graphs
 from sctp import graph as g
@@ -66,7 +66,8 @@ def get_edge(edges, v1_id, v2_id):
     
 
 class SCTPState(object):
-    def __init__(self, graph=None, goalID=None, robot=None, drones=[], iscopy=False, n_maps=100):
+    def __init__(self, graph=None, goalID=None, robot=None, drones=[], iscopy=False, \
+                    n_maps=100, revisit_pen=20.0):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.noway2goal = False
@@ -76,6 +77,9 @@ class SCTPState(object):
         self.uav_action_values = dict() # map action to its value
         self.behavior_change = dict() # map action to its value
         self.use_OptitHeur = True
+        self.sampling_time = 0.0
+        self.s_policy_time = 0.0
+        self.revisit_pen = revisit_pen
         # assert param.ADD_IV == True
         if not iscopy:
             self.graph = graph
@@ -106,7 +110,14 @@ class SCTPState(object):
             
             self.robot_actions = [action for action in self.robot_actions \
                                   if self.history.get_action_outcome(action) != EventOutcome.BLOCK]
-            assert len(self.robot_actions) > 0
+            if len(self.robot_actions) == 0:
+                self.noway2goal = True
+                self.action_cost = STUCK_COST
+                # return self
+                # print(f"The robot is at node? {self.robot.at_node}, last node: {self.robot.last_node}, pl_vertex: {self.robot.pl_vertex}")
+                # print(f"The state history - node 12: {self.history.get_action_outcome(Action(target=12))}, "
+                #             f"node 15: {self.history.get_action_outcome(Action(target=15))}, node 9: {self.history.get_action_outcome(Action(target=9))}")
+            # assert len(self.robot_actions) > 0
             self.state_actions = [action for action in self.robot_actions ]
             self.update_heuristic2()
             # define drones
@@ -129,6 +140,7 @@ class SCTPState(object):
                     else:
                         uav.need_action = True
                 if param.ADD_IV:
+                    time1 = time.perf_counter()
                     for act in self.uav_actions: # only for value information gain 118-127
                         if act in continue_actions:
                             continue
@@ -140,6 +152,7 @@ class SCTPState(object):
                                                     cur_heuristic=self.heuristic, n_samples=self.n_samples)
                         self.behavior_change[act] = bc
                         self.uav_action_values[act] = get_action_value(self.behavior_change[act], act, self.uavs[0].cur_pose, self.graph) #act_value
+                    self.sampling_time += time.perf_counter() - time1
                     self.uav_action_values = dict(sorted(self.uav_action_values.items(), key=lambda item: item[1], reverse=True))
                     self.uav_actions = list(self.uav_action_values.keys())[:min(param.MAX_UAV_ACTION, len(self.uav_action_values))]
                     assert len(self.uav_actions) <= param.MAX_UAV_ACTION
@@ -198,11 +211,13 @@ class SCTPState(object):
         uav_actions_left = [action for action in uav_actions_left if self.history.get_action_outcome(action) == EventOutcome.CHANCE]
         # self.uav_action_values.clear()
         self.behavior_change.clear()
+        time1 =time.perf_counter()
         for action in uav_actions_left:
             bc_value = get_behavior_change(graph=new_graph, action=action, robot_edge=redge,
                                             d0=min_dist1, d1=min_dist2, goalID=self.goalID, atNode=self.robot.at_node,
                                             cur_heuristic=self.heuristic, n_samples=self.n_samples)
             self.behavior_change[action] = bc_value
+        self.sampling_time += time.perf_counter() - time1
     
     @property
     def is_goal_state(self):
@@ -225,6 +240,8 @@ class SCTPState(object):
         new_state.v_vertices = self.v_vertices.copy()
         new_state.noway2goal = self.noway2goal
         new_state.heuristic = self.heuristic
+        new_state.sampling_time = 0.0
+        new_state.s_policy_time = 0.0
         # copy the robot
         new_state.robot = self.robot.copy()
         new_state.robot_actions = [Action(target=action.target, rtype=action.rtype, start_pose=action.start_pose) \
@@ -351,10 +368,12 @@ def get_new_nodes_grobot(state, last_node, last_edge):
         stuck = is_robot_stuck(state)
         state.depth += 1
         # update the cost if revisiting the vertex
-        state.action_cost += (state.v_vertices.get(state.robot.last_node, 0)-1) * REVISIT_PEN
+        state.action_cost += (state.v_vertices.get(state.robot.last_node, 0)-1) * state.revisit_pen
         state.update_heuristic2()
         if param.ADD_IV and len(state.uavs) > 0 and cur_node in state.graph.vertices: # only reculcate action values if robots is at vertex
+            # time1 = time.perf_counter()
             state.update_action_bc()
+            # state.sampling_time += time.perf_counter() - time1
         return {state: (1.0, state.action_cost)}
     # if edge_status is 'CHANCE', we don't know the outcome.action
     elif vertex_status == EventOutcome.CHANCE:
@@ -491,6 +510,7 @@ def is_robot_stuck(state):
     if (not _is_robot_goal_connected(state.graph, state.history, robot_edge, state.goalID))\
         or (len(state.robot_actions) == 0):
         state.noway2goal = True
+        state.action_cost = STUCK_COST
         return True
     return False
 
@@ -504,10 +524,10 @@ def _get_robot_that_finishes_first(state):
     time_remaining_uavs = []
     if len(state.uavs) > 0:
         for uav in state.uavs:
-            if uav.last_node == state.goalID:
+            if uav.last_node == state.goalID and uav.remaining_time <= param.APPROX_TIME:
                 continue
-            if uav.remaining_time >APPROX_TIME:
-                time_remaining_uavs.append(uav.remaining_time)
+            # if uav.remaining_time >APPROX_TIME:
+            time_remaining_uavs.append(uav.remaining_time)
     robot_reach_first = False
     if len(time_remaining_uavs)==0 or state.robot.remaining_time < min(time_remaining_uavs):
         robot_reach_first = True
