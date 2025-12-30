@@ -528,10 +528,10 @@ def test_jsap_transition_2ugvs_sgraph():
 #####++++++ Error in copy function: The action target is 6 from 10 of UGV 1 in the copy function
 #####++++++ And robot 0's last node: 2 on edge [2, 6]
 #####++++++ And robot 1's last node: 10 on edge []
-# The poses of UGV 0 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [2.586, 2.586]] and current pose [2.586 2.586]
-# The poses of UGV 1 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [6.0, 4.0]] and current pose [6. 4.]
 # The current actions of UGV 0 is: [6, 9, 10]
 # The current actions of UGV 1 is: [6, 9, 10]
+# The poses of UGV 0 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [2.586, 2.586]] and current pose [2.586 2.586]
+# The poses of UGV 1 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [6.0, 4.0]] and current pose [6. 4.]
 
 
     # the first transition - assign action to the first Ground
@@ -553,7 +553,6 @@ def test_jsap_transition_2ugvs_sgraph():
     assert len(state_prob_cost) == 2
     state2_p = list(state_prob_cost.keys())[0]
     assert len(state2_p.get_actions()) == 1
-    # print(f"The current actions of UGV {state2_p.get_actions()[0].robotID} is: {[a.target for a in state2_p.ugvs_actions[0]]}")
     assert state2_p.get_actions()[0].rtype == param.RobotType.Ground
     assert state2_p.action_cost == 2.0
     assert state2_p.heuristic == 16.0
@@ -583,85 +582,90 @@ def test_jsap_transition_2ugvs_sgraph():
     assert state4_p.get_actions()[0].robotID == state4_p.get_actions()[0].robotID == 0
     assert state4_p.action_cost == 2.0
     assert state4_p.ugvs[0].need_action == True
-    assert state4_p.ugvs[1].need_action == True
-
-# The poses of UGV 0 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [2.586, 2.586]] and current pose [2.586 2.586]
-# The poses of UGV 1 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [6.0, 4.0]] and current pose [6. 4.]
-    
+    assert state4_p.ugvs[1].need_action == False   
 
     # the 5th transition - assign action 8 to ugv 0
     assert state4_p.get_actions()[0].target == 8
     assert state4_p.get_actions()[1].target == 11
-    state4_p.get_actions()[0].robotID = state4_p.get_actions()[1].robotID == 0
+    assert state4_p.ugvs_actions[0][0].robotID == state4_p.ugvs_actions[0][1].robotID == 0
+    assert state4_p.ugvs_actions[1][0].robotID == 1
+    assert state4_p.ugvs_actions[1][0].target == 3
+    state4_p.get_actions()[0].robotID == state4_p.get_actions()[1].robotID == 0
     state_prob_cost = state4_p.transition(state4_p.get_actions()[0])
-    # assert len(state_prob_cost) == 1
-    # state5_p = list(state_prob_cost.keys())[0]
-    # assert state5_p.get_actions()[0].rtype == param.RobotType.Ground
-    # assert len(state5_p.get_actions()) == len(state5_p.state_actions) == 2
-    # assert state5_p.action_cost == 0.0
-    # assert state5_p.ugvs[0].need_action == True
-    # assert state5_p.ugvs[1].need_action == False
+    assert len(state_prob_cost) == 1
+    state5_p = list(state_prob_cost.keys())[0]
+    assert state5_p.get_actions()[0].rtype == param.RobotType.Ground
+    assert len(state5_p.get_actions()) == len(state5_p.state_actions) == 2
+    assert state5_p.action_cost == 0.0
+    assert state5_p.ugvs[0].need_action == False
+    assert state5_p.ugvs[1].need_action == True
 
 
-    # the 6th transition - assign action to the uav
-#     assert state5_p.get_actions()[0].target == 8
-#     state_prob_cost = state5_p.transition(state5_p.get_actions()[0])
-#     assert len(state_prob_cost) == 1
-#     state6_p = list(state_prob_cost.keys())[0]
-#     assert state6_p.get_actions()[0].rtype == param.RobotType.Ground
-#     assert state6_p.action_cost == 0.0
-#     assert state6_p.ugvs[0].need_action == True
-#     assert state6_p.uavs[0].need_action == False
-#     assert state6_p.uavs[1].need_action == False    
-#     assert len(state6_p.get_actions()) == len(state6_p.state_actions) == 1
+    # the 6th transition - assign action 8 to the uav 1
+    assert state5_p.get_actions()[0].target == 8
+    assert state5_p.get_actions()[1].target == 11
+    state_prob_cost = state5_p.transition(state5_p.get_actions()[0])
+    assert len(state_prob_cost) == 2
+    state6_p = list(state_prob_cost.keys())[0]
+    assert len(state6_p.get_actions()) == len(state6_p.state_actions) == 1
+    assert state6_p.get_actions()[0].rtype == param.RobotType.Ground
+    assert state6_p.action_cost == 2.0
+    assert state6_p.ugvs[0].need_action == True
+    assert state6_p.ugvs[1].need_action == False    
+    
+    # the 7th transition - assign action 2 to ugv 0
+    assert state6_p.get_actions()[0].target == 2
+    state_prob_cost = state6_p.transition(state6_p.get_actions()[0])
+    assert len(state_prob_cost) == 1
+    state7_p = list(state_prob_cost.keys())[0]
+    assert len(state7_p.get_actions()) == len(state7_p.state_actions) == 1
+    assert state7_p.get_actions()[0].rtype == param.RobotType.Ground
+    assert state7_p.action_cost == 0.0
+    assert state7_p.ugvs[0].need_action == False
+    assert state7_p.ugvs[1].need_action == True    
+# The poses of UGV 0 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [2.586, 2.586]] and current pose [2.586 2.586]
+# The poses of UGV 1 is: [[0.0, 0.0], [2.0, 0.0], [4.0, 0.0], [4.0, 2.0], [4.0, 4.0], [6.0, 4.0]] and current pose [6. 4.]
+ 
 
-#     # the 7th transition - assign action to the uav
-#     assert state6_p.get_actions()[0].target == 8
-#     state_prob_cost = state6_p.transition(state6_p.get_actions()[0])
-#     assert len(state_prob_cost) == 2
-#     state7_p = list(state_prob_cost.keys())[0]
-#     assert state7_p.get_actions()[0].rtype == param.RobotType.Drone
-#     # assert state7_p.action_cost == 0.0
-#     assert state7_p.ugvs[0].need_action == True
-#     assert state7_p.uavs[0].need_action == False
-#     assert state7_p.uavs[1].need_action == True    
-#     assert len(state7_p.get_actions()) == len(state7_p.state_actions) == 1
+    # the 8th transition - assign action 2 to UGV 1
+    assert state7_p.get_actions()[0].target == 2
+    state_prob_cost = state7_p.transition(state7_p.get_actions()[0])
+    assert len(state_prob_cost) == 1
+    state8_p = list(state_prob_cost.keys())[0]
+    assert len(state8_p.get_actions()) == len(state8_p.state_actions) == 3
+    assert state8_p.get_actions()[0].rtype == param.RobotType.Ground
+    assert state8_p.action_cost == 2.0
+    assert state8_p.ugvs[0].need_action == True
+    assert state8_p.ugvs[1].need_action == False    
 
-#     # the 8th transition - assign action to the uav
-#     assert state7_p.get_actions()[0].target == 3
-#     state_prob_cost = state7_p.transition(state7_p.get_actions()[0])
-#     assert len(state_prob_cost) == 1
-#     state8_p = list(state_prob_cost.keys())[0]
-#     assert state8_p.get_actions()[0].rtype == param.RobotType.Ground
-#     assert state8_p.action_cost == 0.0
-#     assert state8_p.ugvs[0].need_action == True
-#     assert state8_p.uavs[0].need_action == False
-#     assert state8_p.uavs[1].need_action == False    
-#     assert len(state8_p.get_actions()) == len(state8_p.state_actions) == 1
+    # the 9th transition - assign action 6 to UGV 0, then move
+    assert state8_p.get_actions()[0].target == 6
+    state_prob_cost = state8_p.transition(state8_p.get_actions()[0])
+    assert len(state_prob_cost) == 1
+    state9_p = list(state_prob_cost.keys())[0]
+    assert len(state9_p.get_actions()) == len(state9_p.state_actions) == 3
+    assert state9_p.get_actions()[0].rtype == param.RobotType.Ground
+    assert state9_p.action_cost == 0.0
+    assert state9_p.ugvs[0].need_action == False
+    assert state9_p.ugvs[1].need_action == True    
 
-#     # the 9th transition - assign action to the ugv, then move
-#     assert state8_p.get_actions()[0].target == 8
-#     state_prob_cost = state8_p.transition(state8_p.get_actions()[0])
-#     assert len(state_prob_cost) == 2
-#     state9_p = list(state_prob_cost.keys())[0]
-#     assert state9_p.get_actions()[0].rtype == param.RobotType.Ground
-#     # assert state9_p.action_cost == 0.0
-#     assert state9_p.ugvs[0].need_action == True
-#     assert state9_p.uavs[0].need_action == True
-#     assert state9_p.uavs[1].need_action == False    
-#     assert len(state9_p.get_actions()) == len(state9_p.state_actions) == 1
+    print(f"The pose of UGV 0 is: {state9_p.ugvs[0].cur_pose}, last node: {state9_p.ugvs[0].last_node}")
+    print(f"The pose of UGV 1 is: {state9_p.ugvs[1].cur_pose}, last node: {state9_p.ugvs[1].last_node}")
 
-#     # the 10th transition - assign action to the ugv
-#     assert state9_p.get_actions()[0].target == 4
-#     state_prob_cost = state9_p.transition(state9_p.get_actions()[0])
-#     assert len(state_prob_cost) == 1
-#     state10_p = list(state_prob_cost.keys())[0]
-#     assert state10_p.get_actions()[0].rtype == param.RobotType.Drone
-#     assert state10_p.action_cost == 0.0
-#     assert state10_p.ugvs[0].need_action == False
-#     assert state10_p.uavs[0].need_action == True
-#     assert state10_p.uavs[1].need_action == False    
-#     assert len(state10_p.get_actions()) == len(state10_p.state_actions) == 1
+
+    # the 10th transition - assign action 9 to UGV 1, then move
+    assert state9_p.get_actions()[2].target == 10
+    for action in state9_p.get_actions():
+        print(f"Action target: {action.target} of UGV {action.robotID} from {action.start_pose}")
+    state_prob_cost = state9_p.transition(state9_p.get_actions()[2])
+    # assert len(state_prob_cost) == 2
+    # state10_p = list(state_prob_cost.keys())[0]
+    # assert len(state10_p.get_actions()) == len(state10_p.state_actions) == 1
+    # assert state10_p.get_actions()[0].rtype == param.RobotType.Ground
+    # assert state10_p.action_cost == 2.0
+    # assert state10_p.ugvs[0].need_action == False
+    # assert state10_p.ugvs[1].need_action == True
+    
 
 #     # the 11th transition - assign action to the second uav, then move
 #     assert state10_p.get_actions()[0].target == 3

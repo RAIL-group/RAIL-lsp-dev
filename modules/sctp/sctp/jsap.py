@@ -249,33 +249,34 @@ class JSAPState(object):
         new_state.state_actions = []
         # copy the robot
         new_state.ugvs = [ugv.copy() for ugv in self.ugvs]
-        # new_state.ugvs_actions = [[core.Action(target=action.target, start_pose=(action.start_pose[0],action.start_pose[1])) \
-        #                             for action in ugv_actions] for ugv_actions in self.ugvs_actions]
-        new_state.ugvs_actions = [[] for _ in range(len(self.ugvs))]
-        for ii, ugv_actions in enumerate(self.ugvs_actions):
-            new_ugv_actions = []
-            for action in ugv_actions:
-                assert action.robotID is not None
-                assert action.robotID == ii
-                new_action = core.Action(target=action.target, start_pose=(action.start_pose[0],action.start_pose[1]))
-                if action.target == 6 and new_state.ugvs[action.robotID].last_node ==10:
-                    print(f"The depth of the MCTS tree: {self.depth}")
-                    print("___#####++++++ Error in copy function: The action target is 6 from 10 of UGV {} in the copy function".format(action.robotID))
-                    print("___#####++++++ And robot 0's last node: {} on edge {}".format(new_state.ugvs[0].last_node, new_state.ugvs[0].edge))
-                    print("___#####++++++ And robot 1's last node: {} on edge {}".format(new_state.ugvs[1].last_node, new_state.ugvs[1].edge))
-                    print(f"The current actions of UGV 0 is: {[act.target for act in self.ugvs_actions[0]]}")
-                    print(f"The current actions of UGV 1 is: {[act.target for act in self.ugvs_actions[1]]}")
-                    print(f"The poses of UGV 0 is: {new_state.ugvs[0].all_poses} and current pose {new_state.ugvs[0].cur_pose}")
-                    print(f"The poses of UGV 1 is: {new_state.ugvs[1].all_poses} and current pose {new_state.ugvs[1].cur_pose}")
-                    raise ValueError("Error in copy function for UGV action from 10 to 6")
+        new_state.ugvs_actions = [[core.Action(target=action.target, start_pose=(action.start_pose[0],action.start_pose[1])) \
+                                    for action in ugv_actions] for ugv_actions in self.ugvs_actions]
+        # new_state.ugvs_actions = [[] for _ in range(len(self.ugvs))]
+        # print("++++++++++++++++++++++++++++++++++++++++++++++++++")
+        # for ii, ugv_actions in enumerate(self.ugvs_actions): # copy but action of current UGV will be updated.
+        #     new_ugv_actions = []
+        #     for action in ugv_actions:
+        #         assert action.robotID is not None
+        #         assert action.robotID == ii
+        #         new_action = core.Action(target=action.target, start_pose=(action.start_pose[0],action.start_pose[1]))
+                # if action.target == 6 and new_state.ugvs[action.robotID].last_node ==10:
+                #     print(f"The depth of the MCTS tree: {self.depth}")
+                #     print("___#####++++++ Error in copy function: The action target is 6 from 10 of UGV {} in the copy function".format(action.robotID))
+                #     print("___#####++++++ And robot 0's last node: {} on edge {}".format(new_state.ugvs[0].last_node, new_state.ugvs[0].edge))
+                #     print("___#####++++++ And robot 1's last node: {} on edge {}".format(new_state.ugvs[1].last_node, new_state.ugvs[1].edge))
+                #     print(f"The current actions of UGV 0 is: {[act.target for act in self.ugvs_actions[0]]}")
+                #     print(f"The current actions of UGV 1 is: {[act.target for act in self.ugvs_actions[1]]}")
+                #     print(f"The poses of UGV 0 is: {new_state.ugvs[0].all_poses} and current pose {new_state.ugvs[0].cur_pose}")
+                #     print(f"The poses of UGV 1 is: {new_state.ugvs[1].all_poses} and current pose {new_state.ugvs[1].cur_pose}")
+                    # raise ValueError("Error in copy function for UGV action from 10 to 6")
                     # print("---------------------==========================))))))))))))))))))))))))))))------------------------")
-                new_action.update_robotID(action.robotID)
-                assert new_action.robotID == ii    
-                new_ugv_actions.append(new_action)
-            new_state.ugvs_actions[ii] = new_ugv_actions
-        # for ii, actions in enumerate(new_state.ugvs_actions):
-        #     for act in actions:
-        #         act.update_robotID(ii)
+            #     new_action.update_robotID(action.robotID)
+            #     assert new_action.robotID == ii    
+            #     new_ugv_actions.append(new_action)
+            # new_state.ugvs_actions[ii] = new_ugv_actions
+        for ii, actions in enumerate(new_state.ugvs_actions):
+            for act in actions:
+                act.update_robotID(ii)
         if self.uavs != []:
             new_state.uavs = [uav.copy() for uav in self.uavs]
             new_state.uav_actions = [core.Action(target=action.target, rtype=param.RobotType.Drone) \
@@ -459,6 +460,10 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
     state.ugvs[robot_idx].visited_vertices.append(state.ugvs[robot_idx].last_node)
     assert state.ugvs[robot_idx].at_node == True
     state.cur_ugv_idx = robot_idx
+    # One UGV is processed one a time
+    for i, ugv in enumerate(state.ugvs):
+        if i != robot_idx:
+            ugv.need_action = False
     if vertex_status == param.EventOutcome.BLOCK:
         state.ugvs_actions[robot_idx] = [core.Action(target=state.ugvs[robot_idx].pl_vertex, \
                             start_pose=(state.ugvs[robot_idx].cur_pose[0],state.ugvs[robot_idx].cur_pose[1]))]
@@ -486,7 +491,6 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
                 if state.ugvs_actions[robot_idx] == []:
                     state.noway2goal = True
                     state.action_cost = param.STUCK_COST
-                    # state.ugvs_actions[robot_idx] = []        
             elif len(neighbors) == 1:
                 state.ugvs_actions[robot_idx] = [core.Action(target=neighbors[0], \
                     start_pose=(state.ugvs[robot_idx].cur_pose[0],state.ugvs[robot_idx].cur_pose[1]))]
@@ -494,6 +498,7 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
                 state.noway2goal = True
                 state.action_cost = param.STUCK_COST
                 state.ugvs_actions[robot_idx] = []
+        assert isinstance(robot_idx, int)
         for action in state.ugvs_actions[robot_idx]:
             action.update_robotID(robot_idx)
             assert action.robotID == robot_idx
@@ -512,10 +517,7 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
     elif vertex_status == param.EventOutcome.CHANCE:
         if len(state.uavs) > 0:
             reset_uavs_action(state, robot_idx)
-        # Allow other ugvs to explore its current node if they reach
-        for i, ugv in enumerate(state.ugvs):
-            if i != robot_idx:
-                ugv.need_action = False
+        
         if state.use_AVP:
             state.avail_uav_actions = [act for act in state.avail_uav_actions if act.target != state.ugvs[robot_idx].last_node]
             state.behavior_change.pop(core.Action(target=state.ugvs[robot_idx].last_node), None)
