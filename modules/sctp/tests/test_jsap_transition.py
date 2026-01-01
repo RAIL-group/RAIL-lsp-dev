@@ -649,14 +649,14 @@ def test_jsap_transition_2ugvs_sgraph():
     assert state9_p.ugvs[0].need_action == False
     assert state9_p.ugvs[1].need_action == True    
 
-    print(f"The pose of UGV 0 is: {state9_p.ugvs[0].cur_pose}, last node: {state9_p.ugvs[0].last_node}")
-    print(f"The pose of UGV 1 is: {state9_p.ugvs[1].cur_pose}, last node: {state9_p.ugvs[1].last_node}")
+    # print(f"The pose of UGV 0 is: {state9_p.ugvs[0].cur_pose}, last node: {state9_p.ugvs[0].last_node}")
+    # print(f"The pose of UGV 1 is: {state9_p.ugvs[1].cur_pose}, last node: {state9_p.ugvs[1].last_node}")
 
 
     # the 10th transition - assign action 9 to UGV 1, then move
     assert state9_p.get_actions()[2].target == 10
-    for action in state9_p.get_actions():
-        print(f"Action target: {action.target} of UGV {action.robotID} from {action.start_pose}")
+    # for action in state9_p.get_actions():
+    #     print(f"Action target: {action.target} of UGV {action.robotID} from {action.start_pose}")
     state_prob_cost = state9_p.transition(state9_p.get_actions()[2])
     # assert len(state_prob_cost) == 2
     # state10_p = list(state_prob_cost.keys())[0]

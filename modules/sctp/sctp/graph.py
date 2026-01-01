@@ -61,9 +61,10 @@ class Graph():
     def update(self, observations):
         for key, value in observations.items():
             pois = [poi for poi in self.pois if poi.id ==key]
-            if pois:
+            for poi in pois:
+                poi.block_prob = float(poi.block_status)
+            # if pois:
                 # pois[0].block_prob = float(value)
-                pois[0].block_prob = float(pois[0].block_status)
     
     def copy(self):
         new_vertices = [vertex.copy() for vertex in self.vertices]
@@ -568,13 +569,16 @@ def get_removedEdges_allrobots(graph, robots, block_pois):
                     if other_side is not None:
                         edges.append([robot.edge[0], other_side[0]])
             if robot.edge[1] in block_pois:
-                # neighbors = [node for node in graph.pois if node.id == robot.action.target][0].neighbors
                 neighbors = [node for node in graph.pois if node.id == robot.edge[1]][0].neighbors
                 other_side = [n for n in neighbors if n != robot.edge[0]]
                 if other_side is not None:
                     edges.append([robot.edge[1], other_side[0]])
+        
     # be sure no robot on the edges to be removed
     for robot in robots:
-        if not robot.at_node and (robot.edge in edges or [robot.edge[1], robot.edge[0]] in edges):
-            edges.remove(robot.edge) if robot.edge in edges else edges.remove([robot.edge[1], robot.edge[0]])
+        if not robot.at_node:
+            if robot.edge in edges:
+                edges = [e for e in edges if e != robot.edge]
+            if [robot.edge[1], robot.edge[0]] in edges:
+                edges = [e for e in edges if e != [robot.edge[1], robot.edge[0]]]
     return edges, vertices_connectRobot

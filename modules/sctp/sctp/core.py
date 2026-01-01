@@ -25,8 +25,8 @@ class Action(object):
         return hash(self.target)
     def __str__(self):
         if self.rtype == RobotType.Ground:
-            return f'Robot {self.robotID} goes from ({self.start_pose[0]:.2f}, {self.start_pose[1]:.2f}) to V{self.target}'
-        return f'Drone {self.robotID} goes from ({self.start_pose[0]:.2f}, {self.start_pose[1]:.2f}) to V{self.target}'
+            return f'UGV {self.robotID} goes from ({self.start_pose[0]:.2f}, {self.start_pose[1]:.2f}) to V{self.target}'
+        return f'UAV {self.robotID} goes from ({self.start_pose[0]:.2f}, {self.start_pose[1]:.2f}) to V{self.target}'
 
 class History(object):
     def __init__(self, data=None):

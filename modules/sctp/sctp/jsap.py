@@ -5,8 +5,7 @@ import random
 from sctp import param, core
 from sctp import action_esti as ae
 import time
-# from sctp.gstate_dec import GroundState 
-import pouct_planner
+# import pouct_planner
 
 class JSAPState(object):
     def __init__(self, graph=None, goalIDs=[], ugvs=[], drones=[], 
@@ -39,6 +38,7 @@ class JSAPState(object):
             self.goalIDs = goalIDs
             self.history = core.History()
             self.vertices_map = {v.id: v for v in self.graph.vertices + self.graph.pois}
+            self.v_vertices = dict()
             self.assigned_pois = set()
             self.init_history()
             self.ugvs = ugvs
@@ -164,6 +164,8 @@ class JSAPState(object):
                     min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalIDs[i])
                     min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalIDs[i])
                     if (min_dist1 < 0) != (min_dist2 < 0):
+                        print(f"Vertices removed for heuristic computation: {new_pois}")
+                        print(f"Edges removed for heuristic computation: {edges}")
                         new_graph.print_graph_config()
                         if min_dist1 < 0:
                             print(f"UGV {i} is on edge: ({redge}) and Vertex {redge[0]} to goal {self.goalIDs[i]} is blocked")
@@ -227,6 +229,7 @@ class JSAPState(object):
         new_state.cur_ugv_idx = self.cur_ugv_idx
         new_state.heuristic = self.heuristic
         new_state.vertices_map = self.vertices_map.copy()
+        new_state.v_vertices = self.v_vertices.copy()
         new_state.depth = self.depth
         new_state.graph = self.graph
         new_state.sampling_maps = self.sampling_maps
@@ -325,13 +328,13 @@ class JSAPState(object):
             assert temp_state.cur_ugv_idx > -1
             ugv_needs_action = [ugv.need_action for ugv in temp_state.ugvs]
             assert any(ugv_needs_action) == True
-            if action.target == 6 and temp_state.ugvs[action.robotID].last_node == 10:
-                assert temp_state.cur_ugv_idx == action.robotID
-                print(f"___#####++++++ Error in transition: The action target is 6 from 10 of UGV {temp_state.cur_ugv_idx} in the transition function")
-                for i, robot in enumerate(temp_state.ugvs):
-                    print(f"The path of UGV {i} is: {robot.all_poses}")
+            # if action.target == 6 and temp_state.ugvs[action.robotID].last_node == 10:
+            #     assert temp_state.cur_ugv_idx == action.robotID
+            #     print(f"___#####++++++ Error in transition: The action target is 6 from 10 of UGV {temp_state.cur_ugv_idx} in the transition function")
+            #     for i, robot in enumerate(temp_state.ugvs):
+            #         print(f"The path of UGV {i} is: {robot.all_poses}")
                 
-                raise ValueError("Error in transition function for UGV action from 10 to 6")
+                # raise ValueError("Error in transition function for UGV action from 10 to 6")
             # ugv_idx = temp_state.cur_ugv_idx
             ugv_idx = action.robotID
             start_pos = (temp_state.ugvs[ugv_idx].cur_pose[0], temp_state.ugvs[ugv_idx].cur_pose[1])
@@ -363,35 +366,24 @@ def get_ugv_action(state, ugv_idx):
                 actions = [core.Action(target=ugv.pl_vertex, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
             else:
                 neighbors = [node for node in state.graph.vertices+state.graph.pois if node.id == ugv.last_node][0].neighbors
-                if len(neighbors) >= 2:
-                    actions = [core.Action(target=neighbor, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])) \
-                               for neighbor in neighbors if neighbor != ugv.pl_vertex]
-                else:
-                    actions = [core.Action(target=neighbor, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])) for neighbor in neighbors]
+                actions = [core.Action(target=neighbor, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])) for neighbor in neighbors]
         ugv.visited_vertices.append(ugv.last_node)
     else:
         actions = [core.Action(target=ugv.edge[0], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])), 
                               core.Action(target=ugv.edge[1],start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
     actions = [action for action in actions \
                     if state.history.get_action_outcome(action) != core.EventOutcome.BLOCK]
-    for action in actions:
-        if action.target == 6 and ugv.last_node ==10:
-            print("The source error from the get_ugv_action function when getting action to 6 from 10")
-            raise ValueError("Error in get_ugv_action function for UGV action from 10 to 6")
-    # assert len(actions) > 0
+    if len(actions) >= 2:
+        actions = [action for action in actions if action.target != ugv.pl_vertex]
+    assert len(actions) > 0
     [action.update_robotID(ugv_idx) for action in actions]
-    for action in actions:
-        if action.target == 6 and state.ugvs[action.robotID].last_node ==10:
-            print("The source error from the get_ugv_action function - updating the robot ID")
-            raise ValueError("Error in get_ugv_action function for UGV action from 10 to 6")
-    
     return actions
 
 def advance_state(state, action):
     # 1. if any robot needs action, determine its actions then return
     uavs_need_action = [uav.need_action for uav in state.uavs]
     if state.uavs != [] and any(uavs_need_action): # and action.rtype == param.RobotType.Drone:
-        uav_idx = robots_need_action.index(True)
+        uav_idx = uavs_need_action.index(True)
         if state.use_AVP:
             state.action_values.clear()
             state.uav_actions = ae.get_uav_action_2ag(state, uav_idx)        
@@ -442,7 +434,7 @@ def advance_state(state, action):
         else:
             robot.need_action = False
     for uav in state.uavs:
-        assert 1 == 0, "UAV advance not implemented yet"
+        # assert 1 == 0, "UAV advance not implemented yet"
         if uav.last_node != state.goalIDs[0]:
             uav.advance_time(time_advance)
         else:
@@ -458,6 +450,7 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
     vertex_status = state.history.get_action_outcome(state.ugvs[robot_idx].action)
     vertex = [node for node in state.graph.vertices+state.graph.pois if node.id == state.ugvs[robot_idx].action.target][0]
     state.ugvs[robot_idx].visited_vertices.append(state.ugvs[robot_idx].last_node)
+    state.v_vertices[state.ugvs[robot_idx].last_node] = state.v_vertices.get(state.ugvs[robot_idx].last_node, 0) + 1
     assert state.ugvs[robot_idx].at_node == True
     state.cur_ugv_idx = robot_idx
     # One UGV is processed one a time
@@ -470,9 +463,9 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
         for action in state.ugvs_actions[robot_idx]:
             action.update_robotID(robot_idx)
             assert action.robotID == robot_idx
-            if action.target == 6 and state.ugvs[action.robotID].last_node == 10:
-                print("The error is here at the get_ugv_belief BLOCK")
-                raise ValueError("Debugging")
+            # if action.target == 6 and state.ugvs[action.robotID].last_node == 10:
+            #     print("The error is here at the get_ugv_belief BLOCK")
+            #     raise ValueError("Debugging")
         state.state_actions = [action for action in state.ugvs_actions[robot_idx]]
         assert all ([uav.remaining_time >= param.APPROX_TIME for uav in state.uavs])
         state.update_heuristic()
@@ -502,10 +495,11 @@ def get_ugv_belief(state, last_nodes, robot_idx, last_edges): # need to work on 
         for action in state.ugvs_actions[robot_idx]:
             action.update_robotID(robot_idx)
             assert action.robotID == robot_idx
-            if action.target == 6 and state.ugvs[action.robotID].last_node == 10:
-                print("The error is here at the get_ugv_belief TRAV")
-                raise ValueError("Debugging")
-            
+            # if action.target == 6 and state.ugvs[action.robotID].last_node == 10:
+            #     print("The error is here at the get_ugv_belief TRAV")
+            #     raise ValueError("Debugging")
+        if len(state.ugvs)==1 and len(state.uavs)==0:
+            state.action_cost += (state.v_vertices.get(state.ugvs[robot_idx].last_node, 0)-1) * state.revisit_pen
         state.state_actions = [action for action in state.ugvs_actions[robot_idx] ]
         assert all ([uav.remaining_time >= param.APPROX_TIME for uav in state.uavs])
         state.update_heuristic()
@@ -571,20 +565,12 @@ def get_new_ugv_node(state, robot_idx, last_node=None, blocked=False):
             if new_state.ugvs_actions[i] == []:
                 new_state.noway2goal = True
                 new_state.action_cost = param.STUCK_COST
-            for action in new_state.ugvs_actions[i]:
-                assert action.robotID == i
-                if action.target == 6 and new_state.ugvs[i].last_node == 10:
-                    print(f"Current pose of UGV {robot_idx} is {new_state.ugvs[robot_idx].cur_pose} on edge {new_state.ugvs[robot_idx].edge} with last node {new_state.ugvs[robot_idx].last_node}")
-                    print(f"Current pose of UGV {i} is {robot.cur_pose} on edge {robot.edge} with last node {robot.last_node}")
-                    new_state.graph.print_graph_config()
-                    print("The error is here at the reset action in get_ugv_belief CHANCE")
-                    raise ValueError("Debugging")
-
+            
     new_state.depth += 1
     new_state.update_heuristic()
     uav_needs_action = [i for i, uav in enumerate(new_state.uavs) if uav.need_action==True]
     if len(uav_needs_action)>0:
-        assert 1 == 0
+        # assert 1 == 0
         if new_state.use_AVP:
             actions = ae.get_uav_action_2ag(new_state, uav_needs_action[0])
             new_state.uav_actions = actions
@@ -595,7 +581,7 @@ def get_new_ugv_node(state, robot_idx, last_node=None, blocked=False):
     return new_state
 
 def get_uav_belief(state, uav_index):
-    assert 1 == 0, "UAV belief not implemented yet"
+    # assert 1 == 0, "UAV belief not implemented yet"
     assert len(state.uavs) > 0
     vertex_status = state.history.get_action_outcome(state.uavs[uav_index].action)
     vertex = [node for node in state.graph.pois+state.graph.vertices if node.id == state.uavs[uav_index].action.target][0]
@@ -648,7 +634,7 @@ def get_uav_belief(state, uav_index):
                     new_state_block: (vertex.block_prob, new_state_block.action_cost)}
 
 def get_new_uav_node(state, uav_index, blocked=False):
-    assert 1 ==0, "UAV new node not implemented yet"
+    # assert 1 ==0, "UAV new node not implemented yet"
     new_state = state.copy()
     new_state.depth += 1
     new_state.cur_ugv_idx = -1

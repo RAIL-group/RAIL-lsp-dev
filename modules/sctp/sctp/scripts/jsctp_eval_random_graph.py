@@ -24,7 +24,7 @@ def _setup(args):
     planner_robot = robot.copy()
     # param.IV_SAMPLE_SIZE = 80
     # print(f"Running CTP with num_iterations {args.num_iterations}")
-    if args.planner == 'base':
+    if args.planner == 'ctp':
         drones = []
         args.num_drones = 0
         param.REVISIT_PEN = 20.0
@@ -91,10 +91,10 @@ def _setup(args):
                         seed=args.seed, cost=cost, verbose=True)
     
     if print_pdf:
-        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.pdf')    
-    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
+        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs.pdf')    
+    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs_sctp.png')
 
-    logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGV.txt'
+    logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGV_sctp.txt'
     with open(logfile, "a+") as f:
         f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exe.success)} | COST: {cost:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f}\n")
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     parser.add_argument('--C', type=float, default=300)
     # parser.add_argument('--v_num', type=int, default=6)
     parser.add_argument('--max_depth', type=int, default=50)
-    parser.add_argument('--sampling_maps', type=int, default=80)
+    parser.add_argument('--sampling_maps', type=int, default=60)
     parser.add_argument('--n_vertex', type=int, default=14)
     args = parser.parse_args()
     args.current_seed = args.seed

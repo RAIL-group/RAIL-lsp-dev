@@ -9,7 +9,7 @@ from sctp.param import RobotType
 
 class JSAPPlanner(object):
     def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 1000, 
-                 rollout_fn = None, tree_depth = 40, n_maps=80, use_AVP = False,
+                 rollout_fn = None, tree_depth = 40, n_maps=80, use_AVP = False, revisit_pen=10.0,
                  max_uanum=3, verbose=False):
         self.rollout_num = rollout_num
         self.verbose = verbose
@@ -25,8 +25,9 @@ class JSAPPlanner(object):
         self.use_AVP = use_AVP
         self.max_uanum = max_uanum
         self.sampling_time = 0.0
+        self.revisit_pen = revisit_pen
         self.single_policy_time = 0.0
-        assert self.n_maps == 80
+        assert self.n_maps == 60
         
     def reached_goal(self):
         return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
@@ -70,11 +71,11 @@ class JSAPPlanner(object):
         else:
             uavs = [uav.copy() for uav in self.uavs]
                 
-        assert self.n_maps == 80
+        assert self.n_maps == 60
         # assert self.spolicy_rollouts == 300
         # assert self.max_uanum == 1
         # assert uavs != []
-        state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
+        state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, revisit_pen=self.revisit_pen, \
                                              drones=uavs, ugvs=ugvs, useAVP=self.use_AVP, max_uanum=self.max_uanum)
     
         # assert state.uavs != []

@@ -46,8 +46,8 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
     root = POUCTNode(state)
     
     if len(root.unexplored_actions) == 0:
-        print(f"Robot position: {root.state.robot.cur_pose} at node {root.state.robot.last_node}")
-    # max_d = 0
+        print("Warning: No available actions at root node")
+        print(f"UGV at nodes {[ugv.last_node for ugv in root.state.ugvs]} and the goals are {root.state.goalIDs}")
     for i in range(n_iterations):
         leaf, sa = traverse(root, C=C, max_depth=depth)
         if not leaf.is_terminal_node():
@@ -56,10 +56,6 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
         simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
-        
-        # if leaf.state.depth > max_d:
-            # print(f"The current dept is: {leaf.state.depth} at iteration {i}")
-            # max_d = leaf.state.depth
         
     best_action, cost = get_best_action(root)
     path_ordering, cost_ordering = get_best_path_sctp(root)
@@ -186,23 +182,21 @@ def get_best_path_sctp(root):
         if uav.action is not None:
             paths.append(uav.action)
     while not node.is_terminal_node():
-        if node.total_n <5 or node.action_n=={} \
+        if node.total_n <100 or node.action_n=={} \
             or np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
-            # if node.total_n <5:
-            #     print("MCTS's tree stops due to the number of visit less than 5")
-            # if node.action_n=={}:
-            #     print("MCTS's tree stops because no action is takens")
-            # if np.max([node.action_n[a] for a in list(node.action_n.keys())])==0:
-            #     print("MCTS's tree stops because all actions have zero visits")
             break
         count += 1
         best_action, cost = get_best_action(node)
         paths.append(best_action)
         costs.append(cost)
         children = list(node.action_outcomes[best_action].keys())
-        if root.state.uavs == []:
-            node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
-        else:
-            node = max(children, key=lambda x: x.total_n)        
-    # print("The dept of MCTS's Tree: ", count)
+        # if len(root.state.uavs) == 0 and len(root.state.ugvs) == 1:
+        #     nodes = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV]
+        #     if len(nodes) > 0:
+        #         node = nodes[0]
+        #     else:
+        #         break
+            # node = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV][0]
+        # else:
+        node = max(children, key=lambda x: x.total_n)        
     return paths, costs

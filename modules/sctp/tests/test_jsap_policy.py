@@ -107,14 +107,14 @@ def test_jsap_policy_sgraph2goals():
     print()
     seed = 2000
     C=200.0
-    num_iterations=2000
-    uav_num = 0
+    num_iterations=3000
+    uav_num = 2
     ugv_num = 2
     starts, goals, graph = graphs.s_graph_2goals()
-    baseline = True
+    # baseline = True
     useAVP = True
     
-    if baseline:
+    if uav_num == 0:
         uavs = []
         planner = 'CTP'
         mdepth = 15
@@ -146,8 +146,8 @@ def test_jsap_policy_sgraph2goals():
     else:
         assert path_cost_times[2] == 0.0
     
-    plotting.plot_policy(graph, actions=path_cost_times[0], startID=starts[0].id, \
-                               goalID=goals[0].id, seed=seed, verbose=True)
+    plotting.plot_policy(graph, actions=path_cost_times[0], startID=[s.id for s in starts], goalID=[g.id for g in goals], \
+                         seed=seed, ugv_num=ugv_num, uav_num=uav_num, verbose=True)
 
 
     
@@ -194,14 +194,14 @@ def test_jsap_policy_sgraph_2uavs2ugvs():
 def test_jsap_policy_mgraph3goals():
     print()
     C=200.0
-    num_iterations=2000
-    uav_num = 1
-    ugv_num = 1
+    num_iterations=400
+    uav_num = 3
+    ugv_num = 3
     starts, goals, graph = graphs.m_graph_unc()
-    baseline = True
-    useAVP = False
+    # baseline = True
+    useAVP = True
     max_uanum = 1
-    if baseline:
+    if uav_num == 0:
         uavs = []
         planner = 'CTP'
         mdepth = 20
@@ -223,7 +223,7 @@ def test_jsap_policy_mgraph3goals():
     best_action, cost, path_cost_times  = policy.po_mcts(state, C=C, \
                             n_iterations=num_iterations, depth=mdepth, rollout_fn= jsap.decsctp_rollout)
     
-    print("The list of actions: ", [[f"{a.target}", f"({a.start_pose[0]:.2f}, {a.start_pose[1]:.2f})"] for a in path_cost_times[0]])
+    print("The list of actions: ", [[f"{a.rtype} {a.robotID} moves to {a.target}" f" from ({a.start_pose[0]:.2f}, {a.start_pose[1]:.2f})"] for a in path_cost_times[0]])
     print("The cost are: ", [f"{c:.2f}"  for c in path_cost_times[1]])  
     if useAVP:
         assert path_cost_times[2] > 0.0
@@ -231,6 +231,6 @@ def test_jsap_policy_mgraph3goals():
     else:
         assert path_cost_times[2] == 0.0
     
-    plotting.plot_policy(graph, actions=path_cost_times[0], name=f"{planner} Policy", startID=starts[0].id, \
-                               goalID=goals[0].id, seed=2000, verbose=True)
+    plotting.plot_policy(graph, actions=path_cost_times[0], name=f"{planner} Policy", startID=[s.id for s in starts], \
+                               goalID=[g.id for g in goals], ugv_num=ugv_num,uav_num=uav_num, seed=2000, verbose=True)
 

@@ -14,12 +14,12 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
             if i >= len(gpaths):
                 break
             ax[0].scatter(start[0], start[1], marker='o', color='r')
-            ax[0].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
+            ax[0].text(start[0]-2.0, start[1], f'S{i}',color='blue', fontsize=8)
         for i, goal in enumerate(goal_coords):
             if i >= len(gpaths):
                 break
             ax[0].scatter(goal[0], goal[1], marker='x', color='r')
-            ax[0].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
+            ax[0].text(goal[0]+1.0, goal[1],f'G{i}',color='r', fontsize=8)
         
         box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=True)
         ax[0].set_aspect('equal', adjustable='box')
@@ -31,12 +31,12 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         if i >= len(gpaths):
             break
         ax[1].scatter(start[0], start[1], marker='o', color='r')
-        ax[1].text(start[0]-1.0, start[1],'Start',color='blue', fontsize=8)
+        ax[1].text(start[0]-2.0, start[1],f'S{i}',color='blue', fontsize=8)
     for i, goal in enumerate(goal_coords):
         if i >= len(gpaths):
             break
         ax[1].scatter(goal[0], goal[1], marker='x', color='r')
-        ax[1].text(goal[0]+0.2, goal[1],'Goal',color='r', fontsize=8)
+        ax[1].text(goal[0]+1.0, goal[1], f'G{i}',color='r', fontsize=8)
         
     box = plot_sctpgraph(graph, ax[1])
     if len(gpaths[0][0]) > 1:        
@@ -59,36 +59,39 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
     else:
         ax[1].set_title(f'S: {seed} | P: {name} | C: {cost:.2f}m | TT: {ttime:.2f}s | ST: {stime:.2f}s')
     
-def plot_policy(graph, name="Policy", actions=[], 
+def plot_policy(graph, name="Policy", actions=[], uav_num=0, ugv_num=1, 
                startID=None, goalID=None, seed=None, verbose=False):
     fig, ax = plt.subplots()
     count = 0
     for node in graph.vertices+graph.pois:
         if startID is not None:
-            if node.id == startID:
-                count += 1
-                ax.text(node.coord[0]-1.0, node.coord[1], "Start", color='blue', fontsize=8)
+            for ii, start in enumerate(startID):
+                if node.id == start:
+                    count += 1
+                    ax.text(node.coord[0]-1.0, node.coord[1], f"S{ii}", color='blue', fontsize=8)
         if goalID is not None:
-            if node.id == goalID:
-                count += 1
-                ax.text(node.coord[0] + 0.3, node.coord[1], "Goal", color='red', fontsize=8) 
+            for ii, goal in enumerate(goalID):
+                if node.id == goal:
+                    count += 1
+                    ax.text(node.coord[0] + 0.3, node.coord[1], f"G{ii}", color='red', fontsize=8) 
 
     box = plot_sctpgraph(graph, ax, verbose=verbose)
     g_cost = 0.0
-    x_drone = []
+    # x_drone = []
     if actions != []:
         d_colors = ['yellow', 'blue']
         g_colors = ['orange', 'green']
-        g_cost, x_drone = plot_path_fromActions(ax, graph=graph, actions=actions, dcolors=d_colors, gcolors=g_colors)
+        g_cost, _ = plot_path_fromActions(ax, graph=graph, actions=actions, dcolors=d_colors, gcolors=g_colors,
+                                          uav_num=uav_num, ugv_num=ugv_num)
     ax.set_aspect('equal', adjustable='box')
     ax.set_xlim(box[0][0]-1.0, box[1][0]+1.0)
     ax.set_ylim(box[0][1]-0.5, box[1][1]+0.5)
 
-    plt.title(name+f' | seed = {seed} | cost = {g_cost:.2f}')
-    if x_drone == []:
-        planner = 'base'
+    plt.title(name+f' | seed = {seed} | cost = {0.0:.2f}')
+    if uav_num == 0:
+        planner = 'ctp'
     else:
-        planner = 'sctp'
+        planner = name
     plt.savefig(f'/data/sctp/sctp_eval_policy_{planner}_seed_{seed}.png')
     plt.show()
 
@@ -135,41 +138,51 @@ def plot_path_fromPoints(ax, xy, colors, ugv=False):
         dist += np.linalg.norm(np.array([x[i],y[i]]) - np.array(np.array([x[i+1],y[i+1]])))
     plot_lines_varyWidthColor(ax, [x, y], dist, rev, colors, ugv)
 
-def plot_path_fromActions(ax, graph, actions, dcolors, gcolors):
-    g_cost = 0.0
-    d_dist = 0.0
+def plot_path_fromActions(ax, graph, actions, dcolors, gcolors, uav_num=0, ugv_num=1):
+    g_costs = [0.0 ]*ugv_num
+    d_dists = [0.0 ]*uav_num
     rev = 0.2
-    x_robot = []
-    y_robot = []
-    x_drone = []
-    y_drone = []
+    x_ugvs = [[] for _ in range(ugv_num)]
+    y_ugvs = [[] for _ in range(ugv_num)]
+    x_drones = [[] for _ in range(uav_num)]
+    y_drones = [[] for _ in range(uav_num)]
     last_robot_action = None
     last_drone_action = None
     for a in actions:
         if a.rtype == RobotType.Ground:
-            if x_robot != []:
-                g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(a.start_pose))
-            x_robot.append(a.start_pose[0])
-            y_robot.append(a.start_pose[1])
+            if x_ugvs[a.robotID] != []:
+                g_costs[a.robotID] += np.linalg.norm(np.array([x_ugvs[a.robotID][-1],y_ugvs[a.robotID][-1]]) - np.array(a.start_pose))
+            x_ugvs[a.robotID].append(a.start_pose[0])
+            y_ugvs[a.robotID].append(a.start_pose[1])
             last_robot_action = a
         elif a.rtype == RobotType.Drone:
-            if x_drone != []:
-                d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(a.start_pose))
-            x_drone.append(a.start_pose[0])
-            y_drone.append(a.start_pose[1])
+            if x_drones[a.robotID] != []:
+                d_dists[a.robotID] += np.linalg.norm(np.array([x_drones[a.robotID][-1],y_drones[a.robotID][-1]]) - np.array(a.start_pose))
+            x_drones[a.robotID].append(a.start_pose[0])
+            y_drones[a.robotID].append(a.start_pose[1])
             last_drone_action = a
     last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
-    g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(last_vertex.coord))
-    x_robot.append(last_vertex.coord[0])
-    y_robot.append(last_vertex.coord[1])
-    plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
-    if x_drone != []:
+    # g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(last_vertex.coord))
+    # x_robot.append(last_vertex.coord[0])
+    # y_robot.append(last_vertex.coord[1])
+    for i in range(ugv_num):
+        # if x_ugvs[i] != []:
+        #     last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
+        #     g_cost += np.linalg.norm(np.array([x_ugvs[i][-1],y_ugvs[i][-1]]) - np.array(last_vertex.coord))
+        #     x_ugvs[i].append(last_vertex.coord[0])
+        #     y_ugvs[i].append(last_vertex.coord[1])
+            plot_lines_varyWidthColor(ax, [x_ugvs[i], y_ugvs[i]], g_costs[i], rev, gcolors, ugv=True)
+    # plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
+    # plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
+    if uav_num != 0:
         last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_drone_action.target][0]
-        d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(last_vertex.coord))
-        x_drone.append(last_vertex.coord[0])
-        y_drone.append(last_vertex.coord[1])
-        plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
-    return g_cost, x_drone
+        # d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(last_vertex.coord))
+        # x_drone.append(last_vertex.coord[0])
+        # y_drone.append(last_vertex.coord[1])
+        for i in range(uav_num):
+            plot_lines_varyWidthColor(ax, [x_drones[i], y_drones[i]], d_dists[i], rev, dcolors)
+        # plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
+    return g_costs, uav_num
 
 
 
@@ -286,7 +299,7 @@ def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange',
         lc = LineCollection(segments, linewidths=linewidths, colors=cmap(color_range))
         ax.add_collection(lc)
         counter += seg_points
-    ax.scatter(x, y, marker='P', color='orange',s=10)
+    # ax.scatter(x, y, marker='P', color='orange',s=10)
 
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
