@@ -57,9 +57,9 @@ class JSAPPlanner(object):
         if self.verbose:
             print('------------These robots poses after updating ---------------')
             for i, drone in enumerate(self.uavs):
-                print(f"UAV {i}: {drone.cur_pose} at node? {drone.at_node} / last node: {drone.last_node}")
+                print(f"UAV {i}: {drone.cur_pose} at node? {drone.at_node} /last node: {drone.last_node} to Goal: {self.goalIDs[0]}")
             for i, ugv in enumerate(self.ugvs):
-                print(f"UGV {i}: {ugv.cur_pose} at node? {ugv.at_node} /on edge? {ugv.edge}/ last node: {ugv.last_node}")
+                print(f"UGV {i}: {ugv.cur_pose} at node? {ugv.at_node} /on edge? {ugv.edge}/last node: {ugv.last_node} to Goal: {self.goalIDs[i]}")
         
     
     def compute_joint_action(self):

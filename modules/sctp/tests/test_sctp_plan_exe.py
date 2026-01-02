@@ -558,18 +558,18 @@ def test_baseline_plan_exec_mg():
 
 def test_baseline_plan_exec_rg():
     args = _get_args()
-    args.planner = 'base'
+    args.planner = 'ctp'
     args.seed = 3000
-    args.num_iterations = 10000
-    args.n_samples = 400
+    args.num_iterations = 2500
+    args.n_samples = 60
     args.max_depth = 20
-    args.n_vertex = 8
-    verbose = False
+    args.n_vertex = 14
+    verbose = True
     random.seed(args.seed)
     np.random.seed(args.seed)
     start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
     robot = Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, at_node=True)
-    if args.planner == 'base':
+    if args.planner == 'ctp':
         drones = []
     else:
         drones = [Robot(position=[start.coord[0], start.coord[1]], cur_node=start.id, robot_type=RobotType.Drone, at_node=True)]
@@ -579,10 +579,10 @@ def test_baseline_plan_exec_rg():
     planner_drones = [drone.copy() for drone in drones]
     sctpplanner = planner.SCTPPlanner(args=args, init_graph=init_graph, goalID=goal.id,robot=planner_robot, 
                                       drones=planner_drones, n_samples=args.n_samples, tree_depth=args.max_depth,
-                                      rollout_fn=core.sctp_rollout3,verbose=True) 
+                                      rollout_fn=core.sctp_rollout3,verbose=verbose, revisit_pen=20.0) 
     plan_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goal.id,\
                                                    graph=graph, reached_goal=sctpplanner.reached_goal)
-    plan_exec.max_counter = 30
+    plan_exec.max_counter = 35
     for step_data in plan_exec:
         print(f"####################### Action Execution with count {plan_exec.counter} #######################################")
         sctpplanner.update(
@@ -604,10 +604,10 @@ def test_baseline_plan_exec_rg():
         dpaths.append([x, y])
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpath=[x_g, y_g], dpaths=dpaths, graph_plot=graph_forPlot,\
                              start_coord=start.coord, goal_coord=goal.coord, seed=args.seed, cost=cost, verbose=verbose)
-    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
+    # plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
     plt.show()
 
-    logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
-    with open(logfile, "a+") as f:
-        f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f}\n")
+    # logfile = Path(args.save_dir) / f'log_{args.num_drones}.txt'
+    # with open(logfile, "a+") as f:
+    #     f.write(f"SEED : {args.seed} | PLANNER : {args.planner} | COST : {cost:0.3f}\n")
 

@@ -33,7 +33,7 @@ def _get_args():
     
     args.save_dir = 'data/sctp'
     args.planner = 'ctp'
-    args.num_drones = 0
+    # args.num_drones = 
     args.num_iterations = 5000
     args.C = 200
     args.max_depth = 30
@@ -354,11 +354,11 @@ def test_jsap_plan_exec_mgraph():
 def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
-    args.planner = 'ctp'
-    args.seed = 3035
+    args.planner = 'jsap'
+    args.seed = 3004
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs = 3
+    args.num_ugvs = 1
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
     # print(f"The iniital graph")
     # graph.print_graph_config()
@@ -370,21 +370,31 @@ def test_jsap_plan_exec_randomgraph():
                     at_node=True) for i in range(args.num_ugvs)]
     if args.planner == 'ctp':
         drones = []
-        args.num_iterations = 2500*args.num_ugvs
+        args.num_iterations = 2000 + 500*args.num_ugvs
         args.max_depth = 20
         use_AVP = False
-    else:
+    elif args.planner == 'jsap':
+        use_AVP = False
         args.max_depth = 8
-        if use_AVP:
-            max_uanum = max_uanum
-            args.num_iterations = 500
-            args.planner = 'jsap-avp'
-        else:
-            max_uanum = 1
-            args.num_iterations = 3000
-            args.planner = 'jsap'
+        assert args.num_drones > 0
+        assert args.num_ugvs > 0
+        max_uanum = 1
+        args.num_iterations = 3500*(args.num_drones)
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                robot_type=RobotType.Drone, at_node=True) for i in range(*args.num_drones)]
+                robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+
+    elif args.planner == 'jsapavp':
+        use_AVP==True
+        assert args.num_drones > 0
+        assert args.num_ugvs > 0
+        args.max_depth = 30
+        max_uanum = max_uanum
+        args.num_iterations = 500
+        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+
+    else:
+        raise ValueError(f'Planner {args.planner} not recognized')
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, uavs=planner_drones,

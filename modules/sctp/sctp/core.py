@@ -72,19 +72,20 @@ class SCTPState(object):
         self.heuristic = -1.0
         self.noway2goal = False
         self.depth = 0
-        self.vertices_map = dict() # map vertex id to vertex object
+        # self.vertices_map = dict() # map vertex id to vertex object
         self.n_samples = n_maps
         self.uav_action_values = dict() # map action to its value
         self.behavior_change = dict() # map action to its value
         self.use_OptitHeur = True
         self.sampling_time = 0.0
         self.s_policy_time = 0.0
-        self.revisit_pen = revisit_pen
+        
         # assert param.ADD_IV == True
         if not iscopy:
             self.graph = graph
             self.goalID = goalID
             self.history = History()
+            self.revisit_pen = revisit_pen
             self.vertices_map = {v.id: v for v in self.graph.vertices + self.graph.pois}
             for vertex in graph.vertices+graph.pois:
                 action = Action(target=vertex.id)
@@ -113,10 +114,6 @@ class SCTPState(object):
             if len(self.robot_actions) == 0:
                 self.noway2goal = True
                 self.action_cost = STUCK_COST
-                # return self
-                # print(f"The robot is at node? {self.robot.at_node}, last node: {self.robot.last_node}, pl_vertex: {self.robot.pl_vertex}")
-                # print(f"The state history - node 12: {self.history.get_action_outcome(Action(target=12))}, "
-                #             f"node 15: {self.history.get_action_outcome(Action(target=15))}, node 9: {self.history.get_action_outcome(Action(target=9))}")
             # assert len(self.robot_actions) > 0
             self.state_actions = [action for action in self.robot_actions ]
             self.update_heuristic2()
@@ -235,6 +232,7 @@ class SCTPState(object):
         new_state.graph = self.graph
         new_state.goalID = self.goalID
         new_state.action_cost = 0.0
+        new_state.revisit_pen = self.revisit_pen
         new_state.assigned_pois = self.assigned_pois.copy() # [poi for poi in self.assigned_pois]
         new_state.state_actions = []
         new_state.v_vertices = self.v_vertices.copy()

@@ -30,14 +30,14 @@ def _setup(args):
         args.num_iterations = 2500*(args.num_ugvs)
         args.max_depth = 20
         use_AVP = False
-        param.REVISIT_PEN = 20.0
+        param.REVISIT_PEN = 25.0
     elif args.planner =='jsap':
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
         use_AVP = False
         args.max_depth = 8
-        args.num_iterations == 2000*(args.num_ugvs+args.num_drones)
+        args.num_iterations == 2500*(args.num_ugvs+args.num_drones)
     
     elif args.planner == 'jsapavp':
         args.num_drones = 1

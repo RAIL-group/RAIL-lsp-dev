@@ -8,7 +8,7 @@ from sctp.param import RobotType
 
 class SCTPPlanner(object):
     def __init__(self, init_graph, goalID, robot, drones=[], C=100.0, rollout_num = 500, 
-                 rollout_fn = None, tree_depth = 50, n_maps=100, verbose=False):
+                 rollout_fn = None, tree_depth = 50, n_maps=60, revisit_pen=20.0, verbose=False):
         self.rollout_num = rollout_num
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -20,6 +20,7 @@ class SCTPPlanner(object):
         self.max_depth = tree_depth
         self.n_maps = n_maps
         self.C = C
+        self.revisit_pen = revisit_pen
         self.sampling_time = 0.0
         self.single_policy_time = 0.0
         
@@ -64,9 +65,9 @@ class SCTPPlanner(object):
         else:
             drones = [drone.copy() for drone in self.drones]
                 
-        assert self.n_maps == 80
+        assert self.n_maps == 60
         sctpstate = sctp.core.SCTPState(graph=self.observed_graph, goalID=self.goalID, 
-                                        robot=robot, drones=drones,
+                                        robot=robot, drones=drones, revisit_pen=self.revisit_pen,
                                         n_maps=self.n_maps)
         # assert self.rollout_num == 800
         action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(sctpstate, \

@@ -15,28 +15,21 @@ from sctp.planners import sctp_plan_exe as plan_loop
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    print_pdf = True
-    # start, goal, graph = graphs.random_graph(n_vertex=args.n_vertex)
-    starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=1)
+    print_pdf = False
+    starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     robot = Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, at_node=True)
     planner_robot = robot.copy()
-    # param.IV_SAMPLE_SIZE = 80
     # print(f"Running CTP with num_iterations {args.num_iterations}")
     if args.planner == 'ctp':
         drones = []
         args.num_drones = 0
         param.REVISIT_PEN = 20.0
-    elif args.planner =='jsctp1':
+    elif args.planner =='jsctp':
         args.num_drones = 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, robot_type=RobotType.Drone, at_node=True)]
         param.REVISIT_PEN = 0.0
-        param.ADD_IV = False
-    elif args.planner == 'jsctp2':
-        args.num_drones = 2
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, robot_type=RobotType.Drone, at_node=True)
-                    for i in range(args.num_drones)]
         param.ADD_IV = False
     elif args.planner == 'jsctpig':
         args.num_drones = 1
@@ -48,16 +41,16 @@ def _setup(args):
     
     planner_drones = [drone.copy() for drone in drones]
     sctpplanner = planner.SCTPPlanner(init_graph=policyGraph, goalID=goals[0].id,robot=planner_robot, drones=planner_drones, 
-                    tree_depth=args.max_depth, C= args.C, rollout_num=args.num_iterations,
+                    tree_depth=args.max_depth, C= args.C, rollout_num=args.num_iterations, revisit_pen=param.REVISIT_PEN,
                     n_maps=args.sampling_maps, rollout_fn=core.sctp_rollout3) 
-    planning_exe = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goals[0].id,\
+    planning_exec = plan_loop.SCTPPlanExecution(robot=robot, drones=drones, goalID=goals[0].id,\
                                                 graph=graph, reached_goal=sctpplanner.reached_goal, verbose=False)
 
     
     start_time = time.perf_counter() 
     average_step_time = 0.0
     count_steps = 0
-    for step_data in planning_exe:
+    for step_data in planning_exec:
         sctpplanner.update(
             step_data['observed_pois'],
             step_data['robot'],
@@ -68,9 +61,9 @@ def _setup(args):
         # print
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
-        planning_exe.save_joint_actions(joint_actions, cost)
+        planning_exec.save_joint_actions(joint_actions, cost)
     
-    cost = robot.net_time
+    robot_cost = robot.net_time
     runtime = time.perf_counter() - start_time
     average_step_time /= count_steps
     gpaths = []
@@ -88,15 +81,17 @@ def _setup(args):
     starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost, verbose=True)
-    
+                        seed=args.seed, cost=cost, verbose=False)
     if print_pdf:
         plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs.pdf')    
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs_sctp.png')
 
     logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGV_sctp.txt'
     with open(logfile, "a+") as f:
-        f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exe.success)} | COST: {cost:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f}\n")
+        f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(planning_exec.success)} "
+                f"| COST_AVER: {robot_cost:0.3f} | COST_SUM: {robot_cost:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
+                f"| SAMP.TIME : {sctpplanner.sampling_time:0.2f} | SPOLICY.TIME : {sctpplanner.single_policy_time:0.2f}\n")    
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
