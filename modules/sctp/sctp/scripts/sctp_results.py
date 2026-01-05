@@ -89,14 +89,14 @@ def plot_scatter_data(file_path):
     # plt.tight_layout()
     # plt.savefig(image_name)
     plotting.make_scatter_plot_with_box(base, jsap, xlabel='CTP', ylabel='JSAP')
-    image_name = Path(args.save_dir) / f'plot_cost_base_jsap_{args.num_drones}UAV.png'
+    image_name = Path(args.save_dir) / f'plot_cost_base_jsap_{args.num_ugvs}UGVs.png'
     plt.tight_layout()
     plt.savefig(image_name)
     
-    # plotting.make_scatter_plot_with_box(base, jsapavp, xlabel='Baseline', ylabel='JSAP-AVP')
-    # image_name = Path(args.save_dir) / f'plot_cost_base_jsapavp_{args.num_drones}UAV.png'
-    # plt.tight_layout()
-    # plt.savefig(image_name)
+    plotting.make_scatter_plot_with_box(base, jsapavp, xlabel='CTP', ylabel='JSAP-AVP')
+    image_name = Path(args.save_dir) / f'plot_cost_base_jsapavp_{args.num_drones}UAVs.png'
+    plt.tight_layout()
+    plt.savefig(image_name)
     
     # plotting.make_scatter_plot_with_box(base, dsap, xlabel='Baseline', ylabel='DSAP')
     # image_name = Path(args.save_dir) / f'plot_cost_base_dsap{args.num_drones}.png'
@@ -207,7 +207,7 @@ if __name__ == '__main__':
     file_path = args.save_dir
     
     if scatter_data:
-        file_path = Path(file_path)/ f'results_{args.num_ugvs}UGV.txt'
+        file_path = Path(file_path)/ f'results_{args.num_ugvs}UGVs.txt'
         plot_scatter_data(file_path)
     else:
         plot_data_varying_drones(file_path)

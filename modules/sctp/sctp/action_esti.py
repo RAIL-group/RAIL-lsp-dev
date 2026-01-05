@@ -8,55 +8,27 @@ import pytest
 def get_uav_action_2ag(state, uav_index):
     actions = []
     state.action_values.clear()
-    assert len(state.behavior_change) == len(state.avail_uav_actions)
-    for act in list(state.behavior_change.keys()):
-        state.action_values[act] = get_action_value(state.behavior_change[act], act, 
-                                                    state.uavs[uav_index].cur_pose, state.graph)
+    if len(state.behavior_change) != len(state.avail_uav_actions):
+        # print(f"Number of element in behavior_change is: {len(state.behavior_change)}")
+        # print(f"Number of element in avail_uav_actions is: {len(state.avail_uav_actions)}")
+        raise ValueError("Behavior change and available uav actions size mismatch - get_uav_action_2ag")
+    for action, value in state.behavior_change.items():
+        state.action_values[action] = get_action_value(bc=value, action=action, \
+                        drone_pose=state.uavs[uav_index].cur_pose, graph=state.graph)    
     state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
     actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
     for action in actions:
         assert action in state.behavior_change
         assert action in state.action_values
-        state.action_values.pop(action)
-        state.behavior_change.pop(action)
         action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
         action.update_robotID(uav_index)    
     return actions
 
-
-
-# def using_uav_action_values(state, uav_index):
-#     if state.use_2AG: # adding information gain
-#         if len(state.uav_actions) == 0 and len(state.uav_action_values) == 0:
-#             state.uav_actions = [core.Action(target=state.goalID, rtype=param.RobotType.Drone, 
-#                                         start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
-#             state.state_actions = [action for action in state.uav_actions]
-#         elif len(state.uav_actions) > 0:
-#             for action in state.uav_actions:
-#                 action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-#             state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
-#     else:
-#         if len(state.uav_actions) == 0:
-#             state.uav_actions = [core.Action(target=state.goalID, rtype=param.RobotType.Drone, 
-#                                         start_pose = (state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))]
-#             state.state_actions = [action for action in state.uav_actions]
-#         else:
-#             for action in state.uav_actions:
-#                 action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-#             state.state_actions = [action for action in state.uav_actions if action.target not in state.assigned_pois]
-
-
-def get_single_behavior_change(graph, action, robot_edge, d0, d1, goalID, atNode, cur_heuristic, n_samples=100):
+def get_single_behavior_change(graph, action, robot_edge, d0, d1, goalID, atNode, cur_heuristic, n_samples=60):
     # value if the action is passable
     block_value = 0.0
     pass_value = 0.0
-    num_pois = len(graph.pois)
-    num_vertices = len(graph.vertices)
-    num_edges = len(graph.edges)
     for _ in range(n_samples):
-        assert num_pois == len(graph.pois)
-        assert num_vertices == len(graph.vertices)
-        assert num_edges == len(graph.edges)
         pass_value += sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=False)
         block_value += sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=True)
     pass_value /= n_samples
@@ -97,13 +69,3 @@ def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, blo
         cost1, _ = paths.get_shortestPath_cost(modified_graph, start=robot_edge[1], goal=goalID)
         assert (cost1 < 0) == (cost0 < 0)
         return min(cost0+d0, cost1+d1) if cost0 >= 0 else param.NOWAY_PEN
-
-
-def _is_robot_goal_connected(graph, history, redge, goalID):
-    block_pois = []
-    for key, value in history.get_data().items():
-        if value == param.EventOutcome.BLOCK:
-            block_pois.append(key.target)
-    new_graph = g.modify_graph(graph=graph, robot_edge=redge, poiIDs=block_pois)
-    reach = paths.is_reachable(graph=new_graph, start=redge[0], goal=goalID)
-    return reach

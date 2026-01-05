@@ -50,10 +50,10 @@ class JSAPPlanExe(object):
             self.counter += 1
             count = 0
             discover = False
+            init_move = True
             while True:
+                uavs_reset = []    
                 if self.uavs == []:
-                    if self.verbose:
-                        print(f"Discover new information? {discover}")
                     if discover:
                         init_actions_len = len(self.ugvs) - len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
                     else:
@@ -62,23 +62,42 @@ class JSAPPlanExe(object):
                         init_actions_len += 1
                     discover = False
                     need_replan, discover, actions_list = self.baseline_move(actions_list, num_actions=init_actions_len)
-                    
-                else:
                     if self.verbose:
                         print(f"Discover new information? {discover}")
-                    if discover:
-                        al = len(self.ugvs)-len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
+                else:
+                    if init_move:
+                        init_move = False
+                        num_act = len(self.ugvs) + len(self.uavs)
                     else:
-                        alen1 = len([ugv.need_action for ugv in self.ugvs \
-                                                if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
-                        alen2 = len([uav.need_action for uav in self.uavs \
-                                                if uav.need_action==True and uav.last_node!=self.goalIDs[0]])
-                        al = alen1 + alen2
-                    if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
-                        al += 1
+                        num_act = self.get_num_actions_needed(actions_list, uavs_reset, discover)
+                    # elif discover:
+                    #     al = len(self.ugvs)-len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
+                    #     al1 = set([ugv.last_node for ugv in self.ugvs if ugv.need_action])
+                    #     al2 = [uav.action.target for uav in self.uavs if uav.need_action==False]
+                    #     count_same_target = 0
+                    #     for target in al2:
+                    #         if target in al1:
+                    #             uav_id = [i for i, uav in enumerate(self.uavs) if uav.action.target==target and uav.need_action==False]
+                    #             assert len(uav_id) == 1
+                    #             uavs_reset.append(uav_id[0])
+                    #             count_same_target += 1
+                    #     al += count_same_target
+                    #     if uavs_reset != []:
+                    #         self.reset_some_uavs(uavs_reset)
+                    #     if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
+                    #         al += 1
+                    # else:
+                    #     alen1 = len([ugv.need_action for ugv in self.ugvs \
+                    #                             if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
+                    #     alen2 = len([uav.need_action for uav in self.uavs \
+                    #                             if uav.need_action==True and uav.last_node!=self.goalIDs[0]])
+                    #     al = alen1 + alen2
+                    #     if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
+                    #         al += 1
                     discover = False
-                    
-                    need_replan, discover, actions_list = self.team_move(actions_list, num_actions=al)
+                    need_replan, discover, actions_list = self.team_move(actions_list, num_actions=num_act)
+                    if self.verbose:
+                        print(f"Discover new information? {discover}")
                 all_robots_goal = all([ugv.last_node ==self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
                 count += 1
                 if need_replan or len(actions_list) == 0 or all_robots_goal:
@@ -87,6 +106,31 @@ class JSAPPlanExe(object):
                 elif discover:
                     self.reset_ugvs()
                     
+    def get_num_actions_needed(self, actions_list, uavs_reset, discover=False):
+        if discover:
+            al = len(self.ugvs)-len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
+            al1 = set([ugv.last_node for ugv in self.ugvs if ugv.need_action])
+            al2 = [uav.action.target for uav in self.uavs if uav.need_action==False]
+            count_same_target = 0
+            for target in al2:
+                if target in al1:
+                    uav_id = [i for i, uav in enumerate(self.uavs) if uav.action.target==target and uav.need_action==False]
+                    assert len(uav_id) == 1
+                    uavs_reset.append(uav_id[0])
+                    count_same_target += 1
+            al += count_same_target
+            if uavs_reset != []:
+                self.reset_some_uavs(uavs_reset)
+        else:
+            alen1 = len([ugv.need_action for ugv in self.ugvs \
+                                    if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
+            alen2 = len([uav.need_action for uav in self.uavs \
+                                    if uav.need_action==True and uav.last_node!=self.goalIDs[0]])
+            al = alen1 + alen2
+        if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
+            al += 1
+        return al
+                      
                     
     def reset_all_robots(self):
         self.reset_ugvs()
@@ -104,29 +148,24 @@ class JSAPPlanExe(object):
                 ugv.need_action = True
             else:
                 ugv.need_action = False
+    
+    def reset_some_uavs(self, uav_ids):
+        if self.verbose:
+            print(f"reseting the following UAVs {uav_ids}")
+        for i, uav in enumerate(self.uavs):
+            if i in uav_ids:
+                uav.remaining_time = 0.0
+                uav.need_action = True
+                
             
     def team_move(self, actions_list, num_actions=1):
         need_replan2 = False
         self.action_cost = self.update_joint_action(actions_list[:num_actions])    
         if len(self.uavs) > 0:
             need_replan2, discover2 = self.transition_drones()
-        need_replan1, discover1 = self.transition_robots()
-                
+        need_replan1, discover1 = self.transition_robots()        
         actions_list = actions_list[num_actions:]
         
-        # if any([action.rtype == RobotType.Drone for action in actions_list]):
-        #     need_replan = True
-        # else:
-        #     need_replan = False
-        #     while actions_list != [] and not all([ugv.last_node ==self.goalIDs[i] for i, ugv in enumerate(self.ugvs)]):
-        #         actions_list = self.update_onlyugv_action(actions_list)
-        #         print("############################## Only move the ground robots ########################")                
-        #         print(f"Remaining actions {len(actions_list)}")
-        #         print(f"The action left are: {[print (action) for action in  actions_list]}")
-        #         self.action_cost = min([ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]])
-        #         assert self.action_cost > 0.0
-        #         self.transition_robots()
-        #         print(f"UGV positions: {[ugv.cur_pose for ugv in self.ugvs]} at node: {[ugv.last_node for ugv in self.ugvs]}")
         return need_replan1 or need_replan2, discover1 or discover2, actions_list
         
     def baseline_move(self, actions_list, num_actions=1):

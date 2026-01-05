@@ -1,7 +1,7 @@
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
-SCTP_NUM_EXPERIMENTS = 1
-SCTP_NUM_DRONES = 1
+SCTP_NUM_EXPERIMENTS = 30
+SCTP_NUM_DRONES = 2
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
@@ -13,7 +13,7 @@ endef
 
 GRAPHS = dense#bridges
 
-JSAP_PLANNERS = jsap #jsapavp #ctp
+JSAP_PLANNERS = jsap2
 # all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 # 							$(foreach seed, $(call sctp_get_seeds), \
 # 								$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/sctp_eval_planner_$(planner)_seed_$(seed).png))
@@ -21,8 +21,8 @@ JSAP_PLANNERS = jsap #jsapavp #ctp
 # $(all-targets-jsap-eval): planner = $(shell echo $@ | grep -oE '_planner_[a-z0-9]+' | cut -d'_' -f3)
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
-									$(foreach seed, $(call sctp_get_seeds), \
-										$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)/sctp_eval_planner_$(planner)_seed_$(seed)_$(SCTP_NUM_GROUNDS)UGVs.png))
+					$(foreach seed, $(call sctp_get_seeds), \
+					$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)/sctp_eval_planner_$(planner)_seed_$(seed)_$(SCTP_NUM_DRONES)UAVs.png))
 $(all-targets-jsap-eval): jsap_seed = $(shell echo $@ | grep -oE '_seed_[0-9]+' | cut -d'_' -f3)
 $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a-z0-9]+' | cut -d'_' -f3)
 
@@ -109,8 +109,8 @@ $(all-targets-jsap-eval):
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
 		--seed $(jsap_seed) \
-		--num_iterations 3000 \
-		--sampling_maps 60 \
+		--num_iterations 6000 \
+		--sampling_maps 80 \
 		--C 200 \
 		--max_depth 20 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \

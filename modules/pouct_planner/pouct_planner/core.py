@@ -50,9 +50,11 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
         print(f"UGV at nodes {[ugv.last_node for ugv in root.state.ugvs]} and the goals are {root.state.goalIDs}")
     for i in range(n_iterations):
         leaf, sa = traverse(root, C=C, max_depth=depth)
-        if not leaf.is_terminal_node():
+        # if (not leaf.is_terminal_node()) and (leaf.state.depth < depth):
+        if not leaf.state.got_sampling_time:
             sampling_time += leaf.state.sampling_time
             s_policy_time += leaf.state.s_policy_time
+            leaf.state.got_sampling_time = True
         simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
@@ -64,7 +66,6 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
 def traverse(node, C=1.0, max_depth=100):
     save_action = []
     while node.is_fully_expanded() and not node.is_terminal_node():
-        # if node.state.depth > max_depth or node.state.going_back:
         if node.state.depth > max_depth:
             return node, save_action
         action = node.get_best_uct_action(C=C)
@@ -76,7 +77,6 @@ def traverse(node, C=1.0, max_depth=100):
         else:
             node = child_node
     if node.is_terminal_node():
-        
         return node, save_action
     # 1. pick a new action
     action = node.unexplored_actions.pop()

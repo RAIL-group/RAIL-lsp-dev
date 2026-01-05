@@ -6,7 +6,7 @@ from pathlib import Path
 from sctp import sctp_graphs as graphs
 from sctp.utils import plotting 
 from sctp.robot import Robot
-from sctp import jsap
+from sctp import jsap, param
 from sctp.param import RobotType
 from sctp.planners import jsap_planner as planner
 from sctp.planners import jsap_plan_exe as plan_loop
@@ -26,7 +26,7 @@ def _get_args():
     parser.add_argument('--num_iterations', type=int, default=1000)
     parser.add_argument('--C', type=int, default=300)
     parser.add_argument('--max_depth', type=int, default=500)
-    parser.add_argument('--n_maps', type=int, default=60)
+    parser.add_argument('--n_maps', type=int, default=80)
     parser.add_argument('--n_vertex', type=int, default=14)
 
     args = parser.parse_args(['--save_dir', ''])
@@ -68,10 +68,10 @@ def test_jsap_plan_exec_lg():
     
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, uavs=planner_drones,
-                                            rollout_fn=jsap.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_AVP=use_AVP,
-                                            max_uanum=max_uanum, verbose=True)
+    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
+                            uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\
+                            rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_AVP=use_AVP,
+                            max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal)
 
@@ -190,82 +190,6 @@ def test_jsap_plan_exec_dg():
     plt.show()
     
 
-# def test_decPrior_plan_exec_sgraph_2goals():
-#     print()
-    
-#     args = _get_args()
-#     args.planner = 'sctp'
-#     random.seed(args.seed)
-#     np.random.seed(args.seed)
-#     args.num_iterations = 800
-
-#     starts, goals, graph = graphs.s_graph_2goals()
-#     num_uav = 1
-#     num_ugv = 1
-#     for poi in graph.pois:
-#         if poi.id == 9 or poi.id==6 or poi.id==10:
-#             poi.block_status = 0
-#         elif poi.id == 11:
-#             poi.block_status = 1
-    
-#     plotGraph = graph.copy()
-#     use_2AG = True 
-#     max_uanum = 1
-#     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-#                     at_node=True) for i in range(num_ugv)]
-#     drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-#                 robot_type=RobotType.Drone, at_node=True) for i in range(num_uav)]
-#     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
-#                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-#                                             tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
-#                                             max_uanum=max_uanum, verbose=True)
-#     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
-#                                                     reached_goal=decPriorplanner.reached_goal)
-
-#     start_time = time.perf_counter() 
-#     average_step_time = 0.0
-#     count_steps = 0
-    
-#     for step_data in plan_exec:
-#         decPriorplanner.update(
-#             step_data['observed_pois'],
-#             step_data['ugvs'],
-#             step_data['uavs']
-#         )
-#         time1 = time.perf_counter()
-#         # if (count_steps==1):
-#         #     print("Done to the first loop:")
-            
-#         joint_action, cost = decPriorplanner.compute_joint_action()
-#         average_step_time += (time.perf_counter() - time1)
-#         count_steps += 1
-#         plan_exec.save_joint_actions(joint_action, cost)
-    
-#     cost_sum = np.sum([robot.net_time for robot in robots])
-#     cost_aver = np.average([robot.net_time for robot in robots])
-
-#     runtime = time.perf_counter() - start_time
-#     average_step_time /= count_steps    
-#     gpaths = []
-#     for robot in robots:
-#         x_g = [pose[0] for pose in robot.all_poses]
-#         y_g = [pose[1] for pose in robot.all_poses]
-#         gpaths.append([x_g, y_g])
-    
-#     dpaths = []
-#     for drone in drones:
-#         x = [pose[0] for pose in drone.all_poses]
-#         y = [pose[1] for pose in drone.all_poses]
-#         dpaths.append([x, y])
-#     goals_cords = [goal.coord for goal in goals]
-#     starts_cords = [start.coord for start in starts]
-#     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
-#                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-#                         seed=args.seed, cost=cost_aver, verbose=False)
-#     plt.savefig(f'../data/sctp/tests/sctp_test_planner_{args.planner}_seed_{args.seed}.pdf')
-#     plt.show()
-
-
 def test_jsap_plan_exec_mgraph():
     print()
     args = _get_args()
@@ -354,8 +278,8 @@ def test_jsap_plan_exec_mgraph():
 def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
-    args.planner = 'jsap'
-    args.seed = 3004
+    args.planner = 'jsap2'
+    args.seed = 3001
     random.seed(args.seed)
     np.random.seed(args.seed)
     args.num_ugvs = 1
@@ -364,8 +288,8 @@ def test_jsap_plan_exec_randomgraph():
     # graph.print_graph_config()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    use_AVP = True 
-    max_uanum = 1
+    
+    
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(args.num_ugvs)]
     if args.planner == 'ctp':
@@ -375,39 +299,52 @@ def test_jsap_plan_exec_randomgraph():
         use_AVP = False
     elif args.planner == 'jsap':
         use_AVP = False
-        args.max_depth = 8
+        args.max_depth = 15
         assert args.num_drones > 0
         assert args.num_ugvs > 0
         max_uanum = 1
         args.num_iterations = 3500*(args.num_drones)
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+    elif args.planner == 'jsap2':
+        use_AVP = False
+        args.num_drones = 2
+        args.max_depth = 15
+        param.REVISIT_PEN = 0.0
+        assert args.num_drones == 2
+        assert args.num_ugvs == 1 
+        max_uanum = 1
+        args.num_iterations = 6000+3500*(args.num_drones-1)
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
 
     elif args.planner == 'jsapavp':
         use_AVP==True
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 30
+        args.max_depth = 8
         max_uanum = max_uanum
         args.num_iterations = 500
+        max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
-
+        print(f"Testing JSAP-AVP planner with use_AVP={use_AVP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
+    
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, uavs=planner_drones,
-                                            rollout_fn=jsap.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
-                                            tree_depth=args.max_depth, n_maps=args.n_maps, use_AVP=use_AVP,
-                                            max_uanum=max_uanum, verbose=True)
+    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
+                uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
+                rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, \
+                use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
-                                                    reached_goal=jsapplanner.reached_goal)
+                                                    reached_goal=jsapplanner.reached_goal, verbose=True)
 
     start_time = time.perf_counter() 
     average_step_time = 0.0
     count_steps = 0
-    print(f"Working on a team of {len(robots)} UGVs and {len(drones)} UAVs with seed {args.seed}")
+    print(f"{args.planner}: working on a team of {len(robots)} UGVs and {len(drones)} UAVs with seed {args.seed}")
     
     for step_data in plan_exec:
         jsapplanner.update(
@@ -536,4 +473,79 @@ def test_jsap_plan_exec_randomgraph():
 #                 f"| SAMP.TIME : {decPriorplanner.sampling_time:0.2f} | SPOLICY.TIME : {decPriorplanner.single_policy_time:0.2f}\n")    
 
 #     # plt.show()
+
+# def test_decPrior_plan_exec_sgraph_2goals():
+#     print()
+    
+#     args = _get_args()
+#     args.planner = 'sctp'
+#     random.seed(args.seed)
+#     np.random.seed(args.seed)
+#     args.num_iterations = 800
+
+#     starts, goals, graph = graphs.s_graph_2goals()
+#     num_uav = 1
+#     num_ugv = 1
+#     for poi in graph.pois:
+#         if poi.id == 9 or poi.id==6 or poi.id==10:
+#             poi.block_status = 0
+#         elif poi.id == 11:
+#             poi.block_status = 1
+    
+#     plotGraph = graph.copy()
+#     use_2AG = True 
+#     max_uanum = 1
+#     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+#                     at_node=True) for i in range(num_ugv)]
+#     drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+#                 robot_type=RobotType.Drone, at_node=True) for i in range(num_uav)]
+#     decPriorplanner = planner.DecPriorPlanner(init_graph=graph, goalIDs=[goal.id for goal in goals], ugvs=robots, uavs=drones,
+#                                             rollout_fn=dec_prior.decsctp_rollout, C=args.C, rollout_num=args.num_iterations,
+#                                             tree_depth=args.max_depth, n_maps=args.n_maps, use_2AG=use_2AG,
+#                                             max_uanum=max_uanum, verbose=True)
+#     plan_exec = plan_loop.DecPriorPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
+#                                                     reached_goal=decPriorplanner.reached_goal)
+
+#     start_time = time.perf_counter() 
+#     average_step_time = 0.0
+#     count_steps = 0
+    
+#     for step_data in plan_exec:
+#         decPriorplanner.update(
+#             step_data['observed_pois'],
+#             step_data['ugvs'],
+#             step_data['uavs']
+#         )
+#         time1 = time.perf_counter()
+#         # if (count_steps==1):
+#         #     print("Done to the first loop:")
+            
+#         joint_action, cost = decPriorplanner.compute_joint_action()
+#         average_step_time += (time.perf_counter() - time1)
+#         count_steps += 1
+#         plan_exec.save_joint_actions(joint_action, cost)
+    
+#     cost_sum = np.sum([robot.net_time for robot in robots])
+#     cost_aver = np.average([robot.net_time for robot in robots])
+
+#     runtime = time.perf_counter() - start_time
+#     average_step_time /= count_steps    
+#     gpaths = []
+#     for robot in robots:
+#         x_g = [pose[0] for pose in robot.all_poses]
+#         y_g = [pose[1] for pose in robot.all_poses]
+#         gpaths.append([x_g, y_g])
+    
+#     dpaths = []
+#     for drone in drones:
+#         x = [pose[0] for pose in drone.all_poses]
+#         y = [pose[1] for pose in drone.all_poses]
+#         dpaths.append([x, y])
+#     goals_cords = [goal.coord for goal in goals]
+#     starts_cords = [start.coord for start in starts]
+#     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
+#                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
+#                         seed=args.seed, cost=cost_aver, verbose=False)
+#     plt.savefig(f'../data/sctp/tests/sctp_test_planner_{args.planner}_seed_{args.seed}.pdf')
+#     plt.show()
 

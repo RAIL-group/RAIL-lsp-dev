@@ -27,39 +27,62 @@ def _setup(args):
         args.num_drones = 0
         drones = []
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 2500*(args.num_ugvs)
+        args.num_iterations = 2000+1000*(args.num_ugvs-1)
         args.max_depth = 20
         use_AVP = False
-        param.REVISIT_PEN = 25.0
+        max_uanum = 1
+        param.REVISIT_PEN = 23.0
     elif args.planner =='jsap':
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
+        assert args.num_drones == 1
         use_AVP = False
-        args.max_depth = 8
-        args.num_iterations == 2500*(args.num_ugvs+args.num_drones)
-    
+        max_uanum = 1
+        args.max_depth = 15
+        args.num_iterations = 6000
+    elif args.planner =='jsap2':
+        use_AVP = False
+        param.REVISIT_PEN = 0.0
+        assert args.num_drones == 2
+        assert args.num_ugvs == 1
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        args.max_depth = 15
+        args.num_iterations = 6000+3500*(args.num_drones-1) #3000
+        max_uanum = 1
     elif args.planner == 'jsapavp':
         args.num_drones = 1
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
         param.REVISIT_PEN = 0.0
-        args.num_iterations == 550
-        args.max_depth = 8
+        args.num_iterations = 1100
+        args.max_depth = 9
+        args.sampling_maps = 80
+        max_uanum = 1
+    elif args.planner == 'jsapavp2':
+        args.num_drones = 2
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        use_AVP = True
+        param.REVISIT_PEN = 0.0
+        args.num_iterations = 1300
+        args.max_depth = 9
+        args.sampling_maps = 80
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
     print(f"Planning for a team of {args.num_ugvs} UGV(s) and {args.num_drones} UAV(s)") 
-    max_uanum = 1
+    
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    assert args.sampling_maps == 60
-    
+    assert args.sampling_maps == 80
+    assert args.num_iterations == 9500
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
-                                              uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\
-                                              rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
-                                              use_AVP=use_AVP, max_uanum=max_uanum, verbose=False)
+                        uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\
+                        rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
+                        use_AVP=use_AVP, max_uanum=max_uanum, verbose=False)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=False)
 
@@ -104,8 +127,8 @@ def _setup(args):
                         seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=False)
     
     if print_pdf:
-        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs.pdf')    
-    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_ugvs}UGVs.png')
+        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_uavs}UAVs.pdf')    
+    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.png')
 
     logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGVs.txt'
     with open(logfile, "a+") as f:

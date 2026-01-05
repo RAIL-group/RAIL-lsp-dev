@@ -1,10 +1,10 @@
 import numpy as np
 import pouct_planner
 import sctp
-from sctp import param
-from sctp.core import Action
+# from sctp import param
+# from sctp.core import Action
 import sctp.jsap
-from sctp.param import RobotType
+# from sctp.param import RobotType
 
 
 class JSAPPlanner(object):
@@ -27,7 +27,8 @@ class JSAPPlanner(object):
         self.sampling_time = 0.0
         self.revisit_pen = revisit_pen
         self.single_policy_time = 0.0
-        assert self.n_maps == 60
+        
+        assert self.n_maps == 80
         
     def reached_goal(self):
         return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
@@ -71,7 +72,6 @@ class JSAPPlanner(object):
         else:
             uavs = [uav.copy() for uav in self.uavs]
                 
-        assert self.n_maps == 60
         # assert self.spolicy_rollouts == 300
         # assert self.max_uanum == 1
         # assert uavs != []
