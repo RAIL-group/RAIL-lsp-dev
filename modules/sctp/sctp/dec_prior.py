@@ -3,7 +3,7 @@ from sctp.utils import paths, plotting
 import numpy as np
 import random
 from sctp import param, core
-from sctp import action_esti as ae
+from sctp import action_estimation as ae
 import time
 from sctp.gstate_dec import GroundState 
 import pouct_planner

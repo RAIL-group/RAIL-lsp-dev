@@ -33,9 +33,10 @@ def _setup(args):
     if args.planner =='ctp':
         args.num_drones = 0
         drones = []
-        # param.REVISIT_PEN = 20.0
-        args.num_iterations = 2000
+        param.REVISIT_PEN = 2.0
         use_AVP = False
+        use_DAP = False
+        args.max_depth = 15
     elif args.planner =='jsap':
         args.num_drones = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
@@ -43,29 +44,45 @@ def _setup(args):
         assert args.num_drones == 1, "This script only supports 1 UAV"
         param.REVISIT_PEN = 0.0
         use_AVP = False
-        assert args.num_iterations == 2000
-    
+        use_DAP = False
+        args.max_depth = 20
+        
     elif args.planner == 'jsapavp':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
+        args.max_depth = 20
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = True
+        use_DAP = False
+        assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner == 'jsapdap':
+        args.num_drones = 1
         param.REVISIT_PEN = 0.0
+        args.max_depth = 20
+        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        use_AVP = False
+        use_DAP = True
         assert args.num_drones == 1, "This script only supports 1 UAV"
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
+
+    assert args.num_iterations == 1000
+    assert args.sampling_maps == 200
+    print(f"Planner: {args.planner}, a team of {args.num_ugvs} UGV(s)-{args.num_drones} UAV(s), iters.: {args.num_iterations},"
+          f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP: {use_AVP}, DAP: {use_DAP}") 
     
      
     max_uanum = 1
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    assert args.sampling_maps == 80
+    
     
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
                                               uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
                                               rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
-                                              use_AVP=use_AVP, max_uanum=max_uanum, verbose=False)
+                                              use_AVP=use_AVP, use_DAP=use_DAP, max_uanum=max_uanum, verbose=False)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=False)
 
@@ -85,8 +102,9 @@ def _setup(args):
         count_steps += 1
         plan_exec.save_joint_actions(joint_actions, cost)
     
-    cost_sum = np.sum([robot.net_time for robot in robots])
-    cost_aver = np.average([robot.net_time for robot in robots])
+    robot_net_times = [robot.net_time for robot in robots]
+    cost_sum = np.sum(robot_net_times)
+    cost_aver = np.average(robot_net_times)
     
     runtime = time.perf_counter() - start_time
     average_step_time /= count_steps
@@ -108,14 +126,14 @@ def _setup(args):
                         seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=True)
     
     if print_pdf:
-        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.pdf')    
-    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}.png')
+        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
+    plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.png')
 
-    logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGV.txt'
+    logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGVs.txt'
     with open(logfile, "a+") as f:
         f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(plan_exec.success)} "
                 f"| COST_AVER: {cost_aver:0.3f} | COST_SUM: {cost_sum:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
-                f"| SAMP.TIME : {jsapplanner.sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
+                f"| SAMP.TIME : {jsap.JSAPState.total_sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
 
 
 if __name__ == '__main__':

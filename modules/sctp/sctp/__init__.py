@@ -6,4 +6,4 @@ from . import comp
 from . import dstate_dec
 from . import gstate_dec
 from . import dec_prior
-from . import action_esti
+from . import action_estimation

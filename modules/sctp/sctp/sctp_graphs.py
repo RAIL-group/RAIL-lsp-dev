@@ -27,6 +27,90 @@ def random_graph(n_vertex=8, xmin=0, ymin=0, SG_pairs=1):
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return starts, goals, graph
 
+def get_insland_bridges_graph():
+    count = 0
+    while True:
+        starts, goals, graph = create_island_bridges_graph()
+        start_goal_connected = True
+        for i, start in enumerate(starts):
+            if not g.check_graph_valid(startID=start.id, goalID=goals[i].id, graph=graph):
+                start_goal_connected = False
+                break
+        if start_goal_connected:
+            break
+        
+        count += 1
+        if count > 1000:
+            raise ValueError("Cannot find a valid graph, try other seed ranges")
+    return starts, goals, graph
+
+def create_island_bridges_graph():
+    g.Vertex.reset_id_counter()
+    node1 = g.Vertex(coord=(np.random.uniform(0.0,1.5), np.random.uniform(0.0,1.5))) # start node
+    node2 = g.Vertex(coord=(np.random.uniform(0.0,2.0), np.random.uniform(25.0,26.5)))
+    node3 = g.Vertex(coord=(np.random.uniform(0.0,1.5), np.random.uniform(50.0,52.5)))
+    node4 = g.Vertex(coord=(np.random.uniform(20.0,23.5), np.random.uniform(11.0,13.5))) 
+    node5 = g.Vertex(coord=(np.random.uniform(21.0,23.5), np.random.uniform(36.0,38.5)))
+    node6 = g.Vertex(coord=(np.random.uniform(44.5,47.5), np.random.uniform(0.0,3.0)))
+    node7 = g.Vertex(coord=(np.random.uniform(44.5,47.5), np.random.uniform(25.0,50.5)))
+    node8 = g.Vertex(coord=(np.random.uniform(44.5,47.5), np.random.uniform(70.0,75.5)))
+    node9 = g.Vertex(coord=(np.random.uniform(74.5,77.5), np.random.uniform(0.0,3.0)))
+    node10 = g.Vertex(coord=(np.random.uniform(74.5,77.5), np.random.uniform(25.0,50.5)))
+    node11 = g.Vertex(coord=(np.random.uniform(74.5,77.5), np.random.uniform(70.0,75.5)))
+    node12 = g.Vertex(coord=(np.random.uniform(94.5,97.5), np.random.uniform(0.0,3.0)))
+    node13 = g.Vertex(coord=(np.random.uniform(94.5,97.5), np.random.uniform(22.0,24.5)))
+    node14 = g.Vertex(coord=(np.random.uniform(94.5,97.5), np.random.uniform(46.0,50.5)))
+    node15 = g.Vertex(coord=(np.random.uniform(114.5,117.5), np.random.uniform(0.0, 4.5)))
+    node16 = g.Vertex(coord=(np.random.uniform(114.5,117.5), np.random.uniform(24.0,26.5)))
+    
+    nodes = [node1, node2, node3, node4, node5, node6, node7, node8, \
+                    node9, node10, node11, node12, node13, node14, node15, node16]
+    graph = g.Graph(nodes)
+    graph.edges.clear()
+    # bridges
+    graph.add_edge(node6, node9, np.random.uniform(0.55, 0.75))
+    graph.add_edge(node7, node10, np.random.uniform(0.40, 0.55))
+    graph.add_edge(node8, node11, np.random.uniform(0.15, 0.3))
+    # start connections
+    graph.add_edge(node1, node2, np.random.uniform(0.05,0.1))
+    graph.add_edge(node2, node3, np.random.uniform(0.05,0.1))
+    # start neighbors
+    graph.add_edge(node1, node6, np.random.uniform(0.2,0.4))
+    graph.add_edge(node1, node4, np.random.uniform(0.2,0.4))
+    graph.add_edge(node2, node4, np.random.uniform(0.2,0.4))
+    graph.add_edge(node2, node5, np.random.uniform(0.2,0.4))
+    graph.add_edge(node3, node5, np.random.uniform(0.2,0.4))
+    graph.add_edge(node3, node8, np.random.uniform(0.2,0.4))
+    
+    # goal connections
+    graph.add_edge(node15, node16, np.random.uniform(0.05,0.1))
+    # goals neighbors
+    graph.add_edge(node15, node12, np.random.uniform(0.2,0.4))
+    graph.add_edge(node15, node13, np.random.uniform(0.2,0.4))
+    graph.add_edge(node16, node13, np.random.uniform(0.2,0.4))
+    graph.add_edge(node16, node14, np.random.uniform(0.2,0.4))
+    
+    # other edges
+    graph.add_edge(node4, node6, np.random.uniform(0.2,0.7))
+    graph.add_edge(node4, node7, np.random.uniform(0.2,0.7))
+    graph.add_edge(node5, node7, np.random.uniform(0.2,0.7))
+    graph.add_edge(node5, node8, np.random.uniform(0.2,0.7))
+    graph.add_edge(node6, node7, np.random.uniform(0.2,0.7))
+    graph.add_edge(node7, node8, np.random.uniform(0.2,0.7))
+    graph.add_edge(node9, node10, np.random.uniform(0.2,0.7))
+    graph.add_edge(node10, node11, np.random.uniform(0.2,0.7))
+    graph.add_edge(node9, node12, np.random.uniform(0.2,0.7))
+    graph.add_edge(node9, node13, np.random.uniform(0.2,0.7))
+    graph.add_edge(node10, node13, np.random.uniform(0.2,0.70))
+    graph.add_edge(node10, node14, np.random.uniform(0.2,0.70))
+    graph.add_edge(node11, node14, np.random.uniform(0.2,0.70))
+    graph.add_edge(node12, node13, np.random.uniform(0.2,0.70))
+    graph.add_edge(node13, node14, np.random.uniform(0.2,0.70))
+    
+    
+    return [node1, node2, node3], [node15,node13, node16], graph
+
+
 def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
     count = 0
     graph, islands, points = g.generate_island_graph(n_islands=n_island, xmin=xmin, ymin=ymin, 

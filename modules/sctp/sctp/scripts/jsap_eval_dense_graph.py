@@ -25,64 +25,87 @@ def _setup(args):
                     at_node=True) for i in range(args.num_ugvs)]
     if args.planner =='ctp':
         args.num_drones = 0
+        assert args.num_ugvs == 1
         drones = []
-        param.REVISIT_PEN = 0.0
-        args.num_iterations = 2000+1000*(args.num_ugvs-1)
-        args.max_depth = 20
+        param.REVISIT_PEN = 27.0 #25.0
+        args.num_iterations = 1000 #(1 UGV) #2500 (3 UGVs) #2000 (2UGVs)
+        args.max_depth = 12
         use_AVP = False
+        use_DAP = False
         max_uanum = 1
-        param.REVISIT_PEN = 23.0
+        param.REVISIT_PEN = 0.0
     elif args.planner =='jsap':
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
-        assert args.num_drones == 1
+        args.num_drones = 1
+        assert args.num_ugvs == 1
         use_AVP = False
+        use_DAP = False
         max_uanum = 1
-        args.max_depth = 15
-        args.num_iterations = 6000
+        args.max_depth = 18
+        args.num_iterations = 1000
     elif args.planner =='jsap2':
         use_AVP = False
+        use_DAP = False
         param.REVISIT_PEN = 0.0
-        assert args.num_drones == 2
+        args.num_drones = 2
         assert args.num_ugvs == 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
-        args.max_depth = 15
-        args.num_iterations = 6000+3500*(args.num_drones-1) #3000
+        args.max_depth = 18
+        args.num_iterations = 1000 #12000 #6000+3500*(args.num_drones-1) #3000
         max_uanum = 1
     elif args.planner == 'jsapavp':
+        use_AVP = True
+        use_DAP = False
         args.num_drones = 1
+        assert args.num_ugvs == 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
-        use_AVP = True
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 1100
-        args.max_depth = 9
-        args.sampling_maps = 80
+        args.max_depth = 14 #(2ugvs-1uav) #8 #(1ugv-1uav)
+        args.sampling_maps = 200
         max_uanum = 1
+    
     elif args.planner == 'jsapavp2':
         args.num_drones = 2
+        assert args.num_ugvs == 2
+        max_uanum = 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
+        use_DAP = False
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 1300
-        args.max_depth = 9
-        args.sampling_maps = 80
+        args.num_iterations = 1000
+        args.max_depth = 8 #(1ugv-2uavs)
+        args.sampling_maps = 65
+    
+    elif args.planner == 'jsapdap':
+        args.num_drones = 1
+        param.REVISIT_PEN = 0.0
+        max_uanum = 1
+        args.max_depth = 14
+        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        use_AVP = False
+        use_DAP = True
+        assert args.num_drones == 1, "This script only supports 1 UAV"
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
-    print(f"Planning for a team of {args.num_ugvs} UGV(s) and {args.num_drones} UAV(s)") 
+    print(f"Planner: {args.planner}, a team of {args.num_ugvs}UGV(s)-{args.num_drones}UAV(s), iters.: {args.num_iterations},"
+          f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP:{use_AVP}, DAP:{use_DAP}") 
     
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    assert args.sampling_maps == 80
-    assert args.num_iterations == 9500
+    assert args.sampling_maps == 200
+    assert args.max_depth == 14
+    assert args.num_iterations == 1000
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
                         uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\
                         rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
-                        use_AVP=use_AVP, max_uanum=max_uanum, verbose=False)
+                        use_AVP=use_AVP, use_DAP=use_DAP, max_uanum=max_uanum, verbose=False)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=False)
 
@@ -127,14 +150,14 @@ def _setup(args):
                         seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=False)
     
     if print_pdf:
-        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_uavs}UAVs.pdf')    
+        plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.png')
 
     logfile = Path(args.save_dir) / f'results_{args.num_ugvs}UGVs.txt'
     with open(logfile, "a+") as f:
         f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(plan_exec.success)} "
                 f"| COST_AVER: {cost_aver:0.3f} | COST_SUM: {cost_sum:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
-                f"| SAMP.TIME : {jsapplanner.sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
+                f"| SAMP.TIME : {jsap.JSAPState.total_sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
 
 
 if __name__ == '__main__':

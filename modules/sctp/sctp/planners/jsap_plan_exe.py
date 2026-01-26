@@ -54,12 +54,16 @@ class JSAPPlanExe(object):
             while True:
                 uavs_reset = []    
                 if self.uavs == []:
-                    if discover:
-                        init_actions_len = len(self.ugvs) - len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
+                    if init_move:
+                        init_move = False
+                        init_actions_len = len(self.ugvs) + len(self.uavs)
                     else:
-                        init_actions_len = len([ugv.need_action for ugv in self.ugvs if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
-                    if actions_list[0].robotID in [self.ugvs.index(ugv) for ugv in self.ugvs if ugv.last_node==self.goalIDs[self.ugvs.index(ugv)]]:
-                        init_actions_len += 1
+                        if discover:
+                            init_actions_len = len(self.ugvs) - len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
+                        else:
+                            init_actions_len = len([ugv.need_action for ugv in self.ugvs if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
+                        if actions_list[0].robotID in [self.ugvs.index(ugv) for ugv in self.ugvs if ugv.last_node==self.goalIDs[self.ugvs.index(ugv)]]:
+                            init_actions_len += 1
                     discover = False
                     need_replan, discover, actions_list = self.baseline_move(actions_list, num_actions=init_actions_len)
                     if self.verbose:
@@ -70,30 +74,6 @@ class JSAPPlanExe(object):
                         num_act = len(self.ugvs) + len(self.uavs)
                     else:
                         num_act = self.get_num_actions_needed(actions_list, uavs_reset, discover)
-                    # elif discover:
-                    #     al = len(self.ugvs)-len([i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]])
-                    #     al1 = set([ugv.last_node for ugv in self.ugvs if ugv.need_action])
-                    #     al2 = [uav.action.target for uav in self.uavs if uav.need_action==False]
-                    #     count_same_target = 0
-                    #     for target in al2:
-                    #         if target in al1:
-                    #             uav_id = [i for i, uav in enumerate(self.uavs) if uav.action.target==target and uav.need_action==False]
-                    #             assert len(uav_id) == 1
-                    #             uavs_reset.append(uav_id[0])
-                    #             count_same_target += 1
-                    #     al += count_same_target
-                    #     if uavs_reset != []:
-                    #         self.reset_some_uavs(uavs_reset)
-                    #     if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
-                    #         al += 1
-                    # else:
-                    #     alen1 = len([ugv.need_action for ugv in self.ugvs \
-                    #                             if ugv.need_action==True and ugv.last_node!=self.goalIDs[self.ugvs.index(ugv)]])
-                    #     alen2 = len([uav.need_action for uav in self.uavs \
-                    #                             if uav.need_action==True and uav.last_node!=self.goalIDs[0]])
-                    #     al = alen1 + alen2
-                    #     if actions_list[0].robotID in [i for i, ugv in enumerate(self.ugvs) if ugv.last_node==self.goalIDs[i]]:
-                    #         al += 1
                     discover = False
                     need_replan, discover, actions_list = self.team_move(actions_list, num_actions=num_act)
                     if self.verbose:
@@ -160,19 +140,21 @@ class JSAPPlanExe(object):
             
     def team_move(self, actions_list, num_actions=1):
         need_replan2 = False
-        self.action_cost = self.update_joint_action(actions_list[:num_actions])    
+        # self.action_cost = self.update_joint_action(actions_list[:num_actions])
+        self.action_cost, num_actions = self.update_joint_action(actions_list)
         if len(self.uavs) > 0:
             need_replan2, discover2 = self.transition_drones()
         need_replan1, discover1 = self.transition_robots()        
-        actions_list = actions_list[num_actions:]
-        
-        return need_replan1 or need_replan2, discover1 or discover2, actions_list
+        # return need_replan1 or need_replan2, discover1 or discover2, actions_list[num_actions:]
+        return discover1 or discover2, discover1 or discover2, actions_list[num_actions:]
         
     def baseline_move(self, actions_list, num_actions=1):
-        self.action_cost = self.update_joint_action(actions_list[:num_actions])    
+        # self.action_cost = self.update_joint_action(actions_list[:num_actions])
+        self.action_cost, num_actions = self.update_joint_action(actions_list)    
         need_replan_robot, discover = self.transition_robots()
         
-        return need_replan_robot, discover, actions_list[num_actions:]
+        # return need_replan_robot, discover, actions_list[num_actions:]
+        return discover, discover, actions_list[num_actions:]
     
     def is_anyrobot_needaction(self):
         if any([ugv.need_action for ugv in self.ugvs]):
@@ -261,49 +243,99 @@ class JSAPPlanExe(object):
     def update_joint_action(self, joint_action):
         if joint_action is None:
             return
-        if self.verbose:
-            print(f"+++++++++++++++++++++++++ Updating {len(joint_action)} action(s) +++++++++++++++++")
-            [print(action) for action in joint_action]
-        for action in joint_action:
+        number_action = 0
+        
+        for ii in range(len(self.ugvs)+len(self.uavs)):
+            if ii >= len(joint_action):
+                break
+            action = joint_action[ii]
             robot_id = action.robotID
             if action.rtype == RobotType.Ground:
                 ugv = self.ugvs[robot_id]
                 if ugv.last_node == self.goalIDs[robot_id]:
+                    number_action += 1
                     continue
                 if ugv.need_action == False:
-                    print(f"Something is wrong: UGV {robot_id} is at node {ugv.last_node} node and goal is {self.goalIDs[robot_id]}")
-                    print(f"UGV {robot_id} has need action? {ugv.need_action} and remaining time {ugv.remaining_time}")
-                    for i, ugv in enumerate(self.ugvs):
-                        if i != robot_id:
-                            print(f"UGV {i}: last node {ugv.last_node}, goal {self.goalIDs[i]} need action? {ugv.need_action}, remaining time {ugv.remaining_time}")
-                    raise ValueError("UGV is not ready to get a new action.")
+                    break
                 assert ugv.remaining_time == 0.0
                 end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
                 distance = np.linalg.norm(np.array(ugv.cur_pose) - np.array(end_pos))
                 direction = (np.array([end_pos[0], end_pos[1]]) - ugv.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
                 ugv.retarget(action, distance, direction)
+                number_action += 1
                 if self.verbose:
                     print(f"Assigned action for UGV {robot_id} with remaining time: {ugv.remaining_time}!")
             elif action.rtype == RobotType.Drone:
                 drone = self.uavs[robot_id]
                 if drone.last_node == self.goalIDs[0]:
+                    number_action += 1
                     continue
                 if drone.need_action == False:
-                    print(f"Something is wrong: UAV {robot_id} is at node {drone.last_node} node and goal is {self.goalIDs[0]}")
-                    print(f"UAV {robot_id} has need action? {drone.need_action} and remaining time {drone.remaining_time}")
-                    for i, uav in enumerate(self.uavs):
-                        if i != robot_id:
-                            print(f"UAV {i}: last node {uav.last_node}, goal {self.goalIDs[0]} need action? {uav.need_action}, remaining time {uav.remaining_time}")
-                    raise ValueError("UAV is not ready to get a new action.")
+                    break
                 assert drone.remaining_time == 0.0
                 end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
                 distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
                 direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
                 drone.retarget(action, distance, direction)
+                number_action += 1
                 if self.verbose:
                     print(f"Assigned action for UAV {robot_id} with remaining time: {drone.remaining_time}!")
             else:
                 raise ValueError("Unknown robot type in joint action")
+        
+        if self.verbose:
+            print(f"+++ Total: updating {number_action} action(s) +++++++++++++++++")
+            [print(action) for action in joint_action[:number_action]]
+            print("----------------------------------------------------------------------")
+        
+        # if self.verbose:
+        #     print(f"+++++++++++++++++++++++++ Updating {len(joint_action)} action(s) +++++++++++++++++")
+        #     [print(action) for action in joint_action]
+        # for action in joint_action:
+        #     robot_id = action.robotID
+        #     if action.rtype == RobotType.Ground:
+        #         ugv = self.ugvs[robot_id]
+        #         if ugv.last_node == self.goalIDs[robot_id]:
+        #             continue
+        #         if ugv.need_action == False:
+        #             print(f"Something is wrong: UGV {robot_id} is at node {ugv.last_node} node and goal is {self.goalIDs[robot_id]}")
+        #             print(f"UGV {robot_id} has need action? {ugv.need_action} and remaining time {ugv.remaining_time}")
+        #             for i, ugv in enumerate(self.ugvs):
+        #                 if i != robot_id:
+        #                     print(f"UGV {i}: last node {ugv.last_node}, goal {self.goalIDs[i]} need action? {ugv.need_action}, remaining time {ugv.remaining_time}")
+        #             raise ValueError("UGV is not ready to get a new action.")
+        #         assert ugv.remaining_time == 0.0
+        #         end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+        #         distance = np.linalg.norm(np.array(ugv.cur_pose) - np.array(end_pos))
+        #         direction = (np.array([end_pos[0], end_pos[1]]) - ugv.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+        #         ugv.retarget(action, distance, direction)
+        #         if self.verbose:
+        #             print(f"Assigned action for UGV {robot_id} with remaining time: {ugv.remaining_time}!")
+        #     elif action.rtype == RobotType.Drone:
+        #         drone = self.uavs[robot_id]
+        #         if drone.last_node == self.goalIDs[0]:
+        #             continue
+        #         if drone.need_action == False:
+        #             print(f"Something is wrong: UAV {robot_id} is at node {drone.last_node} node and goal is {self.goalIDs[0]}")
+        #             print(f"UAV {robot_id} has need action? {drone.need_action} and remaining time {drone.remaining_time}")
+        #             for i, uav in enumerate(self.uavs):
+        #                 if i != robot_id:
+        #                     print(f"UAV {i}: last node {uav.last_node}, goal {self.goalIDs[0]} need action? {uav.need_action}, remaining time {uav.remaining_time}")
+        #             raise ValueError("UAV is not ready to get a new action.")
+        #         assert drone.remaining_time == 0.0
+        #         end_pos = [node for node in self.graph.vertices+self.graph.pois if node.id == action.target][0].coord
+        #         distance = np.linalg.norm(np.array(drone.cur_pose) - np.array(end_pos))
+        #         direction = (np.array([end_pos[0], end_pos[1]]) - drone.cur_pose)/distance if distance != 0.0 else np.array([1.0, 1.0])
+        #         drone.retarget(action, distance, direction)
+        #         if self.verbose:
+        #             print(f"Assigned action for UAV {robot_id} with remaining time: {drone.remaining_time}!")
+        #     else:
+        #         raise ValueError("Unknown robot type in joint action")
+        
+        
+        
+        
+        
         times_ugvs_remaining = [ugv.remaining_time for i, ugv in enumerate(self.ugvs) if ugv.last_node != self.goalIDs[i]]
         assert times_ugvs_remaining != []
         min_time1 = min(times_ugvs_remaining)
@@ -311,4 +343,4 @@ class JSAPPlanExe(object):
             times_uavs_remaining = [uav.remaining_time for uav in self.uavs if uav.last_node != self.goalIDs[0]]
             if times_uavs_remaining != []:
                 min_time1 = min(min_time1, min(times_uavs_remaining))
-        return min_time1
+        return min_time1, number_action

@@ -38,7 +38,7 @@ def _get_args():
     args.C = 200
     args.max_depth = 30
     args.current_seed = args.seed
-    args.num_ugvs = 2
+    args.num_ugvs = 1
     
     return args
 
@@ -278,73 +278,100 @@ def test_jsap_plan_exec_mgraph():
 def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
-    args.planner = 'jsap2'
-    args.seed = 3001
+    args.planner = 'jsapdap'
+    args.seed = 3000
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs = 1
+    args.num_ugvs =1
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
+    # print(f"The number of POIs in the graph: {len(graph.pois)}")
     # print(f"The iniital graph")
     # graph.print_graph_config()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
+    # return
     
     
-    robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                    at_node=True) for i in range(args.num_ugvs)]
     if args.planner == 'ctp':
+        args.num_drones =0
         drones = []
-        args.num_iterations = 2000 + 500*args.num_ugvs
-        args.max_depth = 20
+        args.num_iterations = 1500 #2000 
+        args.max_depth = 12
         use_AVP = False
+        use_DAP = False
+        param.REVISIT_PEN = 0.0
+        max_uanum = 1
     elif args.planner == 'jsap':
         use_AVP = False
-        args.max_depth = 15
-        assert args.num_drones > 0
-        assert args.num_ugvs > 0
+        use_DAP = False
+        args.max_depth = 18
+        args.num_drones =1 
+        # args.num_ugvs =2
         max_uanum = 1
-        args.num_iterations = 3500*(args.num_drones)
+        args.num_iterations = 10000
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
     elif args.planner == 'jsap2':
         use_AVP = False
+        use_DAP = False
         args.num_drones = 2
-        args.max_depth = 15
+        assert args.num_ugvs > 0
+        args.max_depth = 18
         param.REVISIT_PEN = 0.0
         assert args.num_drones == 2
-        assert args.num_ugvs == 1 
+        assert args.num_ugvs == 3 
         max_uanum = 1
-        args.num_iterations = 6000+3500*(args.num_drones-1)
+        args.num_iterations = 30000 # 6000+3500*(args.num_drones-1)
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                 robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
 
     elif args.planner == 'jsapavp':
-        use_AVP==True
+        use_AVP=True
+        use_DAP = False
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 8
-        max_uanum = max_uanum
-        args.num_iterations = 500
+        args.max_depth = 9
+        # max_uanum = max_uanum
+        args.num_iterations = 1500
+        args.n_maps = 200
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         print(f"Testing JSAP-AVP planner with use_AVP={use_AVP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
+    
+    elif args.planner == 'jsapdap':
+        use_AVP=False
+        use_DAP = True
+        assert args.num_drones > 0
+        assert args.num_ugvs > 0
+        args.max_depth = 14
+        # max_uanum = max_uanum
+        args.num_iterations = 1000
+        args.n_maps = 200
+        max_uanum = 1
+        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        print(f"Testing JSAP-DAP planner with use_DAP={use_DAP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
+    robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                    at_node=True) for i in range(args.num_ugvs)]
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
                 uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
-                rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, \
+                rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \
                 use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
+    
+    
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=True)
 
     start_time = time.perf_counter() 
     average_step_time = 0.0
     count_steps = 0
-    print(f"{args.planner}: working on a team of {len(robots)} UGVs and {len(drones)} UAVs with seed {args.seed}")
+    print(f"{args.planner}: working on a team of {len(robots)} UGVs - {len(drones)} UAVs, seed {args.seed}, iter. {args.num_iterations}")
     
     for step_data in plan_exec:
         jsapplanner.update(
@@ -354,18 +381,21 @@ def test_jsap_plan_exec_randomgraph():
         )
         time1 = time.perf_counter()
         joint_action, cost = jsapplanner.compute_joint_action()
+        # break
         average_step_time += (time.perf_counter() - time1)
         count_steps += 1
         plan_exec.save_joint_actions(joint_action, cost)
-    
+        
+    print(f"The sampling time: {jsap.JSAPState.total_sampling_time}s")
     robots_net_times = [robot.net_time for robot in robots]
     
     cost_sum = np.sum(robots_net_times)
     cost_aver = np.average(robots_net_times)
 
     runtime = time.perf_counter() - start_time
-    average_step_time /= count_steps
-    # average_step_time = 0.0    
+    # average_step_time /= count_steps
+    print(f"The total time: {runtime}") 
+    average_step_time = 0.0    
     gpaths = []
     for robot in robots:
         x_g = [pose[0] for pose in robot.all_poses]
