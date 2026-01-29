@@ -10,7 +10,6 @@ def get_closest_actions(state, uav_idx):
     actions = []
     assert state.use_AVP == False
     uav = state.uavs[uav_idx]
-    # uav_pose = (uav.cur_pose[0], uav.cur_pose[1])
     assert state.avail_uav_actions is not None
     if len(state.avail_uav_actions) <= state.max_uanum:
         actions = state.avail_uav_actions
@@ -57,9 +56,12 @@ def get_single_behavior_change(graph, action, robot_edge, d0, d1, goalID, atNode
         block_value += sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=True)
     pass_value /= n_samples
     block_value /= n_samples
+    # print(f"The pass value is: {pass_value}, block value is: {block_value}")
     aver_block = graph.get_poi(action.target).block_prob * block_value
     aver_pass = (1-graph.get_poi(action.target).block_prob) * pass_value
-    return cur_heuristic - (aver_block + aver_pass)
+    # print(f"The avg pass value is: {aver_pass}, avg block value is: {aver_block}")
+    # return cur_heuristic - (aver_block + aver_pass)
+    return (block_value - pass_value)
 
 def get_ugvs_behavior_change(state, action):
     act_value = 0.0
@@ -76,7 +78,9 @@ def get_ugvs_behavior_change(state, action):
     return act_value
     
 def get_action_value(bc, action, drone_pose, graph):
-    return bc - np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/param.VEL_RATIO
+    # return bc - np.linalg.norm(np.array(drone_pose)-np.array(graph.get_poi(action.target).coord))/param.VEL_RATIO
+    poi = graph.get_poi(action.target)
+    return bc*poi.block_prob*(1.0-poi.block_prob)*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(poi.coord))
 
 def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, block_edge=False):
     block_pois = [poi.id for poi in graph.pois if poi.id != action.target and random.random() <= poi.block_prob ] 
@@ -84,6 +88,7 @@ def sampling_action_value(graph, action, robot_edge, d0, d1, goalID, atNode, blo
         modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois+[action.target])
     else:
         modified_graph = g.modify_graph(graph=graph, robot_edge=robot_edge, poiIDs=block_pois)
+    
     if atNode:
         cost, _ = paths.get_shortestPath_cost(modified_graph, start=robot_edge[0], goal=goalID)
         return cost if cost >= 0.0 else param.NOWAY_PEN

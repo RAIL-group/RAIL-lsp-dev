@@ -23,22 +23,18 @@ class BlockScoutNNConv(nn.Module):
             nn.Linear(hidden_dim, 1)
         )
 
-    def forward(self, x, edge_index, edge_attr, block_mask, drone_state, robot_state):
+    def forward(self, x, edge_index, edge_attr, block_mask, ugv_pose):
         h = torch.relu(self.conv1(x, edge_index, edge_attr))
         h = torch.relu(self.conv2(h, edge_index, edge_attr))
-        context = torch.cat([drone_state, robot_state], dim=-1)
+        context = ugv_pose  # assuming ugv_pose is already the correct context
         context = context.repeat(h.size(0), 1)
         combined = torch.cat([h, context], dim=-1)
         values = self.value_head(combined)
         return values[block_mask]
 
-def convert_to_pyg_data(graph, drone_pos, robot_pos, y):
+def convert_to_pyg_data(graph, action, robot_pos, y):
     vertices = graph.vertices
     pois = graph.pois
-    edges = graph.edges
-
-    vertex_to_id = {v.id: idx for idx, v in enumerate(vertices)}
-    poi_to_id = {p.id: len(vertices) + idx for idx, p in enumerate(pois)}
 
     num_vertices = len(vertices)
     num_pois = len(pois)
@@ -51,23 +47,24 @@ def convert_to_pyg_data(graph, drone_pos, robot_pos, y):
     for p in pois:
         node_features.append([p.coord[0], p.coord[1], p.block_prob, 1])
     node_features = torch.tensor(node_features, dtype=torch.float)
+    
+    action_feature = [[poi.coord[0], poi.coord[1], p.block_prob, 1] for poi in pois if p.id == action]
+    action_feature = torch.tensor(action_feature, dtype=torch.float)
 
     # ----- Edge list and edge attributes -----
     edge_list, edge_attr = [], []
 
     for p in pois:
         v1, v2 = p.neighbors  # ensure this exists
-        pid = poi_to_id[p.id]
-        i, j = vertex_to_id[v1.id], vertex_to_id[v2.id]
-
+        i, j = v1.id, v2.id
         # Distances between POI and intersections
         dist1 = np.linalg.norm(np.array(v1.coord) - np.array(p.coord))
         dist2 = np.linalg.norm(np.array(v2.coord) - np.array(p.coord))
 
-        edge_list += [[i, pid], [pid, i]]
+        edge_list += [[i, p.id], [p.id, i]]
         edge_attr += [[dist1], [dist1]]
 
-        edge_list += [[j, pid], [pid, j]]
+        edge_list += [[j, p.id], [p.id, j]]
         edge_attr += [[dist2], [dist2]]
 
     edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
@@ -78,7 +75,6 @@ def convert_to_pyg_data(graph, drone_pos, robot_pos, y):
     block_mask[num_vertices:] = True
 
     # ----- Context -----
-    drone_state = torch.tensor([drone_pos[0], drone_pos[1]], dtype=torch.float).unsqueeze(0)
     if robot_pos.get('on_edge', False):
         v1, v2 = robot_pos['edge']
         s = robot_pos['s']
@@ -89,14 +85,13 @@ def convert_to_pyg_data(graph, drone_pos, robot_pos, y):
 
     # ----- Labels -----
     y = torch.tensor(y, dtype=torch.float).unsqueeze(1)
-        # if hasattr(pois[0], "info_value") else None
 
     return Data(
         x=node_features,
         edge_index=edge_index,
-        edge_attr=edge_attr,  # <- now added
+        edge_attr=edge_attr,
+        action=action_feature,
         blockpoint_mask=block_mask,
-        drone_state=drone_state,
         robot_state=robot_state,
         y=y
     )

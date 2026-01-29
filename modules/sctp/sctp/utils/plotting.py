@@ -23,7 +23,7 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         
         box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=True)
         ax[0].set_aspect('equal', adjustable='box')
-        ax[0].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
+        ax[0].set_xlim(box[0][0]-1.5, box[1][0]+1.2)
         ax[0].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
         ax[0].set_title(f'Seed: {seed} | Initial Graph')
     
@@ -162,23 +162,10 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors, uav_num=0, ugv_n
             y_drones[a.robotID].append(a.start_pose[1])
             last_drone_action = a
     last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
-    # g_cost += np.linalg.norm(np.array([x_robot[-1],y_robot[-1]]) - np.array(last_vertex.coord))
-    # x_robot.append(last_vertex.coord[0])
-    # y_robot.append(last_vertex.coord[1])
     for i in range(ugv_num):
-        # if x_ugvs[i] != []:
-        #     last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
-        #     g_cost += np.linalg.norm(np.array([x_ugvs[i][-1],y_ugvs[i][-1]]) - np.array(last_vertex.coord))
-        #     x_ugvs[i].append(last_vertex.coord[0])
-        #     y_ugvs[i].append(last_vertex.coord[1])
-            plot_lines_varyWidthColor(ax, [x_ugvs[i], y_ugvs[i]], g_costs[i], rev, gcolors, ugv=True)
-    # plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
-    # plot_lines_varyWidthColor(ax, [x_robot, y_robot], g_cost, rev, gcolors)
+        plot_lines_varyWidthColor(ax, [x_ugvs[i], y_ugvs[i]], g_costs[i], rev, gcolors, ugv=True)
     if uav_num != 0:
         last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_drone_action.target][0]
-        # d_dist += np.linalg.norm(np.array([x_drone[-1],y_drone[-1]]) - np.array(last_vertex.coord))
-        # x_drone.append(last_vertex.coord[0])
-        # y_drone.append(last_vertex.coord[1])
         for i in range(uav_num):
             plot_lines_varyWidthColor(ax, [x_drones[i], y_drones[i]], d_dists[i], rev, dcolors)
         # plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
@@ -220,10 +207,9 @@ def plot_sctpgraph(graph, plt, textsize=7, verbose=False, initG=False):
             plt.scatter(poi.coord[0], poi.coord[1], color='black', s=8)
         else:
             plt.scatter(poi.coord[0], poi.coord[1], color='white', s=8)
-        if verbose:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
-        elif initG:
-            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"{poi.block_prob:.2f}", color='blue', fontsize=textsize)
+        plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
+        # elif initG:
+        #     plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
     return [[x_min, y_min], [x_max, y_max]]
         
 

@@ -170,8 +170,6 @@ class JSAPState(object):
                     min_dist1, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[0], goal=self.goalIDs[i])
                     min_dist2, _ = paths.get_shortestPath_cost(graph=new_graph, start=redge[1], goal=self.goalIDs[i])
                     if (min_dist1 < 0) != (min_dist2 < 0):
-                        # print(f"Vertices removed for heuristic computation: {new_pois}")
-                        # print(f"Edges removed for heuristic computation: {edges}")
                         new_graph.print_graph_config()
                         if min_dist1 < 0:
                             print(f"UGV {i} is on edge: ({redge}) and Vertex {redge[0]} to goal {self.goalIDs[i]} is blocked")
@@ -206,10 +204,17 @@ class JSAPState(object):
         self.behavior_change.clear()
         self.action_values.clear()
         time1 = time.perf_counter()
+        min_bc = 0.0
         for ii, act in enumerate(self.avail_uav_actions):
-           if act.target in self.assigned_pois:
+            if act.target in self.assigned_pois:
                 continue
-           self.behavior_change[act] = ae.get_ugvs_behavior_change(state=self, action=act)
+            bc_value = ae.get_ugvs_behavior_change(state=self, action=act)
+            if bc_value < min_bc:
+                min_bc = bc_value
+            self.behavior_change[act] = bc_value # ae.get_ugvs_behavior_change(state=self, action=act)
+        if min_bc < 0.0:
+            for key in self.behavior_change.keys():
+                self.behavior_change[key] -= min_bc
         JSAPState.total_sampling_time += time.perf_counter() - time1
         
     @property

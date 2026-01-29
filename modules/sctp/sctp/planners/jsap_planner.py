@@ -77,13 +77,6 @@ class JSAPPlanner(object):
         # assert self.max_depth == 12
         assert self.n_maps == 200
         mdepth = self.max_depth
-        # if self.use_AVP:
-        #     if 10 < len(state.avail_uav_actions) <20:
-        #         mdepth += 1
-        #     elif 5 < len(state.avail_uav_actions) <=10:
-        #         mdepth +=2
-        #     elif len(state.avail_uav_actions) <=5:
-        #         mdepth +=3
         action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(state, \
                         n_iterations=self.rollout_num, C=self.C, depth= mdepth, \
                         rollout_fn=self.rollout_fn)

@@ -363,11 +363,9 @@ def test_sctp_randomgraph_sgpairs():
     count =1
     for start, goal in zip(starts, goals):
         plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
-        plt.text(start.coord[0]-0.8, start.coord[1], f'S_{count}', fontsize=8)
-        # plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
-        # plt.text(start.coord[0]-0.3, start.coord[1]-1.0, 'D_s', fontsize=8)
+        plt.text(start.coord[0]-1.8, start.coord[1], f'S_{count}', fontsize=8)
         plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
-        plt.text(goal.coord[0]+0.4, goal.coord[1], f'G_{count}', fontsize=8)
+        plt.text(goal.coord[0]+1.4, goal.coord[1], f'G_{count}', fontsize=8)
         count += 1
     plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
     plt.show()
@@ -383,11 +381,27 @@ def test_sctp_island_bridges_graph():
     count =1
     for start, goal in zip(starts, goals):
         plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
-        plt.text(start.coord[0]-0.8, start.coord[1], f'S{count}', fontsize=8)
-        # plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
-        # plt.text(start.coord[0]-0.3, start.coord[1]-1.0, 'D_s', fontsize=8)
+        plt.text(start.coord[0]-1.8, start.coord[1], f'S{count}', fontsize=8)
         plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
-        plt.text(goal.coord[0]+0.4, goal.coord[1], f'G{count}', fontsize=8)
+        plt.text(goal.coord[0]+1.4, goal.coord[1], f'G{count}', fontsize=8)
+        count += 1
+    plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
+    plt.show()
+
+def test_sctp_island_bridges_sgraph():
+    seed = 3018
+    np.random.seed(seed)
+    random.seed(seed)
+    verbose = True
+    starts, goals, graph = graphs.island_bridges_sgraph()
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal', adjustable='box')
+    count =1
+    for start, goal in zip(starts, goals):
+        plt.scatter(start.coord[0], start.coord[1], marker='o', color='r')
+        plt.text(start.coord[0]-1.8, start.coord[1], f'S{count}', fontsize=8)
+        plt.scatter(goal.coord[0], goal.coord[1], marker='x', color='r')
+        plt.text(goal.coord[0]+1.4, goal.coord[1], f'G{count}', fontsize=8)
         count += 1
     plotting.plot_sctpgraph(graph=graph, plt=ax, verbose=verbose)
     plt.show()

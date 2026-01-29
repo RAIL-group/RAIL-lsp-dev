@@ -72,17 +72,19 @@ def get_shortestPath_cost(graph, start, goal):
     queue = [(0.0, start, [start])]
     visited = set()
     costs = {start: 0.0}
+    goal_coord = [v for v in graph.vertices+graph.pois if v.id == goal][0].coord
     while queue:
-        (path_cost, current_node, path) = heapq.heappop(queue)
+        # (path_cost, current_node, path) = heapq.heappop(queue)
+        (f, current_node, path) = heapq.heappop(queue)
         if current_node in visited:
             continue
         visited.add(current_node)
         if current_node == goal:
             return costs[current_node], len(path)
-        
+        g_cur_node = costs[current_node]
         # Explore neighbors
         vertices = [v for v in graph.vertices+graph.pois if v.id == current_node]
-        if len(vertices) == 0: # the start node was removed
+        if len(vertices) == 0: # the current node was removed
             return -1.0, 1000
         for nei in vertices[0].neighbors:
             step_cost = 0.0
@@ -92,12 +94,14 @@ def get_shortestPath_cost(graph, start, goal):
                     step_cost = edge.dist
                     break
                 ValueError("Not find an edge")
-            new_path_cost = path_cost + step_cost
+            nei_coord = [v for v in graph.vertices+graph.pois if v.id == nei][0].coord
+            new_g = g_cur_node + step_cost
             # If we found a shorter path to neighbor
-            if nei not in costs or new_path_cost < costs[nei]:
-                costs[nei] = new_path_cost
+            if nei not in costs or new_g < costs[nei]:
+                new_f = new_g + np.linalg.norm(np.array(nei_coord)-np.array(goal_coord))
+                costs[nei] = new_g
                 new_path = path + [nei]
-                heapq.heappush(queue, (new_path_cost, nei, new_path))
+                heapq.heappush(queue, (new_f, nei, new_path))
     return -1.0, 1000
 
 def get_shortest_path_with_blocknode(graph, start, goal, redge = [], block_nodes = []):
