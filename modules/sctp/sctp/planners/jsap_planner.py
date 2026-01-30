@@ -75,7 +75,7 @@ class JSAPPlanner(object):
                         useDAP=self.use_DAP, max_uanum=self.max_uanum)
         # assert state.uavs != []
         # assert self.max_depth == 12
-        assert self.n_maps == 200
+        # assert self.n_maps == 200
         mdepth = self.max_depth
         action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(state, \
                         n_iterations=self.rollout_num, C=self.C, depth= mdepth, \

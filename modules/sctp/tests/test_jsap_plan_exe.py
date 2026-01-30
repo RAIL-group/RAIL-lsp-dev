@@ -34,7 +34,7 @@ def _get_args():
     args.save_dir = 'data/sctp'
     args.planner = 'ctp'
     # args.num_drones = 
-    args.num_iterations = 5000
+    args.num_iterations = 500
     args.C = 200
     args.max_depth = 30
     args.current_seed = args.seed
@@ -118,10 +118,11 @@ def test_jsap_plan_exec_lg():
 def test_jsap_plan_exec_dg():
     print()
     args = _get_args()
-    # args.planner = 'jsap'
+    args.planner = 'jsapiap'
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_iterations = 1000
+    args.num_iterations = 500
+    args.n_maps = 100
 
     starts, goals, graph = graphs.disjoint_unc()
     for poi in graph.pois:
@@ -188,21 +189,23 @@ def test_jsap_plan_exec_dg():
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
                         seed=args.seed, cost=cost_aver, ttime=runtime, stime=average_step_time, verbose=False)
     plt.show()
+    print("Done Plotting")
     
 
 def test_jsap_plan_exec_mgraph():
     print()
     args = _get_args()
-    args.planner = 'ctp'
-    args.num_iterations = 1000
+    args.planner = 'jsapiap'
+    args.num_iterations = 500
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_drones = 60
+    args.num_drones = 1
+    args.n_maps = 150
     
 
     starts, goals, graph = graphs.m_graph_unc()
     num_uav = 1
-    num_ugv = 3
+    num_ugv = 1
     
     plotGraph = graph.copy()
     policyGraph = graph.copy()
@@ -212,17 +215,17 @@ def test_jsap_plan_exec_mgraph():
                     at_node=True) for i in range(num_ugv)]
     if args.planner == 'ctp':
         drones = []
-        args.num_iterations = 1500
+        args.num_iterations = 1000
         args.max_depth = 15
     else:
         args.max_depth = 8
         if use_AVP:
             max_uanum = num_uav
-            args.num_iterations = 500
-            args.planner = 'jsap-avp'
+            args.num_iterations = 1000
+            args.planner = 'jsapiap'
         else:
             max_uanum = 1
-            args.num_iterations = 2000
+            args.num_iterations = 1000
             args.planner = 'jsap'
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(num_uav)]
@@ -278,19 +281,14 @@ def test_jsap_plan_exec_mgraph():
 def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
-    args.planner = 'jsapdap'
-    args.seed = 3000
+    args.planner = 'jsapiap'
+    args.seed = 2000
     random.seed(args.seed)
     np.random.seed(args.seed)
     args.num_ugvs =1
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
-    # print(f"The number of POIs in the graph: {len(graph.pois)}")
-    # print(f"The iniital graph")
-    # graph.print_graph_config()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    # return
-    
     
     if args.planner == 'ctp':
         args.num_drones =0
@@ -325,15 +323,15 @@ def test_jsap_plan_exec_randomgraph():
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                 robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
 
-    elif args.planner == 'jsapavp':
+    elif args.planner == 'jsapiap':
         use_AVP=True
         use_DAP = False
         assert args.num_drones > 0
         assert args.num_ugvs > 0
         args.max_depth = 9
         # max_uanum = max_uanum
-        args.num_iterations = 1500
-        args.n_maps = 200
+        args.num_iterations = 500
+        args.n_maps = 100
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]

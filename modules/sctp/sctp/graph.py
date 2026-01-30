@@ -47,10 +47,10 @@ class Graph():
         raise ValueError("Edge not found in graph.")
     
     def get_poi(self, poi_id):
-        for poi in self.pois:
-            if poi.id == poi_id:
-                return poi
-        raise ValueError("POI not found in graph.")
+        if poi_id not in self.poiIDs:
+            print(f"The poiID: {poi_id} is not in the list of poi's IDs: {self.poiIDs}")
+            raise ValueError("POI ID not found in graph.")
+        return self.pois[self.poiIDs.index(poi_id)]
     
     def get_vertex_by_id(self, vertex_id):
         for vertex in self.vertices:
@@ -76,6 +76,7 @@ class Graph():
         # new_graph = Graph(vertices=new_vertices, edges=self.edges.copy())
         new_graph = Graph(vertices=new_vertices, edges=edges)
         new_graph.pois = new_pois
+        new_graph.poiIDs = self.poiIDs.copy()
         return new_graph
     
     def print_graph_config(self):

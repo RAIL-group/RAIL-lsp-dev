@@ -1,1 +1,1 @@
-from .gnn_model import EdgeConditionedConv, DroneScoutEGNN
+from .gnn_model import BlockScoutNNConv

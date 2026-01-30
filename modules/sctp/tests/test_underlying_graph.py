@@ -1,6 +1,6 @@
 # test_explore_graph_planning.py
 import matplotlib
-matplotlib.use("Agg")  # Use non-interactive backend for tests
+# matplotlib.use("Agg")  # Use non-interactive backend for tests
 import matplotlib.pyplot as plt
 import numpy as np
 import sctp.sctp_graphs as graphs
@@ -9,7 +9,7 @@ from sctp.utils.underlying_graph import (
     generate_vertices,
     create_adj_prob_matrices,
     set_edge_probabilities,
-    create_probabilistic_graph,
+    get_initial_edges,
     sample_graph,
     compute_shortest_path,
     plot_probabilistic_graph_with_samples,
@@ -47,7 +47,7 @@ def test_set_edges():
     """Test that the function set edges """
     starts, goals, graph = graphs.disjoint_unc()
     graph.print_graph_config()
-    edges = graphs.get_initial_edges(graph)
+    edges = get_initial_edges(graph)
     positions = generate_vertices(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
@@ -68,7 +68,7 @@ def test_sample_graph():
     """Test that the function set edges """
     starts, goals, graph = graphs.disjoint_unc()
     graph.print_graph_config()
-    edges = graphs.get_initial_edges(graph)
+    edges = get_initial_edges(graph)
     positions = generate_vertices(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
@@ -83,40 +83,50 @@ def test_sample_graph():
     assert sample[2,3] == 0.0
     print(sample)
 
-# def test_probability_matrix_symmetry():
-#     """Test that probability matrix is symmetric."""
-#     positions = generate_vertices(num_vertices=20, bounds=100.0)
-#     adjacency = create_adjacency_matrix(positions, threshold=30.0)
-#     probabilities = create_probability_matrix(adjacency)
-#     np.testing.assert_array_equal(probabilities, probabilities.T)
+def test_shortest_path_sgraph():
+    """Test that the function set edges """
+    print("")
+    starts, goals, graph = graphs.s_graph_unc()
+    graph.print_graph_config()
+    edges = get_initial_edges(graph)
+    positions = generate_vertices(graph.vertices)
+    adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
+    pg = ProbabilisticGraph(
+        positions=positions,
+        adjacency=adjacency,
+        probabilities=probabilities,
+    )
+    edges = [(0, 1), (2, 3)]
+    probs = np.array([0.0, 1.0])
+    sample = sample_graph(prob_graph=pg, probs=probs, edges=edges)
+    assert sample[2,3] == 0.0
+    cost = compute_shortest_path(sample, start=0, end=3)
+    print(sample)
+    print(cost)
 
-# def test_probability_matrix_range():
-#     """Test that all non-zero probabilities are in [0.7, 1.0]."""
-#     positions = generate_vertices(num_vertices=50, bounds=100.0)
-#     adjacency = create_adjacency_matrix(positions, threshold=30.0)
-#     probabilities = create_probability_matrix(adjacency, prob_range=(0.7, 1.0))
+def test_shortest_path_island_bridges_graph():
+    """Test that the function set edges """
+    print("")
+    starts, goals, graph = graphs.get_insland_bridges_graph()
+    graph.print_graph_config()
+    edges = get_initial_edges(graph)
+    positions = generate_vertices(graph.vertices)
+    adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
-#     non_zero = probabilities[probabilities > 0]
-#     assert len(non_zero) > 0, "Should have some edges"
-#     assert np.all(non_zero >= 0.7)
-#     assert np.all(non_zero <= 1.0)
-
-
-# def test_probability_matrix_matches_adjacency():
-#     """Test that probability is zero exactly where adjacency is zero."""
-#     positions = np.array([[0, 0], [3, 4], [100, 100]])
-#     adjacency = create_adjacency_matrix(positions, threshold=10.0)
-#     probabilities = create_probability_matrix(adjacency)
-
-#     # Where adjacency is zero, probability must be zero
-#     zero_mask = adjacency == 0
-#     np.testing.assert_array_equal(probabilities[zero_mask], 0)
-
-#     # Where adjacency is non-zero, probability must be non-zero
-#     nonzero_mask = adjacency > 0
-#     assert np.all(probabilities[nonzero_mask] > 0)
-
+    pg = ProbabilisticGraph(
+        positions=positions,
+        adjacency=adjacency,
+        probabilities=probabilities,
+    )
+    edges = [(0, 1), (2, 3)]
+    probs = np.array([0.0, 1.0])
+    new_probabilities = set_edge_probabilities(probs=probs, edges=edges, probabilities=pg.probabilities)
+    sample = sample_graph(prob_graph=pg, probs=new_probabilities)
+    assert sample[2,3] == 0.0
+    cost = compute_shortest_path(sample, start=0, end=3)
+    print(sample)
+    print(cost)
 
 # def test_create_probabilistic_graph():
 #     """Test the convenience function creates a valid ProbabilisticGraph."""

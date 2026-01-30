@@ -4,6 +4,9 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap
 from sctp.param import RobotType
 from scipy.stats import gaussian_kde
+from matplotlib.patches import FancyArrowPatch
+
+LINE_WIDTH = 2.5
 
 def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=None, start_coords=None, \
                    goal_coords=None, seed=None, cost=0.0, ttime=None, stime=None, verbose=False):
@@ -49,7 +52,8 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         colors = ['navy', 'blue', 'green']
         for i, path in enumerate(dpaths):
             ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)            
-            plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
+            # plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
+            plot_pathArrow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
     
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].set_xlim(box[0][0]-1.2, box[1][0]+1.2)
@@ -128,15 +132,40 @@ def plot_firstAction(graph, action, name="First Action",
     plt.savefig(f'/data/sctp/sctp_eval_policy_{planner}_seed_{seed}.png')
     plt.show()
 
-    
 def plot_path_fromPoints(ax, xy, colors, ugv=False):
-    dist = 0.0
-    rev = 0.15
     x = xy[0]
     y = xy[1]
-    for i in range(len(x)-1):
-        dist += np.linalg.norm(np.array([x[i],y[i]]) - np.array(np.array([x[i+1],y[i+1]])))
-    plot_lines_varyWidthColor(ax, [x, y], dist, rev, colors, ugv)
+    points = list(zip(x, y))
+    plot_arrows_withColor(ax, points, colors, ugv)
+
+
+def plot_arrows_withColor(ax, points, color_pair=['orange', 'green'], ugv=False):
+    from matplotlib.patches import FancyArrowPatch
+    
+    # Create colormap
+    cmap = LinearSegmentedColormap.from_list('custom', color_pair)
+    
+    linewidth = LINE_WIDTH    
+    for i in range(len(points) - 1):
+        if points[i] == points[i + 1]:
+            continue
+        
+        # Get start and end points
+        start = points[i]
+        end = points[i + 1]
+        
+        # Draw arrow with matplotlib's FancyArrowPatch
+        arrow = FancyArrowPatch(
+            start,
+            end,
+            arrowstyle='-|>,head_width=0.25,head_length=0.4',
+            color=cmap(i / (len(points) - 1)),
+            linewidth=linewidth,
+            alpha=0.95,
+            mutation_scale=15
+        )
+        ax.add_patch(arrow)
+
 
 def plot_path_fromActions(ax, graph, actions, dcolors, gcolors, uav_num=0, ugv_num=1):
     g_costs = [0.0 ]*ugv_num
@@ -207,9 +236,10 @@ def plot_sctpgraph(graph, plt, textsize=7, verbose=False, initG=False):
             plt.scatter(poi.coord[0], poi.coord[1], color='black', s=8)
         else:
             plt.scatter(poi.coord[0], poi.coord[1], color='white', s=8)
-        plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
-        # elif initG:
-        #     plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
+        if verbose or initG:
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"P{poi.id}"+f"/{poi.block_prob:.2f}", color='blue', fontsize=textsize)
+        else:
+            plt.text(poi.coord[0]-0.3, poi.coord[1] + 0.25, f"{poi.block_prob:.2f}", color='blue', fontsize=textsize)
     return [[x_min, y_min], [x_max, y_max]]
         
 
@@ -260,32 +290,7 @@ def make_scatter_plot(ax, cost_x, cost_y, max_val):
     ax.set_ylim(0, max_val)
 
 
-def plot_lines_varyWidthColor(ax, xy, total_dist, rev=0.2, color_pair=['orange', 'green'],ugv=False):
-    n_points = int(total_dist/rev)
-    counter = 0
-    # Define color gradient (red to blue)
-    colors = np.linspace(0, 1, n_points)
-    cmap = LinearSegmentedColormap.from_list('custom', color_pair)
-    
-    for i in range(len(xy[0])-1):
-        dist = np.linalg.norm(np.array([xy[0][i],xy[1][i]]) - np.array([xy[0][i+1],xy[1][i+1]]))
-        seg_points = int(dist/rev)
-        x = np.linspace(xy[0][i], xy[0][i+1], seg_points)
-        y = np.linspace(xy[1][i], xy[1][i+1], seg_points)
 
-        # Create array of linewidths
-        linewidths = np.linspace(8, 1, seg_points)
-
-        # Create points array for LineCollection
-        points = np.array([x, y]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
-        # Create LineCollection with varying linewidths and colors
-        color_range = colors[counter:counter+seg_points+1]
-        lc = LineCollection(segments, linewidths=linewidths, colors=cmap(color_range))
-        ax.add_collection(lc)
-        counter += seg_points
-    # ax.scatter(x, y, marker='P', color='orange',s=10)
 
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
@@ -383,3 +388,39 @@ def plot_pathArrowHollow(points, ax, color='white'):
         )
         ax.add_patch(arrow)    
 
+def plot_pathArrow(points, ax, color='white'):
+    colors = ['navy', 'blue', 'cyan', 'lime', 'green']
+    if color == 'navy':
+        colors = ['navy', 'navy']
+    elif color == 'blue':
+        colors = ['blue', 'blue']
+    elif color == 'green':
+        colors = ['green', 'green']
+    col = mcolors.LinearSegmentedColormap.from_list(color, colors)
+    cmap = col
+    
+    linewidth = LINE_WIDTH
+    
+    for i in range(len(points) - 1):
+        if points[i] == points[i + 1]:
+            continue
+        
+        # Get start and end points
+        start = points[i]
+        end = points[i + 1]
+        
+        # Calculate arrow properties
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        
+        # Draw arrow with matplotlib's FancyArrowPatch
+        arrow = FancyArrowPatch(
+            start,
+            end,
+            arrowstyle='->,head_width=0.25,head_length=0.4',
+            color=cmap(i / (len(points) - 1)),
+            linewidth=linewidth,
+            alpha=0.95,
+            mutation_scale=15
+        )
+        ax.add_patch(arrow)

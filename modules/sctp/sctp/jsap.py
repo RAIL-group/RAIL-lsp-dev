@@ -4,6 +4,7 @@ import numpy as np
 import random
 from sctp import param, core
 from sctp import action_estimation as ae
+from sctp.utils import underlying_graph as ug
 import time
 
 class JSAPState(object):
@@ -47,6 +48,11 @@ class JSAPState(object):
             self.ugvs = ugvs
             self.use_AVP = useAVP
             self.use_DAP = useDAP
+            # set up underlying graph for sampling
+            edges = ug.get_initial_edges(self.graph)
+            self.pg_positions = ug.generate_vertices(self.graph.vertices)
+            self.pg_adjacency, self.pg_probabilities = ug.create_adj_prob_matrices(edges, self.pg_positions)
+            # set the pruning techniques
             if self.use_AVP or self.use_DAP:
                 assert self.use_AVP != self.use_DAP
             self.ugvs_actions = [[] for _ in range(len(self.ugvs))]
@@ -96,7 +102,8 @@ class JSAPState(object):
                     self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
                     # get the index of uavs  needing action index
                     time1 = time.perf_counter()
-                    self.update_action_bc()
+                    # self.update_action_bc()
+                    self.update_action_bc_networkX()
                     self.sampling_time += (time.perf_counter() - time1)
                     if len(self.avail_uav_actions) != len(self.behavior_change):
                         raise ValueError("The length of avail_uav_actions and behavior_change do not match in __init__()")        
@@ -211,7 +218,41 @@ class JSAPState(object):
             bc_value = ae.get_ugvs_behavior_change(state=self, action=act)
             if bc_value < min_bc:
                 min_bc = bc_value
-            self.behavior_change[act] = bc_value # ae.get_ugvs_behavior_change(state=self, action=act)
+            self.behavior_change[act] = bc_value
+        if min_bc < 0.0:
+            for key in self.behavior_change.keys():
+                self.behavior_change[key] -= min_bc
+        JSAPState.total_sampling_time += time.perf_counter() - time1
+    
+    def update_action_bc_networkX(self):
+        assert self.use_DAP == False
+        self.behavior_change.clear()
+        self.action_values.clear()
+        time1 = time.perf_counter()
+        status_edges = []
+        probs = []
+        for act, outcome  in self.history.get_data().items():
+            if act.target not in self.graph.poiIDs:
+                continue
+            # poi = 
+            neighbors = self.graph.get_poi(act.target).neighbors
+            status_edges.append([neighbors[0]-1, neighbors[1]-1])
+            if outcome == param.EventOutcome.BLOCK:
+                probs.append(1.0)
+            else:            
+                probs.append(0.0)
+        new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
+                        probabilities=self.pg_probabilities) 
+        pg = ug.ProbabilisticGraph(positions=self.pg_positions, adjacency=self.pg_adjacency, \
+                                        probabilities=new_probabilities)
+        min_bc = 0.0
+        for ii, act in enumerate(self.avail_uav_actions):
+            if act.target in self.assigned_pois:
+                continue
+            bc_value = ae.get_ugvs_bc_networkX(state=self, action=act, pg=pg)
+            if bc_value < min_bc:
+                min_bc = bc_value
+            self.behavior_change[act] = bc_value
         if min_bc < 0.0:
             for key in self.behavior_change.keys():
                 self.behavior_change[key] -= min_bc
@@ -247,6 +288,11 @@ class JSAPState(object):
         new_state.revisit_pen = self.revisit_pen
         new_state.assigned_pois = self.assigned_pois.copy() # [poi for poi in self.assigned_pois]
         new_state.history = self.history.copy()
+        # save the underlying graph
+        new_state.pg_positions = self.pg_positions
+        new_state.pg_adjacency = self.pg_adjacency
+        new_state.pg_probabilities = self.pg_probabilities
+        # save the pruning techniques
         if self.use_AVP:
             new_state.avail_uav_actions = self.avail_uav_actions.copy()
             new_state.behavior_change = self.behavior_change.copy()
@@ -546,7 +592,8 @@ def get_new_ugv_node(state, robot_idx, last_node=None, blocked=False):
     uav_needs_action = [i for i, uav in enumerate(new_state.uavs) if uav.need_action==True]
     if len(uav_needs_action)>0:
         if new_state.use_AVP:
-            new_state.update_action_bc()
+            # new_state.update_action_bc()
+            new_state.update_action_bc_networkX()
             new_state.uav_actions = ae.get_uav_action_2ag(new_state, uav_needs_action[0])
         elif new_state.use_DAP:
             new_state.uav_actions = ae.get_closest_actions(new_state, uav_needs_action[0])
@@ -584,7 +631,8 @@ def get_uav_belief(state, uav_index):
     if vertex_status == param.EventOutcome.BLOCK: # should not go here
         state.depth += 1
         if state.use_AVP:
-            state.update_action_bc() # move the action bc update here from ground
+            # state.update_action_bc() # move the action bc update here from ground
+            state.update_action_bc_networkX()
             state.uav_actions = ae.get_uav_action_2ag(state, uav_index)
             if len(state.avail_uav_actions) != len(state.behavior_change):
                 raise ValueError("The length of avail_uav_actions & behavior set do not match in get_uav_belief() - 1")
@@ -600,7 +648,8 @@ def get_uav_belief(state, uav_index):
             state.uav_actions[0].update_robotID(uav_index)
         else:
             if state.use_AVP:
-                state.update_action_bc() # move the action bc update here from ground
+                # state.update_action_bc() # move the action bc update here from ground
+                state.update_action_bc_networkX()
                 state.uav_actions = ae.get_uav_action_2ag(state, uav_index)
                 if len(state.avail_uav_actions) != len(state.behavior_change):
                     raise ValueError("The length of avail_uav_actions & behavior set do not match in get_uav_belief() - 2")
@@ -644,7 +693,8 @@ def get_new_uav_node(state, uav_index, blocked=False):
     assert new_state.use_AVP == state.use_AVP
     assert new_state.max_uanum == state.max_uanum
     if new_state.use_AVP:
-        new_state.update_action_bc() # move the action bc update here from ground
+        # new_state.update_action_bc() # move the action bc update here from ground
+        new_state.update_action_bc_networkX()
         new_state.uav_actions = ae.get_uav_action_2ag(new_state, uav_index)
         if len(new_state.avail_uav_actions) != len(new_state.behavior_change):
             raise ValueError("The length of avail_uav_actions & behavior set do not match in get_uav_belief() - 3")

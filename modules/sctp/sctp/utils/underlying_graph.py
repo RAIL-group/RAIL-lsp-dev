@@ -22,6 +22,13 @@ class ProbabilisticGraph:
     positions: np.ndarray
     adjacency: np.ndarray
     probabilities: np.ndarray
+
+def get_initial_edges(graph):
+    initial_edges = []
+    for poi in graph.pois:
+        initial_edges.append([poi.neighbors[0]-1, poi.neighbors[1]-1, poi.block_prob])
+    return initial_edges
+
     
 def set_edge_probabilities(probs: np.ndarray, edges: list, probabilities: np.ndarray):
     """Set edge probabilities for specified edges.
@@ -37,10 +44,14 @@ def set_edge_probabilities(probs: np.ndarray, edges: list, probabilities: np.nda
     
     # Convert edges list to arrays for vectorized indexing
     edges_array = np.array(edges)
+    # print("The numpy edges_array: ", edges_array)
     i_indices = edges_array[:, 0]
     j_indices = edges_array[:, 1]
-    
+    # print("The i_indices: ", i_indices)
+    # print("The j_indices: ", j_indices)
     # Set both directions at once using advanced indexing
+    # print("The original probabilities: ", probabilities_copy)
+    # print("Selected edges", probabilities_copy[i_indices, j_indices])
     probabilities_copy[i_indices, j_indices] = probs
     probabilities_copy[j_indices, i_indices] = probs    
     return probabilities_copy
@@ -82,26 +93,26 @@ def create_adj_prob_matrices(edges, positions):
     probabilities = probabilities + probabilities.T
     return adjacency, probabilities
 
-def create_probabilistic_graph(
-    vertices: list,
-    edges: list,
-) -> ProbabilisticGraph:
-    """Create a complete ProbabilisticGraph.
-    Args:
-        num_vertices: Number of vertices to generate.
-        threshold: Maximum distance for edge existence.
-        bounds: Coordinates range from 0 to bounds.
-        prob_range: (min, max) range for edge probabilities.
+# def create_probabilistic_graph(
+#     vertices: list,
+#     edges: list,
+# ) -> ProbabilisticGraph:
+#     """Create a complete ProbabilisticGraph.
+#     Args:
+#         num_vertices: Number of vertices to generate.
+#         threshold: Maximum distance for edge existence.
+#         bounds: Coordinates range from 0 to bounds.
+#         prob_range: (min, max) range for edge probabilities.
 
-    Returns:
-        A ProbabilisticGraph with generated positions, adjacency, and probabilities.
-    """
-    positions = generate_vertices(vertices)
-    adjacency, probabilities = create_adj_prob_matrices(edges, positions)
-    return ProbabilisticGraph(positions=positions, adjacency=adjacency, probabilities=probabilities)
+#     Returns:
+#         A ProbabilisticGraph with generated positions, adjacency, and probabilities.
+#     """
+#     positions = generate_vertices(vertices)
+#     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
+#     return ProbabilisticGraph(positions=positions, adjacency=adjacency, probabilities=probabilities)
 
 
-def sample_graph(prob_graph: ProbabilisticGraph, probs: np.ndarray, edges:list ) -> np.ndarray:
+def sample_graph(prob_graph: ProbabilisticGraph, probs: np.ndarray) -> np.ndarray:
     """Sample a concrete adjacency matrix from the probabilistic graph.
 
     Generates random values and thresholds against probabilities to determine
@@ -117,10 +128,7 @@ def sample_graph(prob_graph: ProbabilisticGraph, probs: np.ndarray, edges:list )
 
     # Generate random values for upper triangle
     random_vals = np.random.random((n, n))
-    probabilities = set_edge_probabilities(probs, edges, prob_graph.probabilities)
-    # Edge exists where random > probability
-    # edge_exists = random_vals >= prob_graph.probabilities
-    edge_exists = random_vals >= probabilities
+    edge_exists = random_vals >= probs
 
     # Apply to adjacency, keep only upper triangle
     sampled = np.triu(prob_graph.adjacency * edge_exists, k=1)

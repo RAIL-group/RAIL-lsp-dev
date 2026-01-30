@@ -107,12 +107,6 @@ def create_island_bridges_graph():
     graph.add_edge(node13, node14, np.random.uniform(0.2,0.70)) #47
     return [node1, node2, node3], [node15,node13, node16], graph
 
-def get_initial_edges(graph):
-    initial_edges = []
-    for poi in graph.pois:
-        initial_edges.append([poi.neighbors[0]-1, poi.neighbors[1]-1, poi.block_prob])
-    return initial_edges
-
 def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
     count = 0
     graph, islands, points = g.generate_island_graph(n_islands=n_island, xmin=xmin, ymin=ymin, 
