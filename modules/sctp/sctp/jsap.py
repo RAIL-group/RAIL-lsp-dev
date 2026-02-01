@@ -50,7 +50,7 @@ class JSAPState(object):
             self.use_DAP = useDAP
             # set up underlying graph for sampling
             edges = ug.get_initial_edges(self.graph)
-            self.pg_positions = ug.generate_vertices(self.graph.vertices)
+            self.pg_positions = ug.get_vertex_positions(self.graph.vertices)
             self.pg_adjacency, self.pg_probabilities = ug.create_adj_prob_matrices(edges, self.pg_positions)
             # set the pruning techniques
             if self.use_AVP or self.use_DAP:
@@ -234,18 +234,21 @@ class JSAPState(object):
         for act, outcome  in self.history.get_data().items():
             if act.target not in self.graph.poiIDs:
                 continue
-            # poi = 
             neighbors = self.graph.get_poi(act.target).neighbors
             status_edges.append([neighbors[0]-1, neighbors[1]-1])
             if outcome == param.EventOutcome.BLOCK:
                 probs.append(1.0)
             else:            
                 probs.append(0.0)
-        new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
+        if len(status_edges) > 0:
+            new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
                         probabilities=self.pg_probabilities) 
+        else:
+            new_probabilities = self.pg_probabilities.copy()
         pg = ug.ProbabilisticGraph(positions=self.pg_positions, adjacency=self.pg_adjacency, \
                                         probabilities=new_probabilities)
         min_bc = 0.0
+        
         for ii, act in enumerate(self.avail_uav_actions):
             if act.target in self.assigned_pois:
                 continue

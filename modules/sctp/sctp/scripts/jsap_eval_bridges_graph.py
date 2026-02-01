@@ -47,7 +47,7 @@ def _setup(args):
         use_DAP = False
         args.max_depth = 20
         
-    elif args.planner == 'jsapavp':
+    elif args.planner == 'jsapiap':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
         args.max_depth = 20

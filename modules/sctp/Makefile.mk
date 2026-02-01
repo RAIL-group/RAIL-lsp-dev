@@ -1,19 +1,19 @@
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
-SCTP_NUM_EXPERIMENTS = 5
+SCTP_NUM_EXPERIMENTS = 50
 SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
 # SCTP_EXPERIMENT_NAME = Oct29_rg${SCTP_NUM_VERTICES}v_jsctp
-SCTP_EXPERIMENT_NAME = Jan13
+SCTP_EXPERIMENT_NAME = Jan30
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
 
-GRAPHS = island
+GRAPHS = dense
 
-JSAP_PLANNERS = jsapiap
+JSAP_PLANNERS = jsapiap jsapdap
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
@@ -46,28 +46,12 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 # 		--max_depth 20 \
 # 		--num_ugvs $(SCTP_NUM_GROUNDS)
 
-# .PHONY: jsap-eval-dense-graphs
-# jsap-eval-dense-graphs: $(all-targets-jsap-eval)
-# $(all-targets-jsap-eval):
-# 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
-# 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-# 	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_dense_graph \
-# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
-# 		--num_drones $(SCTP_NUM_DRONES) \
-# 		--planner $(jsap_planner) \
-# 		--seed $(jsap_seed) \
-# 		--num_iterations 1000 \
-# 		--sampling_maps 200 \
-# 		--C 200 \
-# 		--max_depth 20 \
-# 		--num_ugvs $(SCTP_NUM_GROUNDS) \
-
-.PHONY: jsap-eval-island-bridges-graphs
-jsap-eval-island-bridges-graphs: $(all-targets-jsap-eval)
+.PHONY: jsap-eval-dense-graphs
+jsap-eval-dense-graphs: $(all-targets-jsap-eval)
 $(all-targets-jsap-eval):
 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_island_bridges_graph \
+	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_dense_graph \
 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
@@ -77,6 +61,22 @@ $(all-targets-jsap-eval):
 		--C 200 \
 		--max_depth 20 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \
+
+# .PHONY: jsap-eval-island-bridges-graphs
+# jsap-eval-island-bridges-graphs: $(all-targets-jsap-eval)
+# $(all-targets-jsap-eval):
+# 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
+# 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
+# 	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_island_bridges_graph \
+# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
+# 		--num_drones $(SCTP_NUM_DRONES) \
+# 		--planner $(jsap_planner) \
+# 		--seed $(jsap_seed) \
+# 		--num_iterations 1000 \
+# 		--sampling_maps 200 \
+# 		--C 200 \
+# 		--max_depth 15 \
+# 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 
 
 

@@ -282,7 +282,7 @@ def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
     args.planner = 'jsapiap'
-    args.seed = 2000
+    args.seed = 3022
     random.seed(args.seed)
     np.random.seed(args.seed)
     args.num_ugvs =1
@@ -328,24 +328,24 @@ def test_jsap_plan_exec_randomgraph():
         use_DAP = False
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 9
+        args.max_depth = 15
         # max_uanum = max_uanum
-        args.num_iterations = 500
-        args.n_maps = 100
+        args.num_iterations = 1000
+        args.n_maps = 200
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
-        print(f"Testing JSAP-AVP planner with use_AVP={use_AVP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
+        print(f"Testing JSAP-IAP planner with use_IAP={use_AVP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
     
     elif args.planner == 'jsapdap':
         use_AVP=False
         use_DAP = True
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 14
+        args.max_depth = 10
         # max_uanum = max_uanum
-        args.num_iterations = 1000
-        args.n_maps = 200
+        args.num_iterations = 500
+        args.n_maps = 100
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]

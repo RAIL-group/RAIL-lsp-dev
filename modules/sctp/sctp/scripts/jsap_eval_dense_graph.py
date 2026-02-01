@@ -56,7 +56,7 @@ def _setup(args):
         args.max_depth = 18
         args.num_iterations = 1000 #12000 #6000+3500*(args.num_drones-1) #3000
         max_uanum = 1
-    elif args.planner == 'jsapavp':
+    elif args.planner == 'jsapiap':
         use_AVP = True
         use_DAP = False
         args.num_drones = 1
@@ -64,11 +64,11 @@ def _setup(args):
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
-        args.max_depth = 14 #(2ugvs-1uav) #8 #(1ugv-1uav)
+        args.max_depth = 15 #(2ugvs-1uav) #8 #(1ugv-1uav)
         args.sampling_maps = 200
         max_uanum = 1
     
-    elif args.planner == 'jsapavp2':
+    elif args.planner == 'jsapiap2':
         args.num_drones = 2
         assert args.num_ugvs == 2
         max_uanum = 1
@@ -78,14 +78,14 @@ def _setup(args):
         use_DAP = False
         param.REVISIT_PEN = 0.0
         args.num_iterations = 1000
-        args.max_depth = 8 #(1ugv-2uavs)
+        args.max_depth = 15 #(1ugv-2uavs)
         args.sampling_maps = 65
     
     elif args.planner == 'jsapdap':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
         max_uanum = 1
-        args.max_depth = 14
+        args.max_depth = 15
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
@@ -100,7 +100,7 @@ def _setup(args):
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     assert args.sampling_maps == 200
-    assert args.max_depth == 14
+    # assert args.max_depth == 14
     assert args.num_iterations == 1000
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
                         uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\

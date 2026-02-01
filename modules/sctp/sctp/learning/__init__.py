@@ -1,1 +1,1 @@
-from .gnn_model import BlockScoutNNConv
+from . import iap_gnn

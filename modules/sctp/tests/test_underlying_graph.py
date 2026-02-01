@@ -6,7 +6,7 @@ import numpy as np
 import sctp.sctp_graphs as graphs
 from sctp.utils.underlying_graph import (
     ProbabilisticGraph,
-    generate_vertices,
+    get_vertex_positions,
     create_adj_prob_matrices,
     set_edge_probabilities,
     get_initial_edges,
@@ -21,7 +21,7 @@ def test_probabilistic_graph_dataclass():
     starts, goals, graph = graphs.disjoint_unc()
     graph.print_graph_config()
     edges = graphs.get_initial_edges(graph)
-    positions = generate_vertices(graph.vertices)
+    positions = get_vertex_positions(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
     pg = ProbabilisticGraph(
@@ -48,7 +48,7 @@ def test_set_edges():
     starts, goals, graph = graphs.disjoint_unc()
     graph.print_graph_config()
     edges = get_initial_edges(graph)
-    positions = generate_vertices(graph.vertices)
+    positions = get_vertex_positions(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
     pg = ProbabilisticGraph(
@@ -69,7 +69,7 @@ def test_sample_graph():
     starts, goals, graph = graphs.disjoint_unc()
     graph.print_graph_config()
     edges = get_initial_edges(graph)
-    positions = generate_vertices(graph.vertices)
+    positions = get_vertex_positions(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
     pg = ProbabilisticGraph(
@@ -89,7 +89,7 @@ def test_shortest_path_sgraph():
     starts, goals, graph = graphs.s_graph_unc()
     graph.print_graph_config()
     edges = get_initial_edges(graph)
-    positions = generate_vertices(graph.vertices)
+    positions = get_vertex_positions(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
     pg = ProbabilisticGraph(
@@ -111,7 +111,7 @@ def test_shortest_path_island_bridges_graph():
     starts, goals, graph = graphs.get_insland_bridges_graph()
     graph.print_graph_config()
     edges = get_initial_edges(graph)
-    positions = generate_vertices(graph.vertices)
+    positions = get_vertex_positions(graph.vertices)
     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
 
     pg = ProbabilisticGraph(

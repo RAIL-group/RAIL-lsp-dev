@@ -50,6 +50,8 @@ class Graph():
         if poi_id not in self.poiIDs:
             print(f"The poiID: {poi_id} is not in the list of poi's IDs: {self.poiIDs}")
             raise ValueError("POI ID not found in graph.")
+        indx = self.poiIDs.index(poi_id)
+        # print("The poi's ID: ", indx)
         return self.pois[self.poiIDs.index(poi_id)]
     
     def get_vertex_by_id(self, vertex_id):
@@ -221,6 +223,7 @@ def generate_random_graph(n_vertex, xmin, ymin, max_edge_len, min_edge_len, num_
         neighbor1 = graph.get_vertex_by_id(poi_to_remove.neighbors[0])
         neighbor2 = graph.get_vertex_by_id(poi_to_remove.neighbors[1])
         if len(neighbor1.neighbors) >=4 and len(neighbor2.neighbors) >=4:
+            graph.poiIDs.remove(poi_to_remove.id)
             graph.pois.remove(poi_to_remove)
             graph.edges = [edge for edge in graph.edges if edge.v1.id != poi_to_remove.id and edge.v2.id != poi_to_remove.id]
             neighbor1.neighbors.remove(poi_to_remove.id)

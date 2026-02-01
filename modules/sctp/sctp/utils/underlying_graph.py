@@ -32,7 +32,6 @@ def get_initial_edges(graph):
     
 def set_edge_probabilities(probs: np.ndarray, edges: list, probabilities: np.ndarray):
     """Set edge probabilities for specified edges.
-
     Args:
         prob: Probability to set for the edges.
         edges: List of (i, j) tuples specifying edges to update.
@@ -40,33 +39,15 @@ def set_edge_probabilities(probs: np.ndarray, edges: list, probabilities: np.nda
     probabilities_copy = probabilities.copy()
     
     if len(edges) == 0:
-        return probabilities_copy
-    
-    # Convert edges list to arrays for vectorized indexing
+        return probabilities_copy    
     edges_array = np.array(edges)
-    # print("The numpy edges_array: ", edges_array)
     i_indices = edges_array[:, 0]
     j_indices = edges_array[:, 1]
-    # print("The i_indices: ", i_indices)
-    # print("The j_indices: ", j_indices)
-    # Set both directions at once using advanced indexing
-    # print("The original probabilities: ", probabilities_copy)
-    # print("Selected edges", probabilities_copy[i_indices, j_indices])
     probabilities_copy[i_indices, j_indices] = probs
     probabilities_copy[j_indices, i_indices] = probs    
     return probabilities_copy
 
-def generate_vertices(vertices) -> np.ndarray:
-    """Generate random vertex positions sorted by top-left to bottom-right.
-
-    Args:
-        num_vertices: Number of vertices to generate.
-        bounds: Coordinates range from 0 to bounds.
-
-    Returns:
-        (num_vertices, 2) array of (x, y) coordinates, sorted so index 0 is
-        top-left-most (smallest x+y) and index -1 is bottom-right-most (largest x+y).
-    """
+def get_vertex_positions(vertices) -> np.ndarray:
     positions = np.array([[v.coord[0], v.coord[1]] for v in vertices])
     return positions
 
@@ -93,31 +74,11 @@ def create_adj_prob_matrices(edges, positions):
     probabilities = probabilities + probabilities.T
     return adjacency, probabilities
 
-# def create_probabilistic_graph(
-#     vertices: list,
-#     edges: list,
-# ) -> ProbabilisticGraph:
-#     """Create a complete ProbabilisticGraph.
-#     Args:
-#         num_vertices: Number of vertices to generate.
-#         threshold: Maximum distance for edge existence.
-#         bounds: Coordinates range from 0 to bounds.
-#         prob_range: (min, max) range for edge probabilities.
-
-#     Returns:
-#         A ProbabilisticGraph with generated positions, adjacency, and probabilities.
-#     """
-#     positions = generate_vertices(vertices)
-#     adjacency, probabilities = create_adj_prob_matrices(edges, positions)
-#     return ProbabilisticGraph(positions=positions, adjacency=adjacency, probabilities=probabilities)
-
 
 def sample_graph(prob_graph: ProbabilisticGraph, probs: np.ndarray) -> np.ndarray:
     """Sample a concrete adjacency matrix from the probabilistic graph.
-
     Generates random values and thresholds against probabilities to determine
     which edges exist in this sample.
-
     Args:
         prob_graph: The probabilistic graph to sample from.
 
@@ -256,18 +217,3 @@ def plot_probabilistic_graph_with_samples(
 
     plt.tight_layout()
     return fig
-
-
-if __name__ == "__main__":
-    # Create probabilistic graph
-    print("Creating probabilistic graph with 100 vertices...")
-    prob_graph = create_probabilistic_graph(num_vertices=100, threshold=25.0)
-
-    print(f"Graph has {len(prob_graph.positions)} vertices")
-    num_edges = np.sum(prob_graph.adjacency > 0) // 2
-    print(f"Probabilistic graph has {num_edges} possible edges")
-
-    # Display visualization
-    print("Generating visualization...")
-    fig = plot_probabilistic_graph_with_samples(prob_graph, num_samples=3, seed=42)
-    plt.show()

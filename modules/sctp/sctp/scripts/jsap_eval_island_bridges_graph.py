@@ -16,7 +16,7 @@ def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     print_pdf = False
-    starts, goals, graph, iedges = graphs.get_insland_bridges_graph()
+    starts, goals, graph = graphs.get_insland_bridges_graph()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
@@ -49,7 +49,7 @@ def _setup(args):
     elif args.planner == 'jsapiap':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
-        args.max_depth = 20
+        args.max_depth = 15
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = True
@@ -58,7 +58,7 @@ def _setup(args):
     elif args.planner == 'jsapdap':
         args.num_drones = 1
         param.REVISIT_PEN = 0.0
-        args.max_depth = 20
+        args.max_depth = 15
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False

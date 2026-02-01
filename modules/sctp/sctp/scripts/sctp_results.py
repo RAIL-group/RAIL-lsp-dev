@@ -52,16 +52,16 @@ def extract_costs(file_path):
             samptime = float(parts[8].split(': ')[1].strip())
             spolicytime = float(parts[9].split(': ')[1].strip())
             if seed not in seed_costs:
-                seed_costs[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapavp": None, \
-                                    "jsapavp2": None, "jsapdap": None, "dsapavp": None}
-                seed_truntimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapavp": None, \
-                            "jsapavp2": None,"jsapdap": None, "dsapavp": None}
-                seed_steptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapavp": None, \
-                            "jsapavp2": None,"jsapdap": None, "dsapavp": None}
-                seed_samptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapavp": None, \
-                            "jsapavp2": None,"jsapdap": None, "dsapavp": None}
-                seed_spolicytimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapavp": None, \
-                            "jsapavp2": None,"jsapdap": None, "dsapavp": None}
+                seed_costs[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
+                                    "jsapiap2": None, "jsapdap": None, "dsapavp": None}
+                seed_truntimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
+                            "jsapiap2": None,"jsapdap": None, "dsapavp": None}
+                seed_steptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
+                            "jsapiap2": None,"jsapdap": None, "dsapavp": None}
+                seed_samptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
+                            "jsapiap2": None,"jsapdap": None, "dsapavp": None}
+                seed_spolicytimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
+                            "jsapiap2": None,"jsapdap": None, "dsapavp": None}
             seed_costs[seed][planner] = cost
             seed_truntimes[seed][planner] = truntime
             seed_steptimes[seed][planner] = steptime
@@ -81,8 +81,8 @@ def get_planner_data(seed_costs):
         jsap.append(seed_costs[seed]["jsap"])
         jsap2.append(seed_costs[seed]["jsap2"])
         base.append(seed_costs[seed]["ctp"])
-        jsapavp.append(seed_costs[seed]["jsapavp"])
-        jsapavp2.append(seed_costs[seed]["jsapavp2"])
+        jsapavp.append(seed_costs[seed]["jsapiap"])
+        jsapavp2.append(seed_costs[seed]["jsapiap2"])
         jsapdap.append(seed_costs[seed]["jsapdap"])
         dsapavp.append(seed_costs[seed]["dsapavp"])
     return base, jsap, jsapavp, jsapdap, dsapavp, jsap2, jsapavp2
@@ -101,12 +101,12 @@ def plot_scatter_data(file_path, args):
     base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, dsapavp_spolicytimes, jsap2_spolicytimes, \
                 jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
     
-    print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
+    if base_dist[0] != None:
+        print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
           f"steptime: {np.average(base_steptimes):0.2f}, samptime: {np.average(base_samptimes):0.2f}, "\
           f"spolicytime: {np.average(base_spolicytimes):0.2f}, total runtime: {np.average(base_ttimes):0.2f}")
     
     if jsap_dist[0] != None:
-        # print(f"jsap dist data: {jsap_dist}")
         plotting.make_scatter_plot_with_box(base_dist, jsap_dist, xlabel='CTP', ylabel='JSAP')
         args.num_drones = 1
         image_name = Path(args.save_dir) / f'plot_cost_ctp_jsap_{args.num_ugvs}UGVs.png'
@@ -133,7 +133,7 @@ def plot_scatter_data(file_path, args):
         image_name = Path(args.save_dir) / f'plot_cost_ctp_jsapavp_{args.num_drones}UAVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAPAVP: costs: {np.average(jsapavp_dist):0.2f},  "\
+        print(f"JSAPIAP: costs: {np.average(jsapavp_dist):0.2f},  "\
           f"steptime: {np.average(jsapavp_steptimes):0.2f}, samptime: {np.average(jsapavp_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsapavp_spolicytimes):0.2f}, total runtime: {np.average(jsapavp_ttimes):0.2f}")
     
