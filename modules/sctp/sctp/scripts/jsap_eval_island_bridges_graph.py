@@ -22,7 +22,7 @@ def _setup(args):
     
     num_uav = 1
     num_ugv = 1
-    assert args.num_drones == num_uav, "This script only supports 1 UAV"
+    
     assert args.num_ugvs == num_ugv, "This script only supports 1 UGV"
     
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
@@ -43,7 +43,7 @@ def _setup(args):
         param.REVISIT_PEN = 0.0
         use_AVP = False
         use_DAP = False
-        args.max_depth = 20
+        args.max_depth = 15
         args.num_iterations = 1000
         
     elif args.planner == 'jsapiap':

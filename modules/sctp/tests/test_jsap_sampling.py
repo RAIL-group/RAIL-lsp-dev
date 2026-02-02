@@ -53,8 +53,9 @@ def test_sap_sampling_sgraph():
 
 
 def test_jsap_gen_data():
-    path = '/data/sctp/jsap_sgraph_data'
-    num_graphs = 5
-    num_maps = 60
-    data_gen.generate_dataset(path=path, num_graphs=num_graphs,num_maps=num_maps)
+    path = '/data/sctp/graph_data/'
+    num_graphs = 1
+    num_maps = 500
+    graph_type = 'island'
+    data_gen.generate_dataset(filepath=path, num_graphs=num_graphs,num_maps=num_maps, graph_type=graph_type)
  

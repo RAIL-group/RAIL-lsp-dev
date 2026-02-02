@@ -20,8 +20,6 @@ class GraphData:
     """Data structure to store graph information"""
     adjacency_matrix: np.ndarray
     edge_probabilities: np.ndarray
-    edge_features: np.ndarray
-    node_features: np.ndarray
     edge_list: List[Tuple[int, int]]
     start: np.ndarray
     goal: np.ndarray
@@ -96,16 +94,17 @@ def create_graph_datum(
         goal=goal_vector.astype(np.float32),
         action=action_vector.astype(np.float32),
         value=value_vector.astype(np.float32),
-        num_nodes=nxgraph.number_of_nodes(),
-        num_edges=nxgraph.number_of_edges(),
+        # num_nodes=nxgraph.number_of_nodes(),
+        # num_edges=nxgraph.number_of_edges(),
         graph_metadata=metadata,
     )
 
 
 def generate_dataset(
-    path: str,
+    filepath: str,
     num_graphs: int,
     num_maps: int = 500,
+    graph_type: str = 'random',
 ) -> List[GraphData]:
     """
     Generate a dataset of multiple graphs
@@ -122,29 +121,37 @@ def generate_dataset(
     Returns:
         List of GraphData objects
     """
-    dataset = []
-    num_data_per_graph = 100
+    # dataset = []
+    num_data_per_graph_per_action = 50
     seeds = random.sample(range(1000, 10000), num_graphs)
     for i in range(num_graphs):
         np.random.seed(seeds[i])
         random.seed(seeds[i])
         # Generate random number of nodes
-        _, _, graph = graphs.get_insland_bridges_graph()
+        if graph_type == 'island':
+            _, _, graph = graphs.get_insland_bridges_graph()
+        elif graph_type == 'dense':
+            _, _, graph = graphs.random_graph()
+        else:
+            raise ValueError(f"Graph type {graph_type} not recognized")
         edges = ug.get_initial_edges(graph)
         vertex_positions = ug.get_vertex_positions(graph.vertices)
         adjacency_matrix, probability_matrix = ug.create_adj_prob_matrices(edges, vertex_positions)
-            
+        action = 0
         for poi in graph.pois:
             edge = [poi.neighbors[0]-1, poi.neighbors[1]-1] # calculate its value
             count = 0
-            while count < num_data_per_graph:
+            while count < num_data_per_graph_per_action:
                 start, goal = random.sample(range(0, len(graph.vertices)), 2)
                 num_known_edges = random.randint(0, len(graph.pois)-1)
                 known_edges = random.sample(graph.pois, num_known_edges)
                 known_edge_list = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
                 known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges]
                 if edge in known_edges_id:
+                    idx = known_edges_id.index(edge)
+                    known_edge_list.pop(idx)
                     known_edges_id.remove(edge)
+                    
                 new_probability_matrix = ug.set_edge_probabilities(
                     probs=np.array(known_edge_list),
                     edges=known_edges_id,
@@ -163,34 +170,34 @@ def generate_dataset(
                     n_samples=num_maps
                 )
                 graph_data = create_graph_datum(graph=pg, action=edge, start=start, goal=goal, value=bc)
-                write_datum_to_file(path, seeds[i], graph_data, count)
-                # dataset.append(graph_data)
+                write_datum_to_file(filepath, seeds[i], graph_data, action, count)
                 count += 1
+            action += 1
     # return dataset
 
-def write_datum_to_file(path, seed, datum, counter):
+def write_datum_to_file(filepath, seed, datum, action, counter):
     """Write a single datum to file and append name to csv record."""
     # Get the data file name
-    data_filename = os.path.join('pickles', f'dat_{seed}_{counter}.pgz')
-    learning.data.write_compressed_pickle(
-        os.path.join(path, data_filename), datum)
-    csv_filename = f'{path}_{seed}.csv'
-    with open(os.path.join(path, csv_filename), 'a') as f:
+    data_filename = os.path.join('pickles', f'dat_{seed}_{action}_{counter}.pgz')
+    learning.data.write_compressed_pickle(os.path.join(filepath, data_filename), datum)
+    csv_filename = f'graph_{seed}.csv'
+    with open(os.path.join(filepath, csv_filename), 'a') as f:
         f.write(f'{data_filename}\n')
         
 
 def _setup(args):
-    # print(f"Planner: {args.planner}, a team of {args.num_ugvs}UGV(s)-{args.num_drones}UAV(s), iters.: {args.num_iterations},"
-    #       f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP:{use_AVP}, DAP:{use_DAP}") 
+    print(f"Graph_Type: {args.graph_type}, number of maps for sampling {args.num_maps}-number of graph: {args.num_graphs},"
+          f" saving to: {args.save_dir}") 
     
     generate_dataset(path=args.save_dir, num_graphs= args.num_graphs,
-                        num_maps = args.num_maps)
+                        num_maps = args.num_maps, graph_type=args.graph_type)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default='/data/sctp')
     parser.add_argument('--num_maps', type=int, default=500)
     parser.add_argument('--num_graphs', type=int, default=5)
+    parser.add_argument('--graph_type', type=str, default='dense')
     args = parser.parse_args()
 
     _setup(args)

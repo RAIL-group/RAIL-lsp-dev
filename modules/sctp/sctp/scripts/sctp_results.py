@@ -107,55 +107,61 @@ def plot_scatter_data(file_path, args):
           f"spolicytime: {np.average(base_spolicytimes):0.2f}, total runtime: {np.average(base_ttimes):0.2f}")
     
     if jsap_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsap_dist, xlabel='CTP', ylabel='JSAP')
+        plotting.make_scatter_plot_with_box(base_dist, jsap_dist, xlabel='CTP', ylabel='SAP')
         args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_jsap_{args.num_ugvs}UGVs.png'
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sap_{args.num_ugvs}UGVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAP: costs: {np.average(jsap_dist):0.2f}, "\
+        print(f"SAP: costs: {np.average(jsap_dist):0.2f}, "\
           f"steptime: {np.average(jsap_steptimes):0.2f}, samptime: {np.average(jsap_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsap_spolicytimes):0.2f}, total runtime: {np.average(jsap_ttimes):0.2f}")
         
     
     if jsap2_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsap2_dist, xlabel='CTP', ylabel='JSAP2')
+        plotting.make_scatter_plot_with_box(base_dist, jsap2_dist, xlabel='CTP', ylabel='SAP2')
         args.num_drones = 2
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_jsap2_{args.num_ugvs}UGVs.png'
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sap2_{args.num_ugvs}UGVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAP2: costs: {np.average(jsap2_dist):0.2f},  "\
+        print(f"SAP2: costs: {np.average(jsap2_dist):0.2f},  "\
           f"steptime: {np.average(jsap2_steptimes):0.2f}, samptime: {np.average(jsap2_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsap2_spolicytimes):0.2f}, total runtime: {np.average(jsap2_ttimes):0.2f}")
     
     if jsapavp_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapavp_dist, xlabel='CTP', ylabel='JSAP-AVP')
+        plotting.make_scatter_plot_with_box(base_dist, jsapavp_dist, xlabel='CTP', ylabel='SAP-IAP')
         args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_jsapavp_{args.num_drones}UAVs.png'
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapiap_{args.num_drones}UAVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAPIAP: costs: {np.average(jsapavp_dist):0.2f},  "\
+        print(f"SAPIAP: costs: {np.average(jsapavp_dist):0.2f},  "\
           f"steptime: {np.average(jsapavp_steptimes):0.2f}, samptime: {np.average(jsapavp_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsapavp_spolicytimes):0.2f}, total runtime: {np.average(jsapavp_ttimes):0.2f}")
     
     if jsapavp2_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapavp2_dist, xlabel='CTP', ylabel='JSAP-AVP2')
+        plotting.make_scatter_plot_with_box(base_dist, jsapavp2_dist, xlabel='CTP', ylabel='SAP-IAP2')
         args.num_drones = 2
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_jsapavp2_{args.num_ugvs}UGVs.png'
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapiap2_{args.num_ugvs}UGVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAPAVP2: costs: {np.average(jsapavp2_dist):0.2f},  "\
+        print(f"SAPIAP2: costs: {np.average(jsapavp2_dist):0.2f},  "\
           f"steptime: {np.average(jsapavp2_steptimes):0.2f}, samptime: {np.average(jsapavp2_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsapavp2_spolicytimes):0.2f}, total runtime: {np.average(jsapavp2_ttimes):0.2f}")
     
     if jsapdap_dist[0] != None:
         plotting.make_scatter_plot_with_box(base_dist, jsapdap_dist, xlabel='CTP', ylabel='SAP-DAP')
         args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_jsapdap_{args.num_ugvs}UGVs.png'
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapdap_{args.num_ugvs}UGVs.png'
         plt.tight_layout()
         plt.savefig(image_name)
-        print(f"JSAP-DAP: costs: {np.average(jsapdap_dist):0.2f},  "\
+        print(f"SAP-DAP: costs: {np.average(jsapdap_dist):0.2f},  "\
           f"steptime: {np.average(jsapdap_steptimes):0.2f}, samptime: {np.average(jsapdap_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsapdap_spolicytimes):0.2f}, total runtime: {np.average(jsapdap_ttimes):0.2f}")
+    
+        plotting.make_scatter_plot_with_box(jsapdap_dist, jsapavp_dist, xlabel='SAP-DAP', ylabel='SAP-IAP')
+        args.num_drones = 1
+        image_name = Path(args.save_dir) / f'plot_cost_sapdap_sapiap_{args.num_ugvs}UGVs.png'
+        plt.tight_layout()
+        plt.savefig(image_name)
     
     if dsapavp_dist[0] != None:
         plotting.make_scatter_plot_with_box(base_dist, dsapavp_dist, xlabel='CTP', ylabel='DSAP-AVP')

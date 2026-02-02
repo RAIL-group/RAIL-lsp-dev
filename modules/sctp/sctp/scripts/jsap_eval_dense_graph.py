@@ -43,7 +43,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         max_uanum = 1
-        args.max_depth = 18
+        args.max_depth = 15
         args.num_iterations = 1000
     elif args.planner =='jsap2':
         use_AVP = False
@@ -53,7 +53,7 @@ def _setup(args):
         assert args.num_ugvs == 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
-        args.max_depth = 18
+        args.max_depth = 15
         args.num_iterations = 1000 #12000 #6000+3500*(args.num_drones-1) #3000
         max_uanum = 1
     elif args.planner == 'jsapiap':

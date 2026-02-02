@@ -1,6 +1,6 @@
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
-SCTP_NUM_EXPERIMENTS = 50
+SCTP_NUM_EXPERIMENTS = 100
 SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
@@ -80,20 +80,17 @@ $(all-targets-jsap-eval):
 
 
 
-# .PHONY: sctp-a-random-graph
-# sctp-a-random-graph:
-# 	@echo "Evaluating: planner execution"
-# 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)
-# 	@$(DOCKER_PYTHON) -m sctp.scripts.sctp_eval_random_graph \
-# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
-# 		--num_drones $(SCTP_NUM_DRONES) \
-# 		--planner "base" \
-# 		--seed 2035 \
-# 		--num_iterations 1000 \
-# 		--C 30 \
-# 		--v_num $(SCTP_NUM_VERTICES) \
-# 		--resolution 0.05 \
-
+.PHONY: sap-generate-data
+sap-generate-data:
+	@echo "Generating training data"
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles
+	@$(DOCKER_PYTHON) -m sctp.scripts.data_gen \
+	 	--save_dir data/$(SCTP_BASENAME)/graph_data \
+		--num_maps 500 \
+		--num_graphs 1 \
+		--graph_type "island" \
+		
 # .PHONY: sctp-planner-test
 # sctp-planner-test:
 # 	@echo "Evaluating: planner: $(planner), seed: 3000"
