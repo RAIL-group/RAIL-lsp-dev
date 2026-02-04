@@ -5,6 +5,8 @@ from sctp.param import TRAV_LEVEL, MAX_EDGE_LENGTH, MIN_EDGE_LENGTH
 from sctp import param
 from sctp import graph as g
 import math
+MAX_ISLAND_DISTANCE = 35.0
+MIN_ISLAND_DISTANCE = 20.0
 
 
 def random_graph(n_vertex=8, xmin=0, ymin=0, SG_pairs=1):
@@ -107,10 +109,10 @@ def create_island_bridges_graph():
     graph.add_edge(node13, node14, np.random.uniform(0.2,0.70)) #47
     return [node1, node2, node3], [node15,node13, node16], graph
 
-def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
+def random_island_graph(n_island=6, xmin=0, ymin=0, SG_dist_min=10):
     count = 0
     graph, islands, points = g.generate_island_graph(n_islands=n_island, xmin=xmin, ymin=ymin, 
-                                max_edge_len=param.MAX_ISLAND_DISTANCE,min_edge_len=param.MIN_ISLAND_DISTANCE)
+                                max_edge_len=MAX_ISLAND_DISTANCE,min_edge_len=MIN_ISLAND_DISTANCE)
     while True:
         islands_vertices = [vertex for graph in islands for vertex in graph.vertices]
         start = min(enumerate(islands_vertices), key=lambda v: v[1].coord[0])[1]
@@ -132,6 +134,141 @@ def random_island_graph(n_island=5, xmin=0, ymin=0, SG_dist_min=10):
         if count > 2000:
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return start, goal, graph
+
+def generate_islands_locations(xmin=0, ymin=0):
+    locations = []
+    loc1 = (np.random.uniform(xmin+0.0, xmin+5.0), np.random.uniform(ymin+0.0, ymin+5.0))
+    locations.append(loc1)
+    loc2 = (np.random.uniform(xmin+40.0, xmin+50.0), np.random.uniform(ymin+0.0, ymin+5.0))
+    locations.append(loc2)
+    loc3 = (np.random.uniform(xmin+95.0, xmin+105.0), np.random.uniform(ymin+0.0, ymin+10.0))
+    locations.append(loc3)
+    loc4 = (np.random.uniform(xmin+40.0, xmin+70.0), np.random.uniform(ymin+26.0, ymin+40.0))
+    locations.append(loc4)
+    loc5 = (np.random.uniform(xmin+5.0, xmin+15.0), np.random.uniform(ymin+55.0, ymin+65.0))
+    locations.append(loc5)
+    loc6 = (np.random.uniform(xmin+80.0, xmin+90.0), np.random.uniform(ymin+55.0, ymin+65.0))
+    locations.append(loc6)
+    return locations
+
+def get_isolated_islands(locations):
+    islands = []
+    for i, loc in enumerate(locations):
+        if i == 3:
+            num_points = 5
+        else:
+            num_points = 4
+        points = g.generate_points_around(loc, min_dist=6.0, max_dist=8.5, num_points=num_points)
+        islands.append(points)
+    return islands
+
+def connect_inside_island(island, graph, island_id):
+    nodes = []
+    for i in range(len(island)):
+        vertex = g.Vertex(coord=island[i])
+        nodes.append(vertex)
+        graph.add_vertex(vertex)
+        if 0 < i < len(island):
+            if island_id == 0 or island_id == 2:
+                graph.add_edge(nodes[i], nodes[i-1], 0.0)
+            else:
+                graph.add_edge(nodes[i], nodes[i-1], np.random.uniform(0.1,0.2))
+        
+    graph.add_edge(nodes[0], nodes[-1], 0.05)
+    
+def connect_island2island(graph):
+    island1 = graph.vertices[0:4]
+    island2 = graph.vertices[4:8]
+    island3 = graph.vertices[8:12]
+    island4 = graph.vertices[12:17]
+    island5 = graph.vertices[17:21]
+    island6 = graph.vertices[21:25]
+    is1x_max = np.argmax([node.coord[0] for node in island1])
+    is1y_max = np.argmax([node.coord[1] for node in island1])
+    is1x_min = np.argmin([node.coord[0] for node in island1])
+    is1y_min = np.argmin([node.coord[1] for node in island1])
+    
+    is2x_max = np.argmax([node.coord[0] for node in island2])
+    is2x_min = np.argmin([node.coord[0] for node in island2])
+    is2y_max = np.argmax([node.coord[1] for node in island2])
+    is2y_min = np.argmin([node.coord[1] for node in island2])
+    
+    is3x_min = np.argmin([node.coord[0] for node in island3])
+    is3x_max = np.argmax([node.coord[0] for node in island3])
+    is3y_max = np.argmax([node.coord[1] for node in island3])
+    is3y_min = np.argmin([node.coord[1] for node in island3])
+    
+    is4x_min = np.argmin([node.coord[0] for node in island4])
+    is4y_min = np.argmin([node.coord[1] for node in island4])
+    is4x_max = np.argmax([node.coord[0] for node in island4])
+    is4y_max = np.argmax([node.coord[1] for node in island4])
+    
+    is5x_min = np.argmin([node.coord[0] for node in island5])
+    is5y_min = np.argmin([node.coord[1] for node in island5])
+    is5y_max = np.argmax([node.coord[1] for node in island5])
+    
+    is6x_min = np.argmin([node.coord[0] for node in island6])
+    is6x_max = np.argmax([node.coord[0] for node in island6])
+    is6y_max = np.argmax([node.coord[1] for node in island6])
+    is6y_min = np.argmin([node.coord[1] for node in island6])
+    
+    # island 1 to island 2    
+    graph.add_edge(island1[is1y_min], island2[is2x_min], np.random.uniform(0.5,0.6))
+    # island 1 to island 4
+    graph.add_edge(island1[is1y_max], island4[is4x_min], np.random.uniform(0.4,0.55))
+    # island 1 to island 5
+    graph.add_edge(island1[is1x_min], island5[is5x_min], np.random.uniform(0.15,0.3))
+    # island 2 to island 3
+    graph.add_edge(island2[is2y_min], island3[is3x_min], np.random.uniform(0.55,0.7))
+    # island 2 to island 4
+    graph.add_edge(island2[is2y_max], island4[is4y_min], np.random.uniform(0.4,0.55))
+    # island 3 to island 4
+    graph.add_edge(island3[is3y_max], island4[is4x_max], np.random.uniform(0.4,0.55))
+    # island 3 to island 6
+    graph.add_edge(island3[is3x_max], island6[is6x_max], np.random.uniform(0.15,0.3))
+    # island 4 to island 5
+    graph.add_edge(island4[is4y_max], island5[is5y_min], np.random.uniform(0.15,0.3))
+    # island 4 to island 6
+    graph.add_edge(island4[is4x_max], island6[is6x_min], np.random.uniform(0.15,0.3))
+    # island 5 to island 6
+    graph.add_edge(island5[is5y_max], island6[is6y_max], np.random.uniform(0.15,0.3))
+    starts = [island1[is1x_min], island1[is1y_max], island1[is1y_min]]
+    goals = [island3[is3x_max], island3[is3y_max], island3[is3y_min]]
+    return starts, goals
+
+
+def connect_select_starts_goals(islands):
+    g.Vertex.reset_id_counter()
+    graph = g.Graph()
+    graph.vertices.clear()
+    graph.edges.clear()
+    graph.pois.clear()
+    graph.poiIDs.clear()
+    for i, island in enumerate(islands):
+        connect_inside_island(island, graph, i)
+        assert len(graph.vertices) > 0
+    starts, goals = connect_island2island(graph)
+    return starts, goals, graph   
+
+def get_sixIslands_graph(xmin=0, ymin=0):
+    locations = generate_islands_locations(xmin=xmin, ymin=ymin)
+    
+    count = 0
+    while True:  
+        islands = get_isolated_islands(locations)
+        starts, goals, graph = connect_select_starts_goals(islands)
+        start_goal_connected = True
+        for i, start in enumerate(starts):
+            if not g.check_graph_valid(startID=start.id, goalID=goals[i].id, graph=graph):
+                start_goal_connected = False
+                break
+        if start_goal_connected:
+            break
+        
+        count += 1
+        if count > 2000:
+            raise ValueError("Cannot find a valid graph, try other seed ranges")
+    return starts, goals, graph
 
 def random_bridges_graph(n_bridge=3):
     count = 0

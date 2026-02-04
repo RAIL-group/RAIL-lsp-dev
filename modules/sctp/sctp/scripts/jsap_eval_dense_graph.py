@@ -16,7 +16,7 @@ def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     print_pdf = False
-    starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
+    starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     # print("")
@@ -59,18 +59,15 @@ def _setup(args):
     elif args.planner == 'jsapiap':
         use_AVP = True
         use_DAP = False
-        args.num_drones = 1
-        assert args.num_ugvs == 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
         args.max_depth = 15 #(2ugvs-1uav) #8 #(1ugv-1uav)
         args.sampling_maps = 200
         max_uanum = 1
-    
+        assert args.num_drones == 1
+        assert args.num_ugvs == 1
     elif args.planner == 'jsapiap2':
-        args.num_drones = 2
-        assert args.num_ugvs == 2
         max_uanum = 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
@@ -79,18 +76,30 @@ def _setup(args):
         param.REVISIT_PEN = 0.0
         args.num_iterations = 1000
         args.max_depth = 15 #(1ugv-2uavs)
-        args.sampling_maps = 65
+        args.sampling_maps = 200
+        assert args.num_drones == 2
+        assert args.num_ugvs == 1
     
     elif args.planner == 'jsapdap':
-        args.num_drones = 1
         param.REVISIT_PEN = 0.0
         max_uanum = 1
         args.max_depth = 15
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
+        assert args.num_ugvs == 1
         assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner == 'jsapdap2':
+        param.REVISIT_PEN = 0.0
+        max_uanum = 1
+        args.max_depth = 15
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        use_AVP = False
+        use_DAP = True
+        assert args.num_drones == 2
+        assert args.num_ugvs == 1
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     

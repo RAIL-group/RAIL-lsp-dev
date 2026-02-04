@@ -5,39 +5,50 @@ import random
 from sctp import param, core
 from sctp import action_estimation as ae
 from sctp.utils import underlying_graph as ug
+from typing import Dict, List
 import time
 
-class JSAPState(object):
-    total_sampling_time = 0.0
-    @classmethod
-    def reset_sampling_time(cls):
-        cls.total_sampling_time = 0.0
-    def __init__(self, graph=None, goalIDs=[], ugvs=[], drones=[], 
-                 iscopy=False, n_maps=60, useAVP=False, useDAP=False, max_uanum=3, revisit_pen=20.0):
+class MacroAction(object):
+    def __init__(self, actions: List[core.Action], times: List[float], robotID: int =None):
+        self.actions = actions
+        self.target = self.actions[-1].target
+        self.sub_targets = [act.target for act in self.actions]
+        self.action_times = times
+        self.total_times = sum(times)
+        self.robotID = robotID
+    def __eq__(self, other):
+        return self.target == other.target 
+    def __hash__(self):
+        return hash(self.target)
+    def __str__(self):
+        return f"MacroAction to {self.target} via {self.sub_targets} taking {self.total_times:.2f} seconds"
+
+
+class MCState(object):
+    # total_sampling_time = 0.0
+    # @classmethod
+    # def reset_sampling_time(cls):
+    #     cls.total_sampling_time = 0.0
+    def __init__(self, graph=None, goalIDs=[], ugvs=[], iscopy=False):        
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.depth = 0
         self.vertices_map = dict() # map vertex id to vertex object
-        self.sampling_maps = n_maps
+        # self.sampling_maps = n_maps
         self.state_actions = []
         self.use_OptiHeur = True
         self.noway2goal = False
         self.cur_ugv_idx = -1
-        self.avail_uav_actions = []
-        self.max_uanum = max_uanum
         self.sampling_time = 0.0 #measure the time for sampling-maps
         self.s_policy_time = 0.0 # measure the time for single policy computation
         self.ugvs_time = 0.0
-        self.uavs_time = 0.0
-        self.revisit_pen = revisit_pen
         self.action_values = dict() # map action to its value
-        self.behavior_change = dict() # map action to its value
-        self.got_sampling_time = False  
         
         if not iscopy: # the first state
             # need to filter the visited POIs
+            assert goalIDs != [] and len(goalIDs) == 1
             assert graph is not None
-            assert ugvs != []
+            assert ugvs != [] and len(ugvs) == 1
             self.graph = graph
             self.goalIDs = goalIDs
             self.history = core.History()
@@ -46,29 +57,24 @@ class JSAPState(object):
             self.assigned_pois = set()
             self.init_history()
             self.ugvs = ugvs
-            self.use_AVP = useAVP
-            self.use_DAP = useDAP
             # set up underlying graph for sampling
             edges = ug.get_initial_edges(self.graph)
             self.pg_positions = ug.get_vertex_positions(self.graph.vertices)
             self.pg_adjacency, self.pg_probabilities = ug.create_adj_prob_matrices(edges, self.pg_positions)
-            # set the pruning techniques
-            if self.use_AVP or self.use_DAP:
-                assert self.use_AVP != self.use_DAP
             self.ugvs_actions = [[] for _ in range(len(self.ugvs))]
             for i, ugv in enumerate(self.ugvs):
                 if ugv.last_node == self.goalIDs[i]:
                     ugv.need_action = True
-                    ugv_actions = [core.Action(target=self.goalIDs[i], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
+                    actions = [core.Action(target=self.goalIDs[i], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
+                    ugv_actions = [MacroAction(actions=actions, times=[0.0], robotID=i)]
                     ugv_actions[0].update_robotID(i)
                 else:
                     ugv.need_action = True
-                    ugv_actions = get_ugv_action(self, i)
+                    ugv_actions = get_macro_actions(self, i)
                     if ugv_actions == []:
                         self.noway2goal = True
                         self.action_cost = param.STUCK_COST
                 ugv.visited_vertices.append(ugv.last_node)                
-                # assert len(ugv_actions) > 0
                 self.ugvs_actions[i] = ugv_actions
             self.cur_ugv_idx = 0
             idx = [i for i, robot in enumerate(self.ugvs) if robot.need_action==True]
@@ -76,65 +82,6 @@ class JSAPState(object):
             self.state_actions = [action for action in self.ugvs_actions[idx[0]]] # what if this ugv has reached goal?
             self.update_heuristic()
             
-            self.uavs = drones
-            if len(self.uavs) > 0:
-                self.uav_actions = [core.Action(target=poi.id, rtype=param.RobotType.Drone) for poi in self.graph.pois]                
-                self.uav_actions = [action for action in self.uav_actions \
-                                    if self.history.get_action_outcome(action) == param.EventOutcome.CHANCE] # list unexplored pois
-                for i, uav in enumerate(self.uavs):
-                    if uav.unfinished_action and uav.unfinished_action in self.uav_actions:
-                        uav.action = uav.unfinished_action
-                        assert uav.action.rtype == param.RobotType.Drone
-                        uav.unfinished_action = None
-                        uav.need_action = False
-                        self.assigned_pois.add(uav.action.target)
-                        uav.action.update_pose((uav.cur_pose[0], uav.cur_pose[1]))
-                        uav.action.update_robotID(i)
-                        distance, direction = self.get_distance_direction(uav.cur_pose, uav.action.target)
-                        uav.retarget(uav.action, distance, direction)
-                        self.uav_actions.remove(uav.action)
-                    else:
-                        uav.need_action = True
-                        uav.action = None
-                
-                indices = [i for i, uav in enumerate(self.uavs) if uav.need_action]
-                if self.use_AVP:
-                    self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
-                    # get the index of uavs  needing action index
-                    time1 = time.perf_counter()
-                    # self.update_action_bc()
-                    self.update_action_bc_networkX()
-                    self.sampling_time += (time.perf_counter() - time1)
-                    if len(self.avail_uav_actions) != len(self.behavior_change):
-                        raise ValueError("The length of avail_uav_actions and behavior_change do not match in __init__()")        
-                    
-                    if indices != []:
-                        self.uav_actions = ae.get_uav_action_2ag(self, indices[0])
-                        for action in self.uav_actions:
-                            action.update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
-                            action.update_robotID(indices[0])
-                        assert len(self.uav_actions) <= self.max_uanum
-                if self.use_DAP:
-                    self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
-                    if len(indices) > 0:
-                        self.uav_actions = ae.get_closest_actions(self, indices[0])
-                        for action in self.uav_actions:
-                            action.update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
-                            action.update_robotID(indices[0])
-                        assert len(self.uav_actions) <= self.max_uanum
-                         
-                if len(self.uav_actions) == 0:                    
-                    self.uav_actions = [core.Action(target=self.goalIDs[0], rtype=param.RobotType.Drone)]
-                    if indices != []:
-                        self.uav_actions[0].update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
-                        self.uav_actions[0].update_robotID(indices[0])      
-                # check right here
-                assert isinstance(self.uav_actions[0], core.Action)
-                assert len(self.uav_actions) > 0
-                if any([uav.need_action for uav in self.uavs]):
-                    self.cur_ugv_idx = -1
-                    self.state_actions = [action for action in self.uav_actions]
-                
     def get_actions(self):
         return self.state_actions
     
@@ -215,10 +162,7 @@ class JSAPState(object):
         for ii, act in enumerate(self.avail_uav_actions):
             if act.target in self.assigned_pois:
                 continue
-            if self.graph.get_poi(act.target).block_prob < 0.05 or self.graph.get_poi(act.target).block_prob > 0.95:
-                bc_value = 0.0
-            else:
-                bc_value = ae.get_ugvs_behavior_change(state=self, action=act)
+            bc_value = ae.get_ugvs_behavior_change(state=self, action=act)
             if bc_value < min_bc:
                 min_bc = bc_value
             self.behavior_change[act] = bc_value
@@ -255,10 +199,7 @@ class JSAPState(object):
         for ii, act in enumerate(self.avail_uav_actions):
             if act.target in self.assigned_pois:
                 continue
-            if self.graph.get_poi(act.target).block_prob < 0.05 or self.graph.get_poi(act.target).block_prob > 0.95:
-                bc_value = 0.0
-            else:
-                bc_value = ae.get_ugvs_bc_networkX(state=self, action=act, pg=pg)
+            bc_value = ae.get_ugvs_bc_networkX(state=self, action=act, pg=pg)
             if bc_value < min_bc:
                 min_bc = bc_value
             self.behavior_change[act] = bc_value
@@ -398,6 +339,21 @@ class JSAPState(object):
         else:
             direction = np.array([1.0, 1.0])
         return distance, direction
+
+
+def create_marco_action(graph, target) -> MacroAction:
+    pass
+    
+def get_macro_actions(state: MCState) -> List[MacroAction]:
+    # get all uncertain pois
+    
+    # get reachable uncertain pois
+    
+    # create a uncertain graph
+    
+    # create macro actions
+    
+    pass
 
 def get_ugv_action(state, ugv_idx):
     actions = []

@@ -17,12 +17,12 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
             if i >= len(gpaths):
                 break
             ax[0].scatter(start[0], start[1], marker='o', color='r')
-            ax[0].text(start[0]-2.0, start[1], f'S{i}',color='blue', fontsize=8)
+            ax[0].text(start[0]-4.0, start[1], f'S{i}',color='blue', fontsize=8)
         for i, goal in enumerate(goal_coords):
             if i >= len(gpaths):
                 break
             ax[0].scatter(goal[0], goal[1], marker='x', color='r')
-            ax[0].text(goal[0]+1.0, goal[1],f'G{i}',color='r', fontsize=8)
+            ax[0].text(goal[0]+1.5, goal[1],f'G{i}',color='r', fontsize=8)
         
         box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=True)
         ax[0].set_aspect('equal', adjustable='box')
@@ -34,12 +34,12 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         if i >= len(gpaths):
             break
         ax[1].scatter(start[0], start[1], marker='o', color='r')
-        ax[1].text(start[0]-2.0, start[1],f'S{i}',color='blue', fontsize=8)
+        ax[1].text(start[0]-4.0, start[1],f'S{i}',color='blue', fontsize=8)
     for i, goal in enumerate(goal_coords):
         if i >= len(gpaths):
             break
         ax[1].scatter(goal[0], goal[1], marker='x', color='r')
-        ax[1].text(goal[0]+1.0, goal[1], f'G{i}',color='r', fontsize=8)
+        ax[1].text(goal[0]+1.5, goal[1], f'G{i}',color='r', fontsize=8)
         
     box = plot_sctpgraph(graph, ax[1])
     if len(gpaths[0][0]) > 1:        
@@ -52,7 +52,6 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         colors = ['navy', 'blue', 'green']
         for i, path in enumerate(dpaths):
             ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)            
-            # plot_pathArrowHollow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
             plot_pathArrow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
     
     ax[1].set_aspect('equal', adjustable='box')
@@ -139,7 +138,7 @@ def plot_path_fromPoints(ax, xy, colors, ugv=False):
     plot_arrows_withColor(ax, points, colors, ugv)
 
 
-def plot_arrows_withColor(ax, points, color_pair=['orange', 'green'], ugv=False):
+def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):
     from matplotlib.patches import FancyArrowPatch
     
     # Create colormap
@@ -192,12 +191,11 @@ def plot_path_fromActions(ax, graph, actions, dcolors, gcolors, uav_num=0, ugv_n
             last_drone_action = a
     last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_robot_action.target][0]
     for i in range(ugv_num):
-        plot_lines_varyWidthColor(ax, [x_ugvs[i], y_ugvs[i]], g_costs[i], rev, gcolors, ugv=True)
+        plot_arrows_withColor(ax, [x_ugvs[i], y_ugvs[i]], color_pair=['orange', 'green'])
     if uav_num != 0:
         last_vertex = [vertex for vertex in graph.vertices+graph.pois if vertex.id == last_drone_action.target][0]
         for i in range(uav_num):
-            plot_lines_varyWidthColor(ax, [x_drones[i], y_drones[i]], d_dists[i], rev, dcolors)
-        # plot_lines_varyWidthColor(ax, [x_drone, y_drone], d_dist, rev, dcolors)
+            plot_pathArrow([x_drones[i], y_drones[i]], ax, color='white')
     return g_costs, uav_num
 
 
@@ -208,8 +206,8 @@ def plot_sctpgraph(graph, plt, textsize=7, verbose=False, initG=False):
     y_max = max(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
     y_min = min(enumerate(graph.vertices), key=lambda v: v[1].coord[1])[1].coord[1]
     
-    plt.set_ylim(y_min-0.5, y_max+1.0)
-    plt.set_xlim(x_min-1.2, x_max+1.0)
+    plt.set_ylim(y_min-5.0, y_max+5.0)
+    plt.set_xlim(x_min-5.0, x_max+5.0)
     # Plot edges
     count = 0
     for edge in graph.edges:
@@ -357,45 +355,45 @@ def get_arrowHollow(start, end,
                       zorder=2)
     return patch
 
-def sharp_arrow(t):       return 0.3 * (1 - t**0.8)                  # very sharp tip
+# def sharp_arrow(t):       return 0.3 * (1 - t**0.8)                  # very sharp tip
 
-def plot_pathArrowHollow(points, ax, color='white'):
-    colors = ['navy', 'blue', 'cyan', 'lime', 'green']
-    if color=='navy':
-        colors = ['navy', 'navy']
-    elif color== 'blue':
-        colors = ['blue', 'blue']
-    elif color =='green':
-        colors = ['green', 'green']
-    col = mcolors.LinearSegmentedColormap.from_list(color, colors)
-    # Now use it exactly like plt.cm.magma:
-    cmap = col
-    # define edge width varying with the length of the path
-    edgewidth = 2.5
-    for i in range(len(points)-1):
-        if points[i] == points[i+1]:
-            continue    
-        arrow = get_arrowHollow(
-            start=points[i],
-            end=points[i+1],
-            width_func=sharp_arrow,
-            n_points=100,
-            # edgecolor=plt.cm.magma(i / (len(points)-1)),
-            edgecolor=cmap(i / (len(points)-1)),
-            facecolor='white',
-            alpha=0.95,
-            edgewidth=edgewidth
-        )
-        ax.add_patch(arrow)    
+# def plot_pathArrowHollow(points, ax, color='white'):
+#     colors = ['navy', 'blue', 'cyan', 'lime', 'green']
+#     if color=='navy':
+#         colors = ['navy', 'navy']
+#     elif color== 'blue':
+#         colors = ['blue', 'blue']
+#     elif color =='green':
+#         colors = ['green', 'green']
+#     col = mcolors.LinearSegmentedColormap.from_list(color, colors)
+#     # Now use it exactly like plt.cm.magma:
+#     cmap = col
+#     # define edge width varying with the length of the path
+#     edgewidth = 2.5
+#     for i in range(len(points)-1):
+#         if points[i] == points[i+1]:
+#             continue    
+#         arrow = get_arrowHollow(
+#             start=points[i],
+#             end=points[i+1],
+#             width_func=sharp_arrow,
+#             n_points=100,
+#             # edgecolor=plt.cm.magma(i / (len(points)-1)),
+#             edgecolor=cmap(i / (len(points)-1)),
+#             facecolor='white',
+#             alpha=0.95,
+#             edgewidth=edgewidth
+#         )
+#         ax.add_patch(arrow)    
 
 def plot_pathArrow(points, ax, color='white'):
     colors = ['navy', 'blue', 'cyan', 'lime', 'green']
     if color == 'navy':
-        colors = ['navy', 'navy']
+        colors = ['navy', 'cyan']
     elif color == 'blue':
-        colors = ['blue', 'blue']
+        colors = ['blue', 'lime']
     elif color == 'green':
-        colors = ['green', 'green']
+        colors = ['green', 'yellow']
     col = mcolors.LinearSegmentedColormap.from_list(color, colors)
     cmap = col
     

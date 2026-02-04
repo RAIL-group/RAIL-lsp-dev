@@ -189,7 +189,7 @@ def _setup(args):
     print(f"Graph_Type: {args.graph_type}, number of maps for sampling {args.num_maps}-number of graph: {args.num_graphs},"
           f" saving to: {args.save_dir}") 
     
-    generate_dataset(path=args.save_dir, num_graphs= args.num_graphs,
+    generate_dataset(filepath=args.save_dir, num_graphs= args.num_graphs,
                         num_maps = args.num_maps, graph_type=args.graph_type)
 
 if __name__ == '__main__':

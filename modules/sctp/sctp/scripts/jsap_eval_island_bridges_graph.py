@@ -23,47 +23,80 @@ def _setup(args):
     num_uav = 1
     num_ugv = 1
     
-    assert args.num_ugvs == num_ugv, "This script only supports 1 UGV"
+    assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(args.num_ugvs)]
     
     if args.planner =='ctp':
-        args.num_drones = 0
         drones = []
         param.REVISIT_PEN = 20.0
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
+        assert args.num_drones == 0
+        assert args.num_ugvs == num_ugv
     elif args.planner =='jsap':
-        args.num_drones = 1
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
-        assert args.num_drones == 1, "This script only supports 1 UAV"
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
         args.num_iterations = 1000
-        
+        assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner =='jsap2':
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        param.REVISIT_PEN = 0.0
+        use_AVP = False
+        use_DAP = False
+        args.max_depth = 15
+        args.num_iterations = 1000
+        assert args.num_drones == 2, "This script only supports 2 UAV"
+        assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapiap':
-        args.num_drones = 1
         param.REVISIT_PEN = 0.0
         args.max_depth = 15
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
-                    robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
         use_DAP = False
+        max_uanum = 1
+        assert args.num_ugvs == num_ugv
         assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner == 'jsapiap2':
+        max_uanum = 1
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        use_AVP = True
+        use_DAP = False
+        param.REVISIT_PEN = 0.0
+        args.num_iterations = 1000
+        args.max_depth = 15 #(1ugv-2uavs)
+        args.sampling_maps = 200
+        assert args.num_drones == 2
+        assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapdap':
-        args.num_drones = 1
+        # args.num_drones = 1
         param.REVISIT_PEN = 0.0
         args.max_depth = 15
-        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        use_AVP = False
+        use_DAP = True
+        assert args.num_ugvs == num_ugv
+        assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner == 'jsapdap2':
+        param.REVISIT_PEN = 0.0
+        max_uanum = 1
+        args.max_depth = 15
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
-        assert args.num_drones == 1, "This script only supports 1 UAV"
+        assert args.num_drones == 2
+        assert args.num_ugvs == num_ugv
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 

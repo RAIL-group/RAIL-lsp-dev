@@ -324,6 +324,7 @@ def generate_points_around(point, min_dist, max_dist, num_points=5):
     distances = np.random.uniform(min_dist, max_dist, num_points)
     points = []
     for angle, dist in zip(angles, distances):
+        angle += np.random.uniform(0.0, 0.5)
         x = point[0] + dist * np.cos(angle)
         y = point[1] + dist * np.sin(angle)
         points.append((x, y))
