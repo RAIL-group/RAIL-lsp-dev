@@ -232,22 +232,23 @@ class JSAPState(object):
         self.behavior_change.clear()
         self.action_values.clear()
         time1 = time.perf_counter()
-        status_edges = []
-        probs = []
-        for act, outcome  in self.history.get_data().items():
-            if act.target not in self.graph.poiIDs:
-                continue
-            neighbors = self.graph.get_poi(act.target).neighbors
-            status_edges.append([neighbors[0]-1, neighbors[1]-1])
-            if outcome == param.EventOutcome.BLOCK:
-                probs.append(1.0)
-            else:            
-                probs.append(0.0)
-        if len(status_edges) > 0:
-            new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
-                        probabilities=self.pg_probabilities) 
-        else:
-            new_probabilities = self.pg_probabilities.copy()
+        # status_edges = []
+        # probs = []
+        # for act, outcome  in self.history.get_data().items():
+        #     if act.target not in self.graph.poiIDs:
+        #         continue
+        #     neighbors = self.graph.get_poi(act.target).neighbors
+        #     status_edges.append([neighbors[0]-1, neighbors[1]-1])
+        #     if outcome == param.EventOutcome.BLOCK:
+        #         probs.append(1.0)
+        #     else:            
+        #         probs.append(0.0)
+        # if len(status_edges) > 0:
+        #     new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
+        #                 probabilities=self.pg_probabilities) 
+        # else:
+        #     new_probabilities = self.pg_probabilities.copy()
+        new_probabilities = ug.get_updated_prob_matrix(self)
         pg = ug.ProbabilisticGraph(positions=self.pg_positions, adjacency=self.pg_adjacency, \
                                         probabilities=new_probabilities)
         min_bc = 0.0

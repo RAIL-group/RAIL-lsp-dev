@@ -90,7 +90,7 @@ def get_planner_data(seed_costs):
 def plot_scatter_data(file_path, args):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
     seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(file_path)
-    assert len(seed_costs) == len(seed_truntimes)    
+    assert len(seed_costs) == len(seed_truntimes)
     base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist = get_planner_data(seed_costs)
     base_ttimes, jsap_ttimes, jsapavp_ttimes, jsapdap_ttimes, jsapdap2_ttimes, jsap2_ttimes, \
                 jsapavp2_ttimes = get_planner_data(seed_truntimes)
@@ -101,6 +101,8 @@ def plot_scatter_data(file_path, args):
     base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
                 jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
     
+    print(base_dist)
+    print(jsap_dist)
     if base_dist[0] != None:
         print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
           f"steptime: {np.average(base_steptimes):0.2f}, samptime: {np.average(base_samptimes):0.2f}, "\
@@ -270,7 +272,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     scatter_data = True
     file_path = args.save_dir
-    args.num_ugvs = 1
+    args.num_ugvs = 2
     
     if scatter_data:
         file_path = Path(file_path)/ f'results_{args.num_ugvs}UGVs.txt'

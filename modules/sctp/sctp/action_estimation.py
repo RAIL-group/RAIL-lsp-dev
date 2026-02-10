@@ -102,7 +102,6 @@ def get_ugvs_bc_networkX(state, action, pg):
     act_value = 0.0
     neighbors = state.graph.get_poi(action.target).neighbors
     action_edge = [[neighbors[0]-1, neighbors[1]-1]]
-    # print("Action edge: ", action_edge)
     for i, ugv in enumerate(state.ugvs):
         if ugv.at_node and ugv.last_node == state.goalIDs[i]:
             continue
@@ -136,15 +135,14 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
     # value if the action is passable
     block_value = 0.0
     pass_value = 0.0
-    # print
     pass_probs = ug.set_edge_probabilities(probs=np.array([0.0]), edges=action_edge, probabilities=ugraph.probabilities)
     block_probs = ug.set_edge_probabilities(probs=np.array([1.0]), edges=action_edge, probabilities=ugraph.probabilities)
     for _ in range(n_samples):        
         pass_sample = ug.sample_graph(prob_graph=ugraph, probs=pass_probs)
-        val = ug.compute_shortest_path(pass_sample, start=start, end=goalID)
+        val = ug.compute_shortest_path_length(pass_sample, start=start, end=goalID)
         pass_value += val if val >=0 else NOWAY_PEN
         block_sample = ug.sample_graph(prob_graph=ugraph, probs=block_probs)
-        val = ug.compute_shortest_path(block_sample, start=start, end=goalID)
+        val = ug.compute_shortest_path_length(block_sample, start=start, end=goalID)
         block_value += val if val >=0 else NOWAY_PEN
     pass_value /= n_samples
     block_value /= n_samples

@@ -143,7 +143,7 @@ def generate_islands_locations(xmin=0, ymin=0):
     locations.append(loc2)
     loc3 = (np.random.uniform(xmin+95.0, xmin+105.0), np.random.uniform(ymin+0.0, ymin+10.0))
     locations.append(loc3)
-    loc4 = (np.random.uniform(xmin+40.0, xmin+70.0), np.random.uniform(ymin+26.0, ymin+40.0))
+    loc4 = (np.random.uniform(xmin+40.0, xmin+70.0), np.random.uniform(ymin+30.0, ymin+40.0))
     locations.append(loc4)
     loc5 = (np.random.uniform(xmin+5.0, xmin+15.0), np.random.uniform(ymin+55.0, ymin+65.0))
     locations.append(loc5)
@@ -158,22 +158,17 @@ def get_isolated_islands(locations):
             num_points = 5
         else:
             num_points = 4
-        points = g.generate_points_around(loc, min_dist=6.0, max_dist=8.5, num_points=num_points)
+        points = g.generate_points_around(loc, min_dist=5.5, max_dist=8.5, num_points=num_points)
         islands.append(points)
     return islands
 
-def connect_inside_island(island, graph, island_id):
-    nodes = []
-    for i in range(len(island)):
-        vertex = g.Vertex(coord=island[i])
-        nodes.append(vertex)
-        graph.add_vertex(vertex)
-        if 0 < i < len(island):
+def connect_inside_island(nodes, graph, island_id):
+    for i in range(len(nodes)):
+        if 0 < i < len(nodes):
             if island_id == 0 or island_id == 2:
                 graph.add_edge(nodes[i], nodes[i-1], 0.0)
             else:
-                graph.add_edge(nodes[i], nodes[i-1], np.random.uniform(0.1,0.2))
-        
+                graph.add_edge(nodes[i], nodes[i-1], np.random.uniform(0.1,0.2))        
     graph.add_edge(nodes[0], nodes[-1], 0.05)
     
 def connect_island2island(graph):
@@ -215,15 +210,15 @@ def connect_island2island(graph):
     # island 1 to island 2    
     graph.add_edge(island1[is1y_min], island2[is2x_min], np.random.uniform(0.5,0.6))
     # island 1 to island 4
-    graph.add_edge(island1[is1y_max], island4[is4x_min], np.random.uniform(0.4,0.55))
+    graph.add_edge(island1[is1y_max], island4[is4x_min], np.random.uniform(0.35,0.45))
     # island 1 to island 5
     graph.add_edge(island1[is1x_min], island5[is5x_min], np.random.uniform(0.15,0.3))
     # island 2 to island 3
-    graph.add_edge(island2[is2y_min], island3[is3x_min], np.random.uniform(0.55,0.7))
+    graph.add_edge(island2[is2y_min], island3[is3x_min], np.random.uniform(0.55,0.65))
     # island 2 to island 4
-    graph.add_edge(island2[is2y_max], island4[is4y_min], np.random.uniform(0.4,0.55))
+    graph.add_edge(island2[is2y_max], island4[is4y_min], np.random.uniform(0.35,0.45))
     # island 3 to island 4
-    graph.add_edge(island3[is3y_max], island4[is4x_max], np.random.uniform(0.4,0.55))
+    graph.add_edge(island3[is3y_max], island4[is4x_max], np.random.uniform(0.35,0.45))
     # island 3 to island 6
     graph.add_edge(island3[is3x_max], island6[is6x_max], np.random.uniform(0.15,0.3))
     # island 4 to island 5
@@ -233,9 +228,16 @@ def connect_island2island(graph):
     # island 5 to island 6
     graph.add_edge(island5[is5y_max], island6[is6y_max], np.random.uniform(0.15,0.3))
     starts = [island1[is1x_min], island1[is1y_max], island1[is1y_min]]
-    goals = [island3[is3x_max], island3[is3y_max], island3[is3y_min]]
+    goals = [island3[is3x_max], island6[is6y_max], island3[is3y_min]]
     return starts, goals
 
+def create_nodes(graph, island):
+    nodes = []
+    for i in range(len(island)):
+        vertex = g.Vertex(coord=island[i])
+        nodes.append(vertex)
+        graph.add_vertex(vertex)
+    return nodes
 
 def connect_select_starts_goals(islands):
     g.Vertex.reset_id_counter()
@@ -244,9 +246,13 @@ def connect_select_starts_goals(islands):
     graph.edges.clear()
     graph.pois.clear()
     graph.poiIDs.clear()
+    islands_nodes = []
     for i, island in enumerate(islands):
-        connect_inside_island(island, graph, i)
-        assert len(graph.vertices) > 0
+        nodes = create_nodes(graph, island)
+        islands_nodes.append(nodes)
+        
+    for i, nodes in enumerate(islands_nodes):
+        connect_inside_island(nodes, graph, i)
     starts, goals = connect_island2island(graph)
     return starts, goals, graph   
 

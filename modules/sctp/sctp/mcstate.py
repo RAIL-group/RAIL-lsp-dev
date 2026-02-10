@@ -8,20 +8,25 @@ from sctp.utils import underlying_graph as ug
 from typing import Dict, List
 import time
 
-class MacroAction(object):
-    def __init__(self, actions: List[core.Action], times: List[float], robotID: int =None):
-        self.actions = actions
-        self.target = self.actions[-1].target
-        self.sub_targets = [act.target for act in self.actions]
-        self.action_times = times
-        self.total_times = sum(times)
+class MAction(object):
+    def __init__(self, start: int, sub_targets: List[int], distances: List[float], \
+                    robotID: int =None, rtype=param.RobotType.Ground):
+        self.start = start
+        self.target = self.sub_targets[-1]
+        self.sub_targets = sub_targets
+        self.distances = distances
+        self.total_dist = sum(self.distances) if len(self.distances) >0 else 0.0
         self.robotID = robotID
+        self.rtype = rtype
+    def copy(self):
+        return MAction(start=self.start, sub_targets=self.sub_targets.copy(), \
+                        distances=self.distances.copy(), robotID=self.robotID, rtype=self.rtype) 
     def __eq__(self, other):
         return self.target == other.target 
     def __hash__(self):
         return hash(self.target)
     def __str__(self):
-        return f"MacroAction to {self.target} via {self.sub_targets} taking {self.total_times:.2f} seconds"
+        return f"MacroAction to {self.target} via {self.sub_targets} taking {self.total_dist:.2f} meters"
 
 
 class MCState(object):
@@ -33,14 +38,11 @@ class MCState(object):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.depth = 0
-        self.vertices_map = dict() # map vertex id to vertex object
         # self.sampling_maps = n_maps
         self.state_actions = []
         self.use_OptiHeur = True
         self.noway2goal = False
         self.cur_ugv_idx = -1
-        self.sampling_time = 0.0 #measure the time for sampling-maps
-        self.s_policy_time = 0.0 # measure the time for single policy computation
         self.ugvs_time = 0.0
         self.action_values = dict() # map action to its value
         
@@ -52,9 +54,12 @@ class MCState(object):
             self.graph = graph
             self.goalIDs = goalIDs
             self.history = core.History()
+            # self.id_vertices_map = dict() # map vertex id to vertex object
             self.vertices_map = {v.id: v for v in self.graph.vertices + self.graph.pois}
-            self.v_vertices = dict()
-            self.assigned_pois = set()
+            self.neighbors_map = {v.id: v.neighbors for v in self.graph.vertices + self.graph.pois}
+            self.edge_poi_map = {tuple(sorted(poi.neighbors)): poi.id for poi in self.graph.pois}
+            # self.v_vertices = dict()
+            # self.assigned_pois = set()
             self.init_history()
             self.ugvs = ugvs
             # set up underlying graph for sampling
@@ -341,43 +346,88 @@ class MCState(object):
         return distance, direction
 
 
-def create_marco_action(graph, target) -> MacroAction:
-    pass
-    
-def get_macro_actions(state: MCState) -> List[MacroAction]:
-    # get all uncertain pois
-    
-    # get reachable uncertain pois
-    
-    # create a uncertain graph
-    
-    # create macro actions
+def create_marco_action(state, path, target, ugv_idx) -> MAction:
+    start = path[0]
+    distances = []
+    sub_targets = []
+    for i in range(1, len(path)):
+        dist = np.linalg.norm(np.array(state.vertices_map[path[i-1]].coord) - np.array(state.vertices_map[path[i]].coord))
+        if path[i-1] in state.graph.poiIDs:
+            sub_targets.append(path[i])
+            distances.append(dist)
+        else:
+            poi = state.edge_poi_map.get(tuple(sorted([path[i-1], path[i]])), None)
+            sub_targets.extend([poi, path[i]])    
+            distances.extend([dist/2, dist/2])
+    dist = np.linalg.norm(np.array(state.vertices_map[path[-1]].coord) - np.array(state.vertices_map[target].coord))
+    sub_targets.append(target)
+    distances.append(dist)
+    return MAction(start=start, sub_targets=sub_targets, distances=distances, robotID=ugv_idx)
     
     pass
 
-def get_ugv_action(state, ugv_idx):
-    actions = []
-    ugv = state.ugvs[ugv_idx]
-    if ugv.at_node:
-        if ugv.last_node == state.goalIDs[ugv_idx]:
-            actions = [core.Action(target=state.goalIDs[ugv_idx], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
-        else:
-            if state.history.get_action_outcome(core.Action(target=ugv.last_node))==param.EventOutcome.BLOCK:
-                actions = [core.Action(target=ugv.pl_vertex, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
+def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) -> List[int]:
+    mactions = []
+    # update the underlying graph based on the history
+    edges = []
+    probs = []
+    for key, value in state.history.get_data().items():
+        if key.target in state.graph.poiIDs:
+            neighbors = state.neighbors_map[key.target]
+            if value == param.EventOutcome.BLOCK:
+                edges.append([neighbors[0]-1, neighbors[1]-1])
+                probs.append(1.0)
+            elif value == param.EventOutcome.TRAV:
+                edges.append([neighbors[0]-1, neighbors[1]-1])
+                probs.append(0.0)
+    updated_probs = ug.set_edge_probabilities(probs=np.array(probs), edges=edges, probabilities=state.pg_probabilities)
+    
+    # get the certain graph based on the history
+    certain_adjacency = ug.get_certain_adj_matrix(prob_matrix=updated_probs, adj_matrix=state.pg_adjacency)
+    
+    for poi in uncertain_pois: # all possible targets
+        target_neighbors = state.neighbors_map[poi]
+        assert state.ugvs[ugv_idx].at_node == True
+        cur_node = state.ugvs[ugv_idx].last_node
+        if cur_node in state.graph.poiIDs:
+            start_neighbors = state.neighbors_map[poi]
+            path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[0], targets=start_neighbors)
+            path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[1], targets=start_neighbors)
+            if cost1 < 0 and cost2 < 0:
+                path = []
+            elif cost1 < 0:
+                path = [ugv_idx] + path2
+            elif cost2 < 0:
+                path = [ugv_idx] + path1
             else:
-                neighbors = [node for node in state.graph.vertices+state.graph.pois if node.id == ugv.last_node][0].neighbors
-                actions = [core.Action(target=neighbor, start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])) for neighbor in neighbors]
-        ugv.visited_vertices.append(ugv.last_node)
-    else:
-        actions = [core.Action(target=ugv.edge[0], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])), 
-                              core.Action(target=ugv.edge[1],start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
-    actions = [action for action in actions \
-                    if state.history.get_action_outcome(action) != core.EventOutcome.BLOCK]
-    if len(actions) >= 2:
-        actions = [action for action in actions if action.target != ugv.pl_vertex]
-    assert len(actions) > 0
-    [action.update_robotID(ugv_idx) for action in actions]
-    return actions
+                path = [ugv_idx] + path1 if cost1 <= cost2 else [ugv_idx] + path2
+        else:
+            path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=cur_node, targets=target_neighbors)
+        
+        if path != []:
+            maction = create_marco_action(state, path=path, target=poi, ugv_idx=ugv_idx)
+            mactions.append(maction)
+    # reach goal directly
+    path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=ugv_idx, targets=[state.goalIDs[ugv_idx]])
+    if path != []:
+        maction = create_marco_action(state, path=path, target=poi, ugv_idx=ugv_idx)
+        mactions.append(maction)
+    return mactions
+
+
+def get_avail_pois(state: MCState) -> List[int]:
+    avail_pois = []
+    for poi in state.graph.pois:
+        if state.history.get_action_outcome(MAction(sub_targets=[poi.id], distances=[0])) == param.EventOutcome.CHANCE:
+            avail_pois.append(poi.id)
+    return avail_pois
+    
+def get_macro_actions(state: MCState, ugv_idx: int) -> List[MAction]:
+    # get all uncertain pois
+    avail_pois = get_avail_pois(state)
+    return get_avail_mactions(state, avail_pois, ugv_idx)
+
+
 
 def advance_state(state, action):
     # 1. if any robot needs action, determine its actions then return
@@ -724,4 +774,3 @@ def decsctp_rollout(state):
     if state.heuristic >= 0.0:
         return state.heuristic
     return state.update_heuristic()
-

@@ -55,7 +55,7 @@ class Graph():
         return self.pois[self.poiIDs.index(poi_id)]
     
     def get_vertex_by_id(self, vertex_id):
-        for vertex in self.vertices:
+        for vertex in self.vertices+self.pois:
             if vertex.id == vertex_id:
                 return vertex
         raise ValueError("Vertex not found in graph.")
@@ -324,7 +324,7 @@ def generate_points_around(point, min_dist, max_dist, num_points=5):
     distances = np.random.uniform(min_dist, max_dist, num_points)
     points = []
     for angle, dist in zip(angles, distances):
-        angle += np.random.uniform(0.0, 0.5)
+        angle += np.random.uniform(0.0, 0.7)
         x = point[0] + dist * np.cos(angle)
         y = point[1] + dist * np.sin(angle)
         points.append((x, y))

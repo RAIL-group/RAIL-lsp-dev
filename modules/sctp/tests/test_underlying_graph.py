@@ -11,7 +11,7 @@ from sctp.utils.underlying_graph import (
     set_edge_probabilities,
     get_initial_edges,
     sample_graph,
-    compute_shortest_path,
+    compute_shortest_path_length as compute_shortest_path,
     plot_probabilistic_graph_with_samples,
 )
 

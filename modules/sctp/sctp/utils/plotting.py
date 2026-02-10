@@ -24,7 +24,7 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
             ax[0].scatter(goal[0], goal[1], marker='x', color='r')
             ax[0].text(goal[0]+1.5, goal[1],f'G{i}',color='r', fontsize=8)
         
-        box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=True)
+        box= plot_sctpgraph(graph_plot, ax[0], verbose=verbose, initG=False)
         ax[0].set_aspect('equal', adjustable='box')
         ax[0].set_xlim(box[0][0]-1.5, box[1][0]+1.2)
         ax[0].set_ylim(box[0][1]-0.5, box[1][1]+1.0)
@@ -135,7 +135,7 @@ def plot_path_fromPoints(ax, xy, colors, ugv=False):
     x = xy[0]
     y = xy[1]
     points = list(zip(x, y))
-    plot_arrows_withColor(ax, points, colors, ugv)
+    plot_arrows_withColor(ax, points, colors)
 
 
 def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):

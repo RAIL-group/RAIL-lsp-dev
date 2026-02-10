@@ -1,14 +1,13 @@
 """Probabilistic graph exploration with sampling and shortest path computation."""
 
 from dataclasses import dataclass
-
 import matplotlib
-# matplotlib.use("macosx")  # Use macOS native backend
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-
+from typing import List, Tuple
+from sctp import param
 
 @dataclass
 class ProbabilisticGraph:
@@ -31,7 +30,7 @@ def get_initial_edges(graph):
 
     
 def set_edge_probabilities(probs: np.ndarray, edges: list, probabilities: np.ndarray):
-    """Set edge probabilities for specified edges.
+    """Set edge probabilities for specified edges with given modified vertices' indices
     Args:
         prob: Probability to set for the edges.
         edges: List of (i, j) tuples specifying edges to update.
@@ -53,7 +52,7 @@ def get_vertex_positions(vertices) -> np.ndarray:
 
 
 def create_adj_prob_matrices(edges, positions):
-    """Create symmetric adjacency matrix with Euclidean distances.
+    """Create symmetric adjacency matrix with Euclidean distances with given modified vertices' indices
     Args:
         positions: (n, 2) array of vertex coordinates.
         threshold: Maximum distance for edge existence. Edges beyond this are 0.
@@ -97,11 +96,21 @@ def sample_graph(prob_graph: ProbabilisticGraph, probs: np.ndarray) -> np.ndarra
     # Mirror to lower triangle
     return sampled + sampled.T
 
+def get_certain_adj_matrix(prob_matrix: np.ndarray, adj_matrix: np.ndarray):
+    n = prob_matrix.shape[0]
 
-def compute_shortest_path(
-    adjacency: np.ndarray, start: int = 0, end: int = -1
-) -> float:
-    """Compute shortest path cost between two vertices.
+    # Generate random values for upper triangle
+    random_vals = np.zeros((n, n))
+    edge_exists = random_vals == prob_matrix
+
+    # Apply to adjacency, keep only upper triangle
+    sampled = np.triu(adj_matrix * edge_exists, k=1)
+    return sampled + sampled.T
+    
+
+
+def compute_shortest_path_length(adjacency: np.ndarray, start: int=0, end: int=-1) -> float:
+    """Compute shortest path cost between two vertices with given modified vertices' indices
 
     Args:
         adjacency: (n, n) adjacency matrix with edge weights.
@@ -125,6 +134,89 @@ def compute_shortest_path(
     except nx.NetworkXNoPath:
         return -1.0
 
+def get_shortest_path(adjacency: np.ndarray, start: int = 0, end: int = -1) -> List[int]:
+    """Compute shortest path between two vertices with given modified vertices' indices
+
+    Args:
+        adjacency: (n, n) adjacency matrix with edge weights.
+        start: Starting vertex index.
+        end: Ending vertex index (supports negative indexing).
+
+    Returns:
+        The shortest path or None if no path exists.
+    """
+    n = adjacency.shape[0]
+    # Handle negative indexing
+    if end < 0:
+        end = n + end
+    # Create networkx graph from adjacency matrix
+    G = nx.from_numpy_array(adjacency)
+    try:
+        return nx.shortest_path(G, source=start, target=end)
+    except nx.NetworkXNoPath:
+        return []
+
+def get_shortest_path_from_vertices(adj_matrix, start: int, targets: List[int]) -> List[int]:
+    """Compute shortest path between two vertices with initial graph's vertices' indices
+
+    Args:
+        adjacency: (n, n) adjacency matrix with edge weights.
+        start: Starting vertex index.
+        end: Ending vertex index (supports negative indexing).
+
+    Returns:
+        The shortest path or None if no path exists with the graph's vertices' indices
+    """
+    return_cost = 0.0
+    if start in targets:
+        return [start], 0.0
+    if len(targets) == 2:
+        costs = []
+        for target in targets:
+            # print(f"the target is: {target} and start {start}")
+            cost = compute_shortest_path_length(adj_matrix, start=start-1, end=target -1)
+            costs.append(cost)
+            # print("the target is: -------------------- ", target)
+        if all (costs) < 0.0:
+            return [], -1.0
+        elif costs[0] < 0.0:
+            path = get_shortest_path(adj_matrix, start=start-1, end=targets[1] -1)
+            return_cost = costs[1]                    
+        elif costs[1] < 0.0:
+            path = get_shortest_path(adj_matrix, start=start-1, end=targets[0] -1)
+            return_cost = costs[0]
+        elif costs[0] <= costs[1]:
+            path = get_shortest_path(adj_matrix, start=start-1, end=targets[0] -1)
+            return_cost = costs[0]
+        else:
+            path = get_shortest_path(adj_matrix, start=start-1, end=targets[1] -1)
+            return_cost = costs[1]
+        return [p+1 for p in path], return_cost
+    else: # reaching goal action
+        assert len(targets) == 1
+        cost = compute_shortest_path_length(adj_matrix, start=start-1, end=targets[0] -1)
+        path = get_shortest_path(adj_matrix, start=start-1, end=targets[0] -1)
+        return [p+1 for p in path] if len(path) > 0 else [], cost
+    
+def get_updated_prob_matrix(state):
+    status_edges = []
+    probs = []
+    for act, outcome  in state.history.get_data().items():
+        if act.target not in state.graph.poiIDs:
+            continue
+        neighbors = state.graph.get_poi(act.target).neighbors
+        status_edges.append([neighbors[0]-1, neighbors[1]-1])
+        if outcome == param.EventOutcome.BLOCK:
+            probs.append(1.0)
+        else:            
+            probs.append(0.0)
+    if len(status_edges) > 0:
+        new_probabilities = set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
+                    probabilities=state.pg_probabilities) 
+    else:
+        new_probabilities = state.pg_probabilities.copy()
+    return new_probabilities
+    
 
 def plot_probabilistic_graph_with_samples(
     prob_graph: ProbabilisticGraph,
@@ -196,7 +288,7 @@ def plot_probabilistic_graph_with_samples(
     for idx in range(num_samples):
         ax = axes[idx + 1]
         sampled = sample_graph(prob_graph)
-        path_cost = compute_shortest_path(sampled, start=0, end=-1)
+        path_cost = compute_shortest_path_length(sampled, start=0, end=-1)
 
         # Find path edges for highlighting
         path_edges = set()

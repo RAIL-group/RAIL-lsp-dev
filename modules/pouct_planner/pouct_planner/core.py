@@ -192,12 +192,5 @@ def get_best_path_sctp(root):
         paths.append(best_action)
         costs.append(cost)
         children = list(node.action_outcomes[best_action].keys())
-        # if len(root.state.uavs) == 0: # and len(root.state.ugvs) == 1:
-        #     nodes = [child for child in children if child.state.history.get_action_outcome(best_action) == EventOutcome.TRAV]
-        #     if len(nodes) > 0:
-        #         node = nodes[0]
-        #     else:
-        #         break
-        # else:
         node = max(children, key=lambda x: x.total_n)        
     return paths, costs
