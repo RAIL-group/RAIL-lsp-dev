@@ -36,12 +36,12 @@ def test_mcstate_create_mcactions_sgraph():
     print(f"Available macro actions: {init_state.get_actions()[2]}")
     
     sub_targets1 = [5]
-    time1 = [2.8]
-    mcaction1 = mcstate.MAction(start=1, sub_targets=sub_targets1, times=time1, robotID=0)
+    distances1 = [2.8]
+    mcaction1 = mcstate.MAction(start=1, sub_targets=sub_targets1, distances=distances1, robotID=0)
     
     sub_targets2 = [6,3,7,2,5]
-    time2 = [2,2,2,2,2.8]
-    mcaction2 = mcstate.MAction(start=1, sub_targets=sub_targets2, times=time2, robotID=0)
+    distances2 = [2,2,2,2,2.8]
+    mcaction2 = mcstate.MAction(start=2, sub_targets=sub_targets2, distances=distances2, robotID=1)
     assert mcaction1 == mcaction2
     assert init_state.history.get_action_outcome(mcaction1) == param.EventOutcome.CHANCE
     
