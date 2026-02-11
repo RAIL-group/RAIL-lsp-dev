@@ -268,7 +268,6 @@ def create_marco_action(state, path, target, ugv_idx) -> MAction:
             sub_targets.extend([poi, path[i]])    
             distances.extend([dist/2, dist/2])
     if target != path[-1]:
-        print(state.vertices_map[path[-1]].coord)
         dist = np.linalg.norm(np.array(state.vertices_map[path[-1]].coord) - np.array(state.vertices_map[target].coord))
         sub_targets.append(target)
         distances.append(dist)
@@ -320,7 +319,7 @@ def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) 
                                     targets=[state.goalIDs[ugv_idx]])
     if path != []:
         # print(path)
-        maction = create_marco_action(state, path=path, target=[state.goalIDs[ugv_idx]], ugv_idx=ugv_idx)
+        maction = create_marco_action(state, path=path, target=state.goalIDs[ugv_idx], ugv_idx=ugv_idx)
         mactions.append(maction)
     return mactions
 
