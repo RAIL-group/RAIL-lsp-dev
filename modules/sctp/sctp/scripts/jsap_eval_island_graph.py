@@ -81,7 +81,7 @@ def _setup(args):
         use_AVP = True
         use_DAP = False
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 1000
+        # 
         args.max_depth = 15 #(1ugv-2uavs)
         args.num_iterations = 1500 #1000 #(for 1ugv)
         args.sampling_maps = 200
@@ -95,6 +95,7 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
+        args.num_iterations = 1500
         assert args.num_ugvs == num_ugv
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapdap2':

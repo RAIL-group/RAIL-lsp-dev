@@ -157,11 +157,11 @@ def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):
         arrow = FancyArrowPatch(
             start,
             end,
-            arrowstyle='-|>,head_width=0.25,head_length=0.4',
+            arrowstyle='-|>,head_width=0.2,head_length=0.3',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
             alpha=0.95,
-            mutation_scale=15
+            mutation_scale=10
         )
         ax.add_patch(arrow)
 
@@ -354,37 +354,7 @@ def get_arrowHollow(start, end,
                       alpha=alpha,
                       zorder=2)
     return patch
-
-# def sharp_arrow(t):       return 0.3 * (1 - t**0.8)                  # very sharp tip
-
-# def plot_pathArrowHollow(points, ax, color='white'):
-#     colors = ['navy', 'blue', 'cyan', 'lime', 'green']
-#     if color=='navy':
-#         colors = ['navy', 'navy']
-#     elif color== 'blue':
-#         colors = ['blue', 'blue']
-#     elif color =='green':
-#         colors = ['green', 'green']
-#     col = mcolors.LinearSegmentedColormap.from_list(color, colors)
-#     # Now use it exactly like plt.cm.magma:
-#     cmap = col
-#     # define edge width varying with the length of the path
-#     edgewidth = 2.5
-#     for i in range(len(points)-1):
-#         if points[i] == points[i+1]:
-#             continue    
-#         arrow = get_arrowHollow(
-#             start=points[i],
-#             end=points[i+1],
-#             width_func=sharp_arrow,
-#             n_points=100,
-#             # edgecolor=plt.cm.magma(i / (len(points)-1)),
-#             edgecolor=cmap(i / (len(points)-1)),
-#             facecolor='white',
-#             alpha=0.95,
-#             edgewidth=edgewidth
-#         )
-#         ax.add_patch(arrow)    
+  
 
 def plot_pathArrow(points, ax, color='white'):
     colors = ['navy', 'blue', 'cyan', 'lime', 'green']
@@ -415,10 +385,10 @@ def plot_pathArrow(points, ax, color='white'):
         arrow = FancyArrowPatch(
             start,
             end,
-            arrowstyle='->,head_width=0.25,head_length=0.4',
+            arrowstyle='->,head_width=0.2,head_length=0.3',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
             alpha=0.95,
-            mutation_scale=15
+            mutation_scale=10
         )
         ax.add_patch(arrow)

@@ -101,8 +101,8 @@ def plot_scatter_data(file_path, args):
     base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
                 jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
     
-    print(base_dist)
-    print(jsap_dist)
+    # print(base_dist)
+    # print(jsap_dist)
     if base_dist[0] != None:
         print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
           f"steptime: {np.average(base_steptimes):0.2f}, samptime: {np.average(base_samptimes):0.2f}, "\

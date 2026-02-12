@@ -26,20 +26,21 @@ def test_mcstate_transition_lgraph():
     state_prob_cost = state.transition(state.get_actions()[0])
     assert len(state_prob_cost) == 2
     state1 = list(state_prob_cost.keys())[0]
+    state_b = list(state_prob_cost.keys())[1]
+    state_b.is_goal_state = True
+    state_b.noway2goal = True
     assert state1.action_cost == 2.5
     assert state1.heuristic == 12.5
     assert len(state1.get_actions()) == len(state1.state_actions) == len(state1.ugvs_actions[0]) == 1
 
     # the second transition - assign action to the ugv then move
-    # assert state1.get_actions()[0].target == 4
-    # state_prob_cost = state1.transition(state1.get_actions()[0])
-    # assert state1.get_actions()[0].rtype == param.RobotType.Ground
-    # assert len(state_prob_cost) == 2
-    # state2_p = list(state_prob_cost.keys())[0]
-    # assert state2_p.get_actions()[0].rtype == param.RobotType.Drone
-    # assert len(state2_p.ugvs_actions[0]) == 2
-    # assert len(state2_p.get_actions()) == 1
-    # assert state2_p.ugvs[0].need_action == True
+    assert state1.get_actions()[0].target == 5
+    state_prob_cost = state1.transition(state1.get_actions()[0])
+    assert len(state_prob_cost) == 2
+    state2_p = list(state_prob_cost.keys())[0]
+    assert len(state2_p.ugvs_actions[0]) == 1
+    assert len(state2_p.get_actions()) == 1
+    assert state2_p.ugvs[0].need_action == True
     # assert state2_p.uavs[0].need_action == True
     # assert state2_p.action_cost == 2.5/param.VEL_RATIO
     # assert state2_p.heuristic == pytest.approx(15.0-state2_p.action_cost, 0.05)

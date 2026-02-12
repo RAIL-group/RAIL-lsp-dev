@@ -135,6 +135,7 @@ class MCRobot:
         self.remaining_time = 0.0
         self._cost_to_target = 0.0
         self.net_dist = 0.0
+        self.pl_vertex = self.last_node
         if not iscopy:
             self.travel_history = [self.last_node]
         self.milestones = []
@@ -148,6 +149,7 @@ class MCRobot:
         new_robot._cost_to_target = self._cost_to_target
         new_robot.vel = self.vel
         new_robot.id = self.id
+        new_robot.pl_vertex = self.pl_vertex
         new_robot.unfinished_action = self.unfinished_action
         new_robot.travel_history = self.travel_history.copy()
         # for maction
@@ -190,7 +192,8 @@ class MCRobot:
             self._cost_to_target = 0.0
         
         if len(self.travel_history) > 0:
-            self.last_node = self.travel_history[-1]            
+            self.last_node = self.travel_history[-1]
+            self.pl_vertex = self.travel_history[max(len(self.travel_history)-2, 0)]         
         if self.remaining_time == 0.0:
             self.need_action = True
             self.edge = []

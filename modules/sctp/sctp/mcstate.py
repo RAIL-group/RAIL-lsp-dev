@@ -182,9 +182,6 @@ class MCState(object):
         new_state.ugvs = [ugv.copy() for ugv in self.ugvs]
         
         new_state.ugvs_actions = [[action.copy() for action in ugv_actions] for ugv_actions in self.ugvs_actions]
-        # for ii, actions in enumerate(new_state.ugvs_actions):
-        #     for act in actions:
-        #         act.update_robotID(ii)
             
         return new_state
         
@@ -203,9 +200,9 @@ def create_marco_action(state, path, target, ugv_idx) -> MAction:
     start = path[0]
     distances = []
     sub_targets = []
-    print(f"The path is {path}")
+    # print(f"The path is {path}")
     for i in range(1, len(path)):
-        print (f"Path step from {path[i-1]} to {path[i]}")
+        # print (f"Path step from {path[i-1]} to {path[i]}")
         dist = np.linalg.norm(np.array(state.vertices_map[path[i-1]].coord) - np.array(state.vertices_map[path[i]].coord))
         if path[i-1] in state.graph.poiIDs:
             sub_targets.append(path[i])
@@ -226,14 +223,15 @@ def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) 
     edges = []
     probs = []
     for key, value in state.history.get_data().items():
-        if key.target in state.graph.poiIDs:
-            neighbors = state.neighbors_map[key.target]
-            if value == param.EventOutcome.BLOCK:
-                edges.append([neighbors[0]-1, neighbors[1]-1])
-                probs.append(1.0)
-            elif value == param.EventOutcome.TRAV:
-                edges.append([neighbors[0]-1, neighbors[1]-1])
-                probs.append(0.0)
+        if key.target not in state.graph.poiIDs:
+            continue
+        neighbors = state.neighbors_map[key.target]
+        if value == param.EventOutcome.BLOCK:
+            edges.append([neighbors[0]-1, neighbors[1]-1])
+            probs.append(1.0)
+        elif value == param.EventOutcome.TRAV:
+            edges.append([neighbors[0]-1, neighbors[1]-1])
+            probs.append(0.0)
     updated_probs = ug.set_edge_probabilities(probs=np.array(probs), edges=edges, probabilities=state.pg_probabilities)
     
     # get the certain graph based on the history
@@ -242,44 +240,12 @@ def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) 
     for poi in uncertain_pois: # all possible targets
         target_neighbors = state.neighbors_map[poi]
         path = get_best_path(state, cur_node, poi, ugv_idx, certain_adjacency, target_neighbors)
-        # 
-        # assert state.ugvs[ugv_idx].at_node == True
-        
-        # if cur_node in state.graph.poiIDs:
-        #     start_neighbors = state.neighbors_map[poi]
-        #     path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[0], targets=start_neighbors)
-        #     path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[1], targets=start_neighbors)
-        #     if cost1 < 0 and cost2 < 0:
-        #         path = []
-        #     elif cost1 < 0:
-        #         path = [cur_node] + path2
-        #     elif cost2 < 0:
-        #         path = [cur_node] + path1
-        #     else:
-        #         path = [cur_node] + path1 if cost1 <= cost2 else [cur_node] + path2
-        # else:
-        #     path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=cur_node, targets=target_neighbors)
-        
         if path != []:
             maction = create_marco_action(state, path=path, target=poi, ugv_idx=ugv_idx)
             mactions.append(maction)
     # macro-action reach goal directly
-    # if cur_node in state.graph.poiIDs:
     target_neighbors = [state.goalIDs[ugv_idx]]
     path = get_best_path(state, cur_node, state.goalIDs[ugv_idx], ugv_idx, certain_adjacency, target_neighbors)
-    #     path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=target_neighbors[0], targets=target_neighbors)
-    #     path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=target_neighbors[1], targets=target_neighbors)
-    #     if cost1 < 0 and cost2 < 0:
-    #         path = []
-    #     elif cost1 < 0:
-    #         path = [cur_node] + path2
-    #     elif cost2 < 0:
-    #         path = [cur_node] + path1
-    #     else:
-    #         path = [cur_node] + path1 if cost1 <= cost2 else [cur_node] + path2
-    # else:
-    #     path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=state.ugvs[ugv_idx].last_node, \
-    #                                 targets=[state.goalIDs[ugv_idx]])
     if path != []:
         maction = create_marco_action(state, path=path, target=state.goalIDs[ugv_idx], ugv_idx=ugv_idx)
         mactions.append(maction)
@@ -288,8 +254,8 @@ def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) 
 def get_best_path(state, cur_node, poi, ugv_idx, certain_adjacency, target_neighbors):
     assert state.ugvs[ugv_idx].at_node == True
     if cur_node in state.graph.poiIDs:
-        start_neighbors = state.neighbors_map[poi]
-        print(f"Current node {cur_node} is a POI, its neighbors are {start_neighbors}")
+        start_neighbors = state.neighbors_map[cur_node]
+        # print(f"Current node {cur_node} is a POI, its neighbors are {start_neighbors}")
         path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[0], targets=target_neighbors)
         path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[1], targets=target_neighbors)
         if cost1 < 0 and cost2 < 0:
@@ -422,7 +388,7 @@ def get_uav_belief(state, uav_index):
 
 
 def _get_robot_that_finishes_first(state):
-    # time_remaining_uavs = []
+    # time_remaining_umax(len(self.travel_history)-2, 0)avs = []
     ugv_finish_first = True
     # if len(state.uavs) > 0:
     #     for uav in state.uavs:

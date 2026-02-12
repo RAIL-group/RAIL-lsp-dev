@@ -21,7 +21,7 @@ def _setup(args):
     policyGraph = graph.copy()
     
     num_uav = 1
-    num_ugv = 1
+    num_ugv = 2
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -34,6 +34,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
+        args.num_iterations = 1000 #1000 #(for 1ugv)
         assert args.num_drones == 0
         assert args.num_ugvs == num_ugv
     elif args.planner =='jsap':
@@ -43,7 +44,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
-        args.num_iterations = 1000
+        args.num_iterations = 1000 #1000 #(for 1ugv)
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner =='jsap2':
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -52,7 +53,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
-        args.num_iterations = 1000
+        args.num_iterations = 1000 #1000 #(for 1ugv)
         assert args.num_drones == 2, "This script only supports 2 UAV"
         assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapiap':
