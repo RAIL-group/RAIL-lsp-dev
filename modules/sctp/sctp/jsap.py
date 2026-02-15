@@ -401,6 +401,7 @@ class JSAPState(object):
         return distance, direction
 
 def get_ugv_action(state, ugv_idx):
+    
     actions = []
     ugv = state.ugvs[ugv_idx]
     if ugv.at_node:
@@ -417,10 +418,9 @@ def get_ugv_action(state, ugv_idx):
         actions = [core.Action(target=ugv.edge[0], start_pose=(ugv.cur_pose[0],ugv.cur_pose[1])), 
                               core.Action(target=ugv.edge[1],start_pose=(ugv.cur_pose[0],ugv.cur_pose[1]))]
     actions = [action for action in actions \
-                    if state.history.get_action_outcome(action) != core.EventOutcome.BLOCK]
+                    if state.history.get_action_outcome(action) != param.EventOutcome.BLOCK]
     if len(actions) >= 2:
         actions = [action for action in actions if action.target != ugv.pl_vertex]
-    assert len(actions) > 0
     [action.update_robotID(ugv_idx) for action in actions]
     return actions
 

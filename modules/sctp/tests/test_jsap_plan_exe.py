@@ -417,11 +417,11 @@ def test_jsap_plan_exec_randomgraph():
 def test_jsap_plan_exec_island_bridges_graph():
     print()
     args = _get_args()
-    args.planner = 'jsapiap'
-    args.seed = 3000
+    args.planner = 'jsap'
+    args.seed = 3081
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs =1
+    args.num_ugvs =2
     starts, goals, graph = graphs.get_insland_bridges_graph()
     # print(f"The number of POIs in the graph: {len(graph.pois)}")
     # print(f"The iniital graph")
@@ -429,6 +429,7 @@ def test_jsap_plan_exec_island_bridges_graph():
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
+    num_ugvs = 2
     
     if args.planner == 'ctp':
         args.num_drones =0
@@ -442,11 +443,11 @@ def test_jsap_plan_exec_island_bridges_graph():
     elif args.planner == 'jsap':
         use_AVP = False
         use_DAP = False
-        args.max_depth = 18
+        args.max_depth = 15
         args.num_drones =1 
-        # args.num_ugvs =2
+        assert args.num_ugvs == num_ugvs
         max_uanum = 1
-        args.num_iterations = 10000
+        args.num_iterations = 1000
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
     elif args.planner == 'jsap2':
@@ -556,8 +557,8 @@ def test_jsap_plan_exec_island_bridges_graph():
 def test_jsap_plan_exec_island_graph():
     print()
     args = _get_args()
-    args.planner = 'jsap2'
-    args.seed = 3000
+    args.planner = 'jsap'
+    args.seed = 3081
     random.seed(args.seed)
     np.random.seed(args.seed)
     args.num_ugvs = 2

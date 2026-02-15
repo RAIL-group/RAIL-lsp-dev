@@ -1,7 +1,7 @@
 SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
 SCTP_NUM_EXPERIMENTS =100
-SCTP_NUM_DRONES = 2
+SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 2
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
@@ -13,7 +13,7 @@ endef
 
 GRAPHS = bridges
 
-JSAP_PLANNERS = jsap2 jsapiap2
+JSAP_PLANNERS = jsap
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
