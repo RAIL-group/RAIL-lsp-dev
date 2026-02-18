@@ -20,8 +20,8 @@ def _setup(args):
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
-    num_uav = 1
-    num_ugv = 2
+    # num_uav = 0
+    num_ugv = 3
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -33,7 +33,7 @@ def _setup(args):
         param.REVISIT_PEN = 20.0
         use_AVP = False
         use_DAP = False
-        args.max_depth = 15
+        args.max_depth = 12
         args.num_iterations = 1000 #1000 #(for 1ugv)
         assert args.num_drones == 0
         assert args.num_ugvs == num_ugv
@@ -101,7 +101,7 @@ def _setup(args):
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 
-    assert args.num_iterations == 1000
+    # assert args.num_iterations == 1000
     assert args.sampling_maps == 200
     print(f"Planner: {args.planner}, a team of {args.num_ugvs} UGV(s)-{args.num_drones} UAV(s), iters.: {args.num_iterations},"
           f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP: {use_AVP}, DAP: {use_DAP}") 

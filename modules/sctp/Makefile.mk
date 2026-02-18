@@ -1,8 +1,8 @@
 SCTP_BASENAME = sctp
-SCTP_SEED_START = 3000
-SCTP_NUM_EXPERIMENTS =100
+SCTP_SEED_START = 3046
+SCTP_NUM_EXPERIMENTS =54
 SCTP_NUM_DRONES = 1
-SCTP_NUM_GROUNDS = 2
+SCTP_NUM_GROUNDS = 3
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
 # SCTP_EXPERIMENT_NAME = Oct29_rg${SCTP_NUM_VERTICES}v_jsctp
@@ -13,7 +13,7 @@ endef
 
 GRAPHS = bridges
 
-JSAP_PLANNERS = jsap
+JSAP_PLANNERS = jsap jsapdap jsapiap
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
@@ -39,8 +39,8 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 # 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 # 		--env_type $(GRAPHS) \
 
-# .PHONY: jsap-eval-dense-graphs
-# jsap-eval-dense-graphs: $(all-targets-jsap-eval)
+# .PHONY: jsap-eval-random-graphs
+# jsap-eval-random-graphs: $(all-targets-jsap-eval)
 # $(all-targets-jsap-eval):
 # 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
 # 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)

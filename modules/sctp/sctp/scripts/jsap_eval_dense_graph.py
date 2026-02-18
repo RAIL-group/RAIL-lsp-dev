@@ -19,42 +19,42 @@ def _setup(args):
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    # print("")
+    num_ugvs = 3
+    num_uavs = 2
         
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(args.num_ugvs)]
     if args.planner =='ctp':
-        args.num_drones = 0
-        assert args.num_ugvs == 1
+        assert args.num_drones == num_uavs
+        assert args.num_ugvs == num_ugvs
         drones = []
-        param.REVISIT_PEN = 27.0 #25.0
-        args.num_iterations = 1000 #(1 UGV) #2500 (3 UGVs) #2000 (2UGVs)
+        args.num_iterations = 1000 #2000
         args.max_depth = 12
         use_AVP = False
         use_DAP = False
         max_uanum = 1
-        param.REVISIT_PEN = 0.0
+        param.REVISIT_PEN = 0.0 #25.0
     elif args.planner =='jsap':
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
-        args.num_drones = 1
-        assert args.num_ugvs == 1
+        assert args.num_drones == num_uavs
+        assert args.num_ugvs == num_ugvs
         use_AVP = False
         use_DAP = False
         max_uanum = 1
         args.max_depth = 15
-        args.num_iterations = 1000
+        assert args.num_iterations == 1000
     elif args.planner =='jsap2':
         use_AVP = False
         use_DAP = False
         param.REVISIT_PEN = 0.0
-        args.num_drones = 2
-        assert args.num_ugvs == 1
+        assert args.num_drones == num_uavs 
+        assert args.num_ugvs == num_ugvs
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         args.max_depth = 15
-        args.num_iterations = 1000 #12000 #6000+3500*(args.num_drones-1) #3000
+        assert args.num_iterations == 1000 #12000 #6000+3500*(args.num_drones-1) #3000
         max_uanum = 1
     elif args.planner == 'jsapiap':
         use_AVP = True
@@ -65,8 +65,9 @@ def _setup(args):
         args.max_depth = 15 #(2ugvs-1uav) #8 #(1ugv-1uav)
         args.sampling_maps = 200
         max_uanum = 1
-        assert args.num_drones == 1
-        assert args.num_ugvs == 1
+        assert args.num_iterations == 1000
+        assert args.num_drones == num_uavs
+        assert args.num_ugvs == num_ugvs
     elif args.planner == 'jsapiap2':
         max_uanum = 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -74,11 +75,11 @@ def _setup(args):
         use_AVP = True
         use_DAP = False
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 1000
+        assert args.num_iterations == 1000
         args.max_depth = 15 #(1ugv-2uavs)
         args.sampling_maps = 200
-        assert args.num_drones == 2
-        assert args.num_ugvs == 1
+        assert args.num_drones == num_uavs
+        assert args.num_ugvs == num_ugvs
     
     elif args.planner == 'jsapdap':
         param.REVISIT_PEN = 0.0
@@ -88,18 +89,20 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
-        assert args.num_ugvs == 1
-        assert args.num_drones == 1, "This script only supports 1 UAV"
+        assert args.num_iterations == 1000
+        assert args.num_ugvs == num_ugvs
+        assert args.num_drones == num_uavs, "This script only supports 1 UAV"
     elif args.planner == 'jsapdap2':
         param.REVISIT_PEN = 0.0
         max_uanum = 1
         args.max_depth = 15
+        assert args.num_iterations == 1000
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
-        assert args.num_drones == 2
-        assert args.num_ugvs == 1
+        assert args.num_drones == num_uavs
+        assert args.num_ugvs == num_ugvs
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
@@ -110,7 +113,7 @@ def _setup(args):
     planner_drones = [drone.copy() for drone in drones]
     assert args.sampling_maps == 200
     # assert args.max_depth == 14
-    assert args.num_iterations == 1000
+    # assert args.num_iterations == 1000
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
                         uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN,\
                         rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 

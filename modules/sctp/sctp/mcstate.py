@@ -254,18 +254,24 @@ def get_avail_mactions(state: MCState, uncertain_pois: List[int], ugv_idx: int) 
 def get_best_path(state, cur_node, poi, ugv_idx, certain_adjacency, target_neighbors):
     assert state.ugvs[ugv_idx].at_node == True
     if cur_node in state.graph.poiIDs:
-        start_neighbors = state.neighbors_map[cur_node]
-        # print(f"Current node {cur_node} is a POI, its neighbors are {start_neighbors}")
-        path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[0], targets=target_neighbors)
-        path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[1], targets=target_neighbors)
-        if cost1 < 0 and cost2 < 0:
-            path = []
-        elif cost1 < 0:
-            path = [cur_node] + path2
-        elif cost2 < 0:
-            path = [cur_node] + path1
+        action = MAction(start=cur_node, sub_targets=[cur_node], distances=[0.0])
+        if state.history.get_action_outcome(action) == param.EventOutcome.BLOCK:
+            start_node = state.ugvs[ugv_idx].pl_vertex
+            path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_node, targets=target_neighbors)
+            if path != []:
+                path = [cur_node] + path
         else:
-            path = [cur_node] + path1 if cost1 <= cost2 else [cur_node] + path2
+            start_neighbors = state.neighbors_map[cur_node]
+            path1, cost1 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[0], targets=target_neighbors)
+            path2, cost2 = ug.get_shortest_path_from_vertices(certain_adjacency, start=start_neighbors[1], targets=target_neighbors)
+            if cost1 < 0 and cost2 < 0:
+                path = []
+            elif cost1 < 0:
+                path = [cur_node] + path2
+            elif cost2 < 0:
+                path = [cur_node] + path1
+            else:
+                path = [cur_node] + path1 if cost1 <= cost2 else [cur_node] + path2
     else:
         path, _ = ug.get_shortest_path_from_vertices(certain_adjacency, start=cur_node, targets=target_neighbors)
     return path
