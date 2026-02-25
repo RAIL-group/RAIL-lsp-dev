@@ -118,3 +118,8 @@ class BipartiteEdgeRegressor(nn.Module):
 
         # 5. Predict on Edges
         return self.regressor(h_edges)
+
+    
+    def loss(self, pred, target, mask=None):
+        # MSE Loss for regression
+        return F.mse_loss(pred.view(-1), target.view(-1))

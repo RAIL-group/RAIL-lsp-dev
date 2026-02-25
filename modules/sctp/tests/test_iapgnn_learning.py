@@ -2,9 +2,12 @@ import numpy as np
 import random
 from sctp.learning.iap_gnn import BipartiteEdgeRegressor
 from sctp.scripts.data_gen import generate_dataset
+from sctp.scripts.iapgnn_training import GzipGNNDataset, train_epoch
 import pickle, gzip
-from torch_geometric.data import Data
 import torch
+import torch.nn as nn
+from torch_geometric.data import DataLoader
+import torch.optim as optim
 
 def test_data_generation():
     graph_type = 'bridges'
@@ -46,27 +49,38 @@ def test_GNN_model():
     print(preds.shape) # Output: [3, 1] (One prediction per edge)
     print(preds)
 
-def test_GNN_pickle_data():
+def test_get_Graphdata():
     # Load the dataset
-    with gzip.open('data/sctp/graph_data/pickles/dat_1000_0.pgz', 'rb') as f:
-        dataset = pickle.load(f)
-
-    # Check the first data point
-    data = dataset
+    with gzip.open('data/sctp/graph_data/pickles/dat_1000_1.pgz', 'rb') as f:
+        data = pickle.load(f)
     print("Node Features (x):", data.x.shape)  # [Num_Nodes, Node_Feats]
+    print("Node Features (x):", data.x)  # [Num_Nodes, Node_Feats]
     print("Edge Index:", data.edge_index.shape)  # [2, Num_Edges]
+    print("Edge Index:", data.edge_index)  # [2, Num_Edges]
     print("Edge Attributes:", data.edge_attr.shape)  # [Num_Edges, Edge_Feats]
+    print("Edge Attributes:", data.edge_attr)  # [Num_Edges, Edge_Feats]
     print("Target Values (y):", data.y.shape)  # [Num_Edges, 1]
+    print("Target Values (y):", data.y)  # [Num_Edges, 1]
+
+def test_IAPtraining():
     NODE_IN = 2
     EDGE_IN = 2
     HIDDEN = 32
     model = BipartiteEdgeRegressor(NODE_IN, EDGE_IN, HIDDEN)
-    x = torch.tensor(data.x, dtype=torch.float)
-    edge_index = torch.tensor(data.edge_index, dtype=torch.long).t().contiguous()
-    edge_attr = torch.tensor(data.edge_attr, dtype=torch.float)
     
-    preds = model(x, edge_index, edge_attr)
-    print(preds)
-    print(preds.shape)
+    # Check the first data point
+    dataset = GzipGNNDataset('data/sctp/graph_data/pickles/')
+    # Use a DataLoader for batching
+    train_loader = DataLoader(dataset, batch_size=8, shuffle=True)
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')  # Force CPU for debugging
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    criterion = nn.MSELoss()
+    
+    num_epochs = 1
+    for epoch in range(1, num_epochs+1):
+        loss = train_epoch(model, train_loader, optimizer, criterion, device)
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
+    
     
     

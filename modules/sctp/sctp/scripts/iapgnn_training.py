@@ -8,6 +8,7 @@ import torch.optim as optim
 from torch_geometric.loader import DataLoader
 from sctp.learning.iap_gnn import BipartiteEdgeRegressor
 from torch.utils.data import Dataset
+from torch_geometric.data import Data
 
 class GzipGNNDataset(Dataset):
     def __init__(self, folder_path):
@@ -19,7 +20,17 @@ class GzipGNNDataset(Dataset):
     def __getitem__(self, idx):
         with gzip.open(self.file_paths[idx], 'rb') as f:
             # This returns your 'GraphData' object
-            return pickle.load(f)
+            raw_data = pickle.load(f)
+        data = Data(
+            x=torch.from_numpy(raw_data.x).float(),
+            edge_index=torch.from_numpy(raw_data.edge_index).long(),
+            edge_attr=torch.from_numpy(raw_data.edge_attr).float(),
+            y=torch.from_numpy(raw_data.y).float(),
+        )
+        if hasattr(raw_data, 'graph_metadata'):
+            data.metadata = raw_data.graph_metadata
+        return data
+        
 
 
 def train_epoch(model, loader, optimizer, criterion, device):
@@ -32,24 +43,25 @@ def train_epoch(model, loader, optimizer, criterion, device):
         
         # 2. Forward Pass
         # Pass the batch data and the specific node attributes
-        # (Assuming your Data object has .start_node, .goal_node, .target_node)
         output = model(
-            batch.x, 
-            batch.edge_index,
-            batch.edge_attr,
+            x= batch.x, 
+            edge_index=batch.edge_index,
+            edge_attr=batch.edge_attr,
         )
         
         # 3. Compute Loss
         # Ensure output and target have the same shape [Batch, 1]
-        loss = criterion(output.view(-1), batch.y.view(-1))
+        # loss = criterion(output.view(-1), batch.y.view(-1))
+        loss = criterion(output, batch.y)  # MSE Loss between predicted and true edge values
         
         # 4. Backward Pass
         loss.backward()
         optimizer.step()
         
-        total_loss += loss.item() * batch.num_graphs
+        # total_loss += loss.item() * batch.num_graphs
+        total_loss += loss.item()
         
-    return total_loss / len(loader.dataset)
+    return total_loss / len(loader)
 
 
 if __name__ == "__main__":
@@ -62,7 +74,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(dataset, batch_size=8, shuffle=True)
 
     # 1. Setup Device & Model
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')  # Force CPU for debugging
     NODE_IN = 2
     EDGE_IN = 2
     HIDDEN = 32

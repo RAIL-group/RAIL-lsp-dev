@@ -17,7 +17,7 @@ import learning
 class GraphData:
     """Data structure to store graph information"""
     x: np.ndarray #start, goal
-    edge_index: List #edge_index
+    edge_index: np.ndarray #edge_index
     edge_attr: np.ndarray #edge_attr
     y: np.ndarray #y [M ,1] M =edges_num valuees - y
     graph_metadata: Dict
@@ -31,25 +31,32 @@ def create_graph_datum(
     values: np.ndarray,
     metadata: Optional[Dict] = None
 ) -> GraphData:
-    # Create adjacency matrix
-    nodes = [[0,0] for _ in range(graph.adjacency.shape[0])]
-    assert len(nodes) == 16
-    nodes[start] = [1,0]
-    nodes[goal] = [0,1]
-    edge_attr = [[graph.adjacency[edge[0], edge[1]], graph.probabilities[edge[0], edge[1]]] for edge in edges]
+    # 1. Create node features
+    # 1. Create node features [Num_Nodes, 2]
+    num_nodes = graph.adjacency.shape[0]
+    nodes = np.zeros((num_nodes, 2), dtype=np.float32)
+    # Mark start and goal using one-hot style features
+    nodes[start, 0] = 1.0
+    nodes[goal, 1] = 1.0
+    
+    edge_attr = []
+    for u, v in edges:
+        length = graph.adjacency[u, v]
+        prob = graph.probabilities[u, v]
+        edge_attr.append([length, prob])
     
     # Create metadata
     if metadata is None:
         metadata = {}
     
     metadata.update({
-        'num_nodes': graph.adjacency.shape[0],
-        'num_edges': np.count_nonzero(graph.adjacency) // 2,
+        'num_nodes': num_nodes,
+        'num_edges': len(edges),
     })
     
     return GraphData(
-        x=np.array(nodes, dtype=np.int64),
-        edge_index=np.array(edges, dtype=np.int64),
+        x= nodes,
+        edge_index=np.array(edges, dtype=np.int64).T,
         edge_attr=np.array(edge_attr, dtype=np.float32),
         y=np.array(values, dtype=np.float32).reshape(-1, 1),
         graph_metadata=metadata,
@@ -67,13 +74,7 @@ def generate_dataset(
     Generate a dataset of multiple graphs
     Args:
         num_graphs: Number of graphs to generate
-        graph_type: Type of graph ('random', 'scale_free', 'small_world')
-        num_nodes_range: Range of number of nodes (min, max)
-        graph_params: Parameters for graph generation
-        prob_params: Parameters for probability distribution
-        node_feature_types: Types of node features
-        edge_feature_types: Types of edge features
-        seed: Random seed for reproducibility
+        graph_type: Type of graph ('random', 'bridges', 'islands')
     
     Returns:
         List of GraphData objects
@@ -83,7 +84,7 @@ def generate_dataset(
         np.random.seed(seeds[i])
         random.seed(seeds[i])
         # Generate random number of nodes
-        if graph_type == 'island':
+        if graph_type == 'islands':
             _, _, graph = graphs.get_sixIslands_graph()
         elif graph_type == 'random':
             _, _, graph = graphs.random_graph()
