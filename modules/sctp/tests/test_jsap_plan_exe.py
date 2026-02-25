@@ -14,10 +14,6 @@ from sctp.planners import jsap_plan_exe as plan_loop
 
 def _get_args():
     parser = argparse.ArgumentParser()
-    # args.seed = 3009
-    # random.seed(args.seed)
-    # np.random.seed(args.seed)
-    
     parser.add_argument('--save_dir', type=str, default='data/sctp')
     parser.add_argument('--seed', type=int, default=1024)
     parser.add_argument('--planner', type=str, default='base')
@@ -282,10 +278,12 @@ def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
     args.planner = 'jsapiap'
-    args.seed = 3022
+    args.seed = 3010
     random.seed(args.seed)
     np.random.seed(args.seed)
     args.num_ugvs =1
+    args.num_drones =1
+    verbose = False
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
@@ -306,7 +304,7 @@ def test_jsap_plan_exec_randomgraph():
         args.num_drones =1 
         # args.num_ugvs =2
         max_uanum = 1
-        args.num_iterations = 10000
+        args.num_iterations = 1000
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
     elif args.planner == 'jsap2':
@@ -326,10 +324,9 @@ def test_jsap_plan_exec_randomgraph():
     elif args.planner == 'jsapiap':
         use_AVP=True
         use_DAP = False
-        assert args.num_drones > 0
-        assert args.num_ugvs > 0
+        assert args.num_drones == 1
+        assert args.num_ugvs == 1
         args.max_depth = 15
-        # max_uanum = max_uanum
         args.num_iterations = 1000
         args.n_maps = 200
         max_uanum = 1
@@ -340,12 +337,12 @@ def test_jsap_plan_exec_randomgraph():
     elif args.planner == 'jsapdap':
         use_AVP=False
         use_DAP = True
-        assert args.num_drones > 0
-        assert args.num_ugvs > 0
-        args.max_depth = 10
+        assert args.num_drones == 1
+        assert args.num_ugvs == 1
+        args.max_depth = 15
         # max_uanum = max_uanum
-        args.num_iterations = 500
-        args.n_maps = 100
+        args.num_iterations = 1000
+        args.n_maps = 200
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
@@ -409,27 +406,26 @@ def test_jsap_plan_exec_randomgraph():
     starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=True)
+                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=verbose)
+    plt.savefig(f'{args.save_dir}/figures/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
     plt.show()
 
 
 
-def test_jsap_plan_exec_island_bridges_graph():
+def test_jsap_plan_exec_bridges_graph():
     print()
     args = _get_args()
-    args.planner = 'jsap'
-    args.seed = 3081
+    args.planner = 'jsapiap'
+    args.seed = 3012
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs =2
+    verbose = False
+    args.num_ugvs =1
     starts, goals, graph = graphs.get_insland_bridges_graph()
-    # print(f"The number of POIs in the graph: {len(graph.pois)}")
-    # print(f"The iniital graph")
-    # graph.print_graph_config()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
-    num_ugvs = 2
+    num_ugvs = 1
     
     if args.planner == 'ctp':
         args.num_drones =0
@@ -460,7 +456,7 @@ def test_jsap_plan_exec_island_bridges_graph():
         assert args.num_drones == 2
         assert args.num_ugvs == 3 
         max_uanum = 1
-        args.num_iterations = 30000 # 6000+3500*(args.num_drones-1)
+        args.num_iterations = 1000 # 6000+3500*(args.num_drones-1)
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                 robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
 
@@ -469,10 +465,10 @@ def test_jsap_plan_exec_island_bridges_graph():
         use_DAP = False
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 8
+        args.max_depth = 15
         # max_uanum = max_uanum
-        args.num_iterations = 500
-        args.n_maps = 100
+        args.num_iterations = 1000
+        args.n_maps = 200
         max_uanum = 1
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
@@ -483,7 +479,7 @@ def test_jsap_plan_exec_island_bridges_graph():
         use_DAP = True
         assert args.num_drones > 0
         assert args.num_ugvs > 0
-        args.max_depth = 14
+        args.max_depth = 15
         # max_uanum = max_uanum
         args.num_iterations = 1000
         args.n_maps = 200
@@ -550,19 +546,21 @@ def test_jsap_plan_exec_island_bridges_graph():
     starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=True)
+                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=verbose)
+    plt.savefig(f'{args.save_dir}/figures/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
     plt.show()
 
 
 def test_jsap_plan_exec_island_graph():
     print()
     args = _get_args()
-    args.planner = 'jsap'
-    args.seed = 3081
+    args.planner = 'ctp'
+    args.seed = 3017
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs = 2
-    args.num_drones = 2
+    args.num_ugvs = 1
+    # args.num_drones = 1
+    verbose = False
     starts, goals, graph = graphs.get_sixIslands_graph()
     # print(f"The number of vertices in the graph: {len(graph.vertices)}")
     # print(f"The vertices' ID: {[v.id for v in graph.vertices]}")
@@ -573,11 +571,11 @@ def test_jsap_plan_exec_island_graph():
     if args.planner == 'ctp':
         args.num_drones =0
         drones = []
-        args.num_iterations = 1500 #2000 
-        args.max_depth = 12
+        args.num_iterations = 1000 #2000 
+        args.max_depth = 13
         use_AVP = False
         use_DAP = False
-        param.REVISIT_PEN = 25.0
+        param.REVISIT_PEN = 0.0
         max_uanum = 1
     elif args.planner == 'jsap':
         use_AVP = False
@@ -605,7 +603,7 @@ def test_jsap_plan_exec_island_graph():
     elif args.planner == 'jsapiap':
         use_AVP=True
         use_DAP = False
-        assert args.num_drones > 0
+        args.num_drones = 1 
         assert args.num_ugvs > 0
         args.max_depth = 15
         # max_uanum = max_uanum
@@ -619,9 +617,9 @@ def test_jsap_plan_exec_island_graph():
     elif args.planner == 'jsapdap':
         use_AVP=False
         use_DAP = True
-        assert args.num_drones > 0
+        args.num_drones = 1
         assert args.num_ugvs > 0
-        args.max_depth = 10
+        args.max_depth = 15
         # max_uanum = max_uanum
         args.num_iterations = 1000
         args.n_maps = 200
@@ -688,7 +686,8 @@ def test_jsap_plan_exec_island_graph():
     starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
-                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=True)
+                        seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=verbose)
+    plt.savefig(f'{args.save_dir}/figures/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
     plt.show()
 
 

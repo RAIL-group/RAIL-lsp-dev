@@ -173,10 +173,8 @@ def get_shortest_path_from_vertices(adj_matrix, start: int, targets: List[int]) 
     if len(targets) == 2:
         costs = []
         for target in targets:
-            # print(f"the target is: {target} and start {start}")
             cost = compute_shortest_path_length(adj_matrix, start=start-1, end=target -1)
             costs.append(cost)
-            # print("the target is: -------------------- ", target)
         if all (costs) < 0.0:
             return [], -1.0
         elif costs[0] < 0.0:

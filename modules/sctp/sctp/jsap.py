@@ -24,7 +24,7 @@ class JSAPState(object):
         self.noway2goal = False
         self.cur_ugv_idx = -1
         self.avail_uav_actions = []
-        self.max_uanum = max_uanum
+        
         self.sampling_time = 0.0 #measure the time for sampling-maps
         self.s_policy_time = 0.0 # measure the time for single policy computation
         self.ugvs_time = 0.0
@@ -39,6 +39,8 @@ class JSAPState(object):
             assert graph is not None
             assert ugvs != []
             self.graph = graph
+            self.max_uanum = max_uanum
+            assert self.max_uanum == 3
             self.goalIDs = goalIDs
             self.history = core.History()
             self.vertices_map = {v.id: v for v in self.graph.vertices + self.graph.pois}
@@ -294,6 +296,7 @@ class JSAPState(object):
         if new_state.use_AVP or new_state.use_DAP:
             assert new_state.use_AVP != new_state.use_DAP
         new_state.max_uanum = self.max_uanum
+        assert new_state.max_uanum == 3
         new_state.action_cost = 0.0
         new_state.revisit_pen = self.revisit_pen
         new_state.assigned_pois = self.assigned_pois.copy() # [poi for poi in self.assigned_pois]

@@ -1,8 +1,8 @@
 SCTP_BASENAME = sctp
-SCTP_SEED_START = 3046
-SCTP_NUM_EXPERIMENTS =54
+SCTP_SEED_START = 3066
+SCTP_NUM_EXPERIMENTS =34
 SCTP_NUM_DRONES = 1
-SCTP_NUM_GROUNDS = 3
+SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
 # SCTP_EXPERIMENT_NAME = Oct29_rg${SCTP_NUM_VERTICES}v_jsctp
@@ -11,9 +11,9 @@ define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
 
-GRAPHS = bridges
+GRAPHS = bridges# islands
 
-JSAP_PLANNERS = jsap jsapdap jsapiap
+JSAP_PLANNERS = jsapiap
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
@@ -32,7 +32,7 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 # 		--num_drones $(SCTP_NUM_DRONES) \
 # 		--planner $(jsap_planner) \
 # 		--seed $(jsap_seed) \
-# 		--num_iterations 1000 \
+# 		--num_iterations 1500 \
 # 		--sampling_maps 200 \
 # 		--C 200 \
 # 		--max_depth 15 \
@@ -55,12 +55,12 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 # 		--max_depth 20 \
 # 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 
-.PHONY: jsap-eval-island-bridges-graphs
-jsap-eval-island-bridges-graphs: $(all-targets-jsap-eval)
+.PHONY: jsap-eval-bridges-graphs
+jsap-eval-bridges-graphs: $(all-targets-jsap-eval)
 $(all-targets-jsap-eval):
 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_island_bridges_graph \
+	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_bridges_graph \
 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
@@ -81,20 +81,9 @@ sap-generate-data:
 	@$(DOCKER_PYTHON) -m sctp.scripts.data_gen \
 	 	--save_dir data/$(SCTP_BASENAME)/graph_data \
 		--num_maps 500 \
-		--num_graphs 1 \
-		--graph_type "island" \
+		--num_graphs 20 \
+		--graph_type 'bridges' \
 		
-# .PHONY: sctp-planner-test
-# sctp-planner-test:
-# 	@echo "Evaluating: planner: $(planner), seed: 3000"
-# 	@$(DOCKER_PYTHON) -m modules.tests.test_sctp_planner \
-# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME) \
-# 		--num_drones $(SCTP_NUM_DRONES) \
-# 		--num_ugvs $(SCTP_NUM_GROUNDS) \
-# 		--seed 3000 \
-# 		--num_iterations 1000 \
-# 		--C 200.0 \
-
 
 .PHONY: sctp-execution-test
 sctp-execution-test: DOCKER_ARGS ?= -it
@@ -109,9 +98,11 @@ sctp-execution-test:
 
 .PHONY: sctp-results
 sctp-results:
+	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m sctp.scripts.sctp_results \
-	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/plot_data \
-		--num_drones $(SCTP_NUM_DRONES)
+	 	--num_ugvs $(SCTP_NUM_GROUNDS) \
+		--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/ \
+		--num_drones $(SCTP_NUM_DRONES) \
 
 # .PHONY: mr-task-vis-net-predictions
 # mr-task-vis-net-predictions: DOCKER_ARGS ?= -it

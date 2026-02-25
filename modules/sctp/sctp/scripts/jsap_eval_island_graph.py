@@ -27,8 +27,8 @@ def _setup(args):
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
-    num_uav = 2
-    num_ugv = 2
+    num_uav = 0
+    num_ugv = 3
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -40,8 +40,8 @@ def _setup(args):
         param.REVISIT_PEN = 0.0
         use_AVP = False
         use_DAP = False
-        args.max_depth = 15
-        args.num_iterations = 1500 #1000 #(for 1ugv)
+        args.max_depth = 12
+        args.num_iterations = 2500 #1000 #(for 1ugv)
         assert args.num_drones == 0
         assert args.num_ugvs == num_ugv
     elif args.planner =='jsap':
@@ -60,7 +60,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
-        args.num_iterations = 1500 #1000 #(for 1ugv)
+        args.num_iterations = 1200 #1000 #(for 1ugv)
         assert args.num_drones == num_uav, "This script only supports 2 UAV"
         assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapiap':
@@ -71,7 +71,7 @@ def _setup(args):
         use_AVP = True
         use_DAP = False
         max_uanum = 1
-        args.num_iterations = 1500 #1000 #(for 1ugv)
+        args.num_iterations = 1200 #1000 #(for 1ugv)
         assert args.num_ugvs == num_ugv
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapiap2':
@@ -83,7 +83,7 @@ def _setup(args):
         param.REVISIT_PEN = 0.0
         # 
         args.max_depth = 15 #(1ugv-2uavs)
-        args.num_iterations = 1500 #1000 #(for 1ugv)
+        args.num_iterations = 1200 #1000 #(for 1ugv)
         args.sampling_maps = 200
         assert args.num_drones == num_uav
         assert args.num_ugvs == num_ugv
@@ -106,6 +106,7 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
+        args.num_iterations = 1200
         assert args.num_drones == num_uav
         assert args.num_ugvs == num_ugv
     else:

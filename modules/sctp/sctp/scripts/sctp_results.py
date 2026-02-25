@@ -175,6 +175,65 @@ def plot_scatter_data(file_path, args):
           f"steptime: {np.average(jsapdap2_steptimes):0.2f}, samptime: {np.average(jsapdap2_samptimes):0.2f}, "\
           f"spolicytime: {np.average(jsapdap2_spolicytimes):0.2f}, total runtime: {np.average(jsapdap2_ttimes):0.2f}")
     
+
+def processed_data(input_file, output_file, args):
+    # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
+    seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(input_file)
+    assert len(seed_costs) == len(seed_truntimes)
+    base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist = get_planner_data(seed_costs)
+    base_ttimes, jsap_ttimes, jsapavp_ttimes, jsapdap_ttimes, jsapdap2_ttimes, jsap2_ttimes, \
+                jsapavp2_ttimes = get_planner_data(seed_truntimes)
+    base_steptimes, jsap_steptimes, jsapavp_steptimes, jsapdap_steptimes, jsapdap2_steptimes, jsap2_steptimes, \
+                jsapavp2_steptimes = get_planner_data(seed_steptimes)
+    base_samptimes, jsap_samptimes, jsapavp_samptimes, jsapdap_samptimes, jsapdap2_samptimes, jsap2_samptimes, \
+                jsapavp2_samptimes = get_planner_data(seed_samptimes)
+    # base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
+    #             jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
+    
+    # print(base_dist)
+    # print(jsap_dist)
+    if base_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: CTP        | UGVs: {args.num_ugvs} | AVG_COST: {np.average(base_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(base_steptimes):0.2f} | SAMP_TIME: {np.average(base_samptimes):0.2f} |"
+                f" T.TIME: {np.average(base_ttimes):0.2f} \n")    
+   
+    if jsap_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-1     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsap_steptimes):0.2f} | SAMP_TIME: {np.average(jsap_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsap_ttimes):0.2f} \n")    
+    
+    if jsap2_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-2     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap2_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsap2_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsap2_ttimes):0.2f} \n")    
+    
+        
+    if jsapavp_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-IAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsapavp_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsapavp_ttimes):0.2f} \n")
+    
+    if jsapavp2_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-IAP-2 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp2_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsapavp2_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp2_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsapavp2_ttimes):0.2f} \n")
+
+    if jsapdap_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsapdap_ttimes):0.2f} \n")
+    
+    if jsapdap2_dist[0] != None:
+        with open(output_file, "a+") as f:
+            f.write(f"PLANNER: JSAP-DAP-2 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap2_dist):0.2f} |"
+                f" AVG_STEP_TIME: {np.average(jsapdap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap2_samptimes):0.2f} |"
+                f" T.TIME: {np.average(jsapdap2_ttimes):0.2f} \n")
     
 
 def plot_data_varying_drones(file_path, ugv_nums=[1,2], drone_nums = [0,1,2], plot_costs=True,
@@ -262,6 +321,76 @@ def plot_data_varying_drones(file_path, ugv_nums=[1,2], drone_nums = [0,1,2], pl
     #     print(f"Extract costs from {file_name}")
     #     base_cost, sctp_cost,
 
+def plot_madist_allinOne_std(x, data, std, featureNames, yName, 
+                    ranges, rangeStep, envName, axis, i):
+    # if not (i==10):
+    # plt.sca(axis[i]) 
+    markers = ['o', '^',  'D', 's', 'p', '*', 'h']
+    colors = ['red', 'magenta', 'orange', 'blue', 'green', 'purple', 'brown']
+    order = 10
+    for ii, dat in enumerate(data):         
+        # if ii==0:
+        #     order = 10
+        # elif ii==5:
+        #     order = 9
+        # else:
+        #     order = 1
+        plt.errorbar(x, dat, std,
+                    color=colors[ii],   
+                    linewidth=2.0, 
+                    # linestyle='None', 
+                    marker=markers[ii],
+                    markersize=9,
+                    label=featureNames[ii],
+                    zorder=order
+                )
+                    
+    plt.title(envName, fontsize=18)
+    plt.ylim(ranges[0], ranges[1])
+    major_ticks = np.arange(ranges[0], ranges[1], rangeStep)
+    plt.grid(axis = "y")
+    # # for number of path expansions
+    # plt.legend(loc='best',fontsize=16)
+    # plt.xlabel('number of path expansions', fontsize=20)
+    # plt.xticks(x,visible=True)
+    # plt.ylabel(yName, fontsize=20)
+    # plt.yticks(major_ticks,fontsize=18)
+    
+    
+    # for runtime and travel distances
+    # if yName == "Distances [m]":
+    plt.xticks(x,visible=True,fontsize=12)
+    plt.xlabel('number of UGVs', fontsize=15)
+    # else:
+        # plt.xticks(x,visible=False)
+    # if i==0:    
+    plt.ylabel(yName, fontsize=15)
+    plt.yticks(major_ticks,fontsize=12)
+    # else:
+    #     plt.yticks(major_ticks,visible=False)
+    plt.savefig(f'/data/sctp/Jan30/plot_{envName}.pdf', bbox_inches='tight')
+
+def read_processed_data(filepath):
+    data = {}
+    with open(filepath, 'r') as file:
+        for line in file:
+            parts = line.split('|')
+            planner = parts[0].split(':')[1].strip()
+            ugvs = int(parts[1].split(':')[1].strip())
+            avg_cost = float(parts[2].split(':')[1].strip())
+            avg_step_time = float(parts[3].split(':')[1].strip())
+            samp_time = float(parts[4].split(':')[1].strip())
+            total_time = float(parts[5].split(':')[1].strip())
+            if planner not in data:
+                data[planner] = {}
+            data[planner][ugvs] = {
+                'avg_cost': avg_cost,
+                'avg_step_time': avg_step_time,
+                'samp_time': samp_time,
+                'total_time': total_time
+            }
+    return data
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -270,13 +399,35 @@ if __name__ == '__main__':
     parser.add_argument('--num_ugvs', type=int, default=1)
     
     args = parser.parse_args()
-    scatter_data = True
+    scatter_data = False
+    processed_flag = True
+    need_to_process = True
     file_path = args.save_dir
-    args.num_ugvs = 2
     
     if scatter_data:
-        file_path = Path(file_path)/ f'results_{args.num_ugvs}UGVs.txt'
-        plot_scatter_data(file_path, args)
+        input_path = Path(file_path)/ f'{args.num_ugvs}/results_{args.num_ugvs}UGVs.txt'
+        plot_scatter_data(input_path, args)
+    elif processed_flag:
+        graphs = ['random', 'bridges', 'islands']
+        ugvs_num = [1,2,3]
+        if need_to_process:
+            for graph in graphs:
+                output_path = Path(file_path)/ f'{graph}/processed_results.txt'    
+                for ugv_num in ugvs_num:
+                    args.num_ugvs = ugv_num
+                    input_path = Path(file_path)/ f'{graph}/{ugv_num}/results_{ugv_num}UGVs.txt'
+                    processed_data(input_path, output_path, args)
+        for graph in graphs:
+            output_path = Path(file_path)/ f'{graph}/processed_results.txt'    
+            data = read_processed_data(output_path)
+            distances = [[data[planner][ugv_num]['avg_cost'] for ugv_num in ugvs_num] for planner in data]
+            plot_madist_allinOne_std(x=ugvs_num, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]", 
+                    ranges=(150, 1400), rangeStep=200, envName=graph, axis=plt.subplots(1, 1)[1], i=graphs.index(graph))
+            
+            # distances = [[data[planner][ugv_num]['avg_cost']/float(ugv_num) for ugv_num in ugvs_num] for planner in data]
+            # plot_madist_allinOne_std(x=ugvs_num, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]", 
+            #         ranges=(150, 700), rangeStep=100, envName=graph, axis=plt.subplots(1, 1)[1], i=graphs.index(graph))
+            plt.show()
     else:
         plot_data_varying_drones(file_path)
     

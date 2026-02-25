@@ -1,97 +1,120 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from torch_geometric.data import Data
-# from torch_geometric.nn import RGCNConv
-# from torch_geometric.nn import GATConv
-from torch_geometric.nn import NNConv
+# from torch_geometric.data import Data
+import torch.nn.functional as F
+from torch_geometric.nn import GATv2Conv
 
+class BipartiteEdgeRegressor(nn.Module):
+    def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=2):
+        super(BipartiteEdgeRegressor, self).__init__()
 
-class BlockScoutNNConv(nn.Module):
-    def __init__(self, node_dim, edge_dim, hidden_dim, context_dim):
-        super().__init__()
-        # edge network maps edge_attr → transformation matrix
-        edge_net = nn.Sequential(
-            nn.Linear(edge_dim, hidden_dim * node_dim)
+        # --- 1. Projections ---
+        # Project distinct features to the same hidden dimension
+        self.node_proj = nn.Linear(node_in_dim, hidden_dim)
+        self.edge_proj = nn.Linear(edge_in_dim, hidden_dim)
+
+        # --- 2. Bipartite GAT Layers ---
+
+        # Layer 1: Nodes -> Edges
+        # Input: (Node_Features, Edge_Features)
+        # Output: Updated Edge_Features
+        self.gat_nodes_to_edges = GATv2Conv(
+            in_channels=(hidden_dim, hidden_dim), # (Source dim, Target dim)
+            out_channels=hidden_dim,
+            heads=num_heads,
+            concat=False, # Average the heads to keep dim constant
+            add_self_loops=False # Bipartite graphs can't have self-loops
         )
-        self.conv1 = NNConv(node_dim, hidden_dim, edge_net, aggr='mean')
-        self.conv2 = NNConv(hidden_dim, hidden_dim, edge_net, aggr='mean')
 
-        self.value_head = nn.Sequential(
-            nn.Linear(hidden_dim + context_dim, hidden_dim),
+        # Layer 2: Edges -> Nodes
+        # Input: (Edge_Features, Node_Features)
+        # Output: Updated Node_Features
+        self.gat_edges_to_nodes = GATv2Conv(
+            in_channels=(hidden_dim, hidden_dim),
+            out_channels=hidden_dim,
+            heads=num_heads,
+            concat=False,
+            add_self_loops=False
+        )
+
+        # Layer 3: Nodes -> Edges (Final Refinement)
+        self.gat_final = GATv2Conv(
+            in_channels=(hidden_dim, hidden_dim),
+            out_channels=hidden_dim,
+            heads=num_heads,
+            concat=False,
+            add_self_loops=False
+        )
+
+        # --- 3. Regression Head ---
+        self.regressor = nn.Sequential(
+            nn.Linear(hidden_dim, 32),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(32, 1),
+            nn.Softplus() # Force positive output
         )
 
-    def forward(self, x, edge_index, edge_attr, block_mask, ugv_pose):
-        h = torch.relu(self.conv1(x, edge_index, edge_attr))
-        h = torch.relu(self.conv2(h, edge_index, edge_attr))
-        context = ugv_pose  # assuming ugv_pose is already the correct context
-        context = context.repeat(h.size(0), 1)
-        combined = torch.cat([h, context], dim=-1)
-        values = self.value_head(combined)
-        return values[block_mask]
+    def forward(self, x, edge_index, edge_attr):
+        """
+        x: [Num_Nodes, Node_Feats] (Start/Goal)
+        edge_index: [2, Num_Edges] (Connectivity)
+        edge_attr: [Num_Edges, Edge_Feats] (Length/Prob)
+        """
 
-# def convert_to_pyg_data(graph, action, robot_pos, y):
-#     vertices = graph.vertices
-#     pois = graph.pois
+        # --- Preprocessing: Create Bipartite Connectivity ---
+        # We need to define which Nodes connect to which Edges.
+        # Original edge_index is [2, M].
+        # Row 0 is Source Nodes, Row 1 is Target Nodes.
+        # We have M edges, indexed 0 to M-1.
 
-#     num_vertices = len(vertices)
-#     num_pois = len(pois)
-#     num_nodes = num_vertices + num_pois
+        num_edges = edge_index.size(1)
+        device = x.device
 
-#     # ----- Node features -----
-#     node_features = []
-#     for v in vertices:
-#         node_features.append([v.coord[0], v.coord[1], v.block_prob, 0])
-#     for p in pois:
-#         node_features.append([p.coord[0], p.coord[1], p.block_prob, 1])
-#     node_features = torch.tensor(node_features, dtype=torch.float)
-    
-#     action_feature = [[poi.coord[0], poi.coord[1], p.block_prob, 1] for poi in pois if p.id == action]
-#     action_feature = torch.tensor(action_feature, dtype=torch.float)
+        # Create indices for the "Edge Nodes"
+        edge_indices = torch.arange(num_edges, device=device)
 
-#     # ----- Edge list and edge attributes -----
-#     edge_list, edge_attr = [], []
+        # Connection Set 1: Source Nodes -> Edge Nodes
+        # Connection Set 2: Target Nodes -> Edge Nodes
+        # We combine them because the road is bidirectional (undirected).
+        # Node u connects to Edge e, Node v connects to Edge e.
 
-#     for p in pois:
-#         v1, v2 = p.neighbors  # ensure this exists
-#         i, j = v1.id, v2.id
-#         # Distances between POI and intersections
-#         dist1 = np.linalg.norm(np.array(v1.coord) - np.array(p.coord))
-#         dist2 = np.linalg.norm(np.array(v2.coord) - np.array(p.coord))
+        # Source indices (Nodes)
+        node_idx_all = edge_index.flatten() # [Source_0, Target_0, Source_1, Target_1...]
 
-#         edge_list += [[i, p.id], [p.id, i]]
-#         edge_attr += [[dist1], [dist1]]
+        # Target indices (Edges)
+        # We repeat each edge index twice: [Edge_0, Edge_0, Edge_1, Edge_1...]
+        edge_idx_all = edge_indices.repeat_interleave(2)
 
-#         edge_list += [[j, p.id], [p.id, j]]
-#         edge_attr += [[dist2], [dist2]]
+        # This is the connectivity matrix for Nodes -> Edges
+        # Shape: [2, 2*M]
+        bipartite_index = torch.stack([node_idx_all, edge_idx_all], dim=0)
 
-#     edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
-#     edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+        # For Edges -> Nodes, we just flip this index
+        bipartite_index_transpose = torch.stack([edge_idx_all, node_idx_all], dim=0)
 
-#     # ----- Masks -----
-#     block_mask = torch.zeros(num_nodes, dtype=torch.bool)
-#     block_mask[num_vertices:] = True
+        # --- Forward Pass ---
 
-#     # ----- Context -----
-#     if robot_pos.get('on_edge', False):
-#         v1, v2 = robot_pos['edge']
-#         s = robot_pos['s']
-#         coord = (1 - s) * np.array(v1.coord) + s * np.array(v2.coord)
-#     else:
-#         coord = np.array(robot_pos['coord'])
-#     robot_state = torch.tensor([coord[0], coord[1]], dtype=torch.float).unsqueeze(0)
+        # 1. Initial Projection
+        h_nodes = F.relu(self.node_proj(x))         # [N, Hidden]
+        h_edges = F.relu(self.edge_proj(edge_attr)) # [M, Hidden]
 
-#     # ----- Labels -----
-#     y = torch.tensor(y, dtype=torch.float).unsqueeze(1)
+        # 2. Layer 1: Nodes pass info to Edges
+        # "Edges look at their endpoints"
+        # Input tuple: (Source, Target) -> (Nodes, Edges)
+        h_edges = self.gat_nodes_to_edges((h_nodes, h_edges), bipartite_index)
+        h_edges = F.relu(h_edges)
 
-#     return Data(
-#         x=node_features,
-#         edge_index=edge_index,
-#         edge_attr=edge_attr,
-#         action=action_feature,
-#         blockpoint_mask=block_mask,
-#         robot_state=robot_state,
-#         y=y
-#     )
+        # 3. Layer 2: Edges pass info back to Nodes
+        # "Nodes look at connected roads"
+        # Input tuple: (Source, Target) -> (Edges, Nodes)
+        # Note: We use the transposed index here
+        h_nodes = self.gat_edges_to_nodes((h_edges, h_nodes), bipartite_index_transpose)
+        h_nodes = F.relu(h_nodes)
+
+        # 4. Layer 3: Nodes pass info to Edges again (Final Context)
+        h_edges = self.gat_final((h_nodes, h_edges), bipartite_index)
+        h_edges = F.relu(h_edges)
+
+        # 5. Predict on Edges
+        return self.regressor(h_edges)

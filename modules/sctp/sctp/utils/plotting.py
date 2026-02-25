@@ -6,7 +6,7 @@ from sctp.param import RobotType
 from scipy.stats import gaussian_kde
 from matplotlib.patches import FancyArrowPatch
 
-LINE_WIDTH = 2.5
+LINE_WIDTH = 2.2
 
 def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=None, start_coords=None, \
                    goal_coords=None, seed=None, cost=0.0, ttime=None, stime=None, verbose=False):
@@ -157,7 +157,7 @@ def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):
         arrow = FancyArrowPatch(
             start,
             end,
-            arrowstyle='-|>,head_width=0.2,head_length=0.3',
+            arrowstyle='-|>,head_width=0.27,head_length=0.38',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
             alpha=0.95,
@@ -385,7 +385,7 @@ def plot_pathArrow(points, ax, color='white'):
         arrow = FancyArrowPatch(
             start,
             end,
-            arrowstyle='->,head_width=0.2,head_length=0.3',
+            arrowstyle='->,head_width=0.27,head_length=0.38',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
             alpha=0.95,

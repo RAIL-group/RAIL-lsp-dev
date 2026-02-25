@@ -19,8 +19,8 @@ def _setup(args):
     starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    num_ugvs = 3
-    num_uavs = 2
+    num_ugvs = 1
+    num_uavs = 1
         
     robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                     at_node=True) for i in range(args.num_ugvs)]

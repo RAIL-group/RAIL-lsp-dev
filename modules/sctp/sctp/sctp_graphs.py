@@ -29,10 +29,10 @@ def random_graph(n_vertex=8, xmin=0, ymin=0, SG_pairs=1):
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return starts, goals, graph
 
-def get_insland_bridges_graph():
+def get_bridges_graph():
     count = 0
     while True:
-        starts, goals, graph = create_island_bridges_graph()
+        starts, goals, graph = create_bridges_graph()
         start_goal_connected = True
         for i, start in enumerate(starts):
             if not g.check_graph_valid(startID=start.id, goalID=goals[i].id, graph=graph):
@@ -46,7 +46,7 @@ def get_insland_bridges_graph():
             raise ValueError("Cannot find a valid graph, try other seed ranges")
     return starts, goals, graph
 
-def create_island_bridges_graph():
+def create_bridges_graph():
     g.Vertex.reset_id_counter()
     node1 = g.Vertex(coord=(np.random.uniform(0.0,3.5), np.random.uniform(0.0,1.5))) # start node
     node2 = g.Vertex(coord=(np.random.uniform(0.0,3.0), np.random.uniform(22.0,27.5)))

@@ -38,6 +38,7 @@ class Graph():
         edge2.rand_cost = rand_cost
         self.edges.append(edge2)
         POI.neighbors.append(vertex2.id)
+        POI.neighbors = sorted(POI.neighbors)
         vertex2.neighbors.append(POI.id)
     
     def get_edge(self, id1, id2):
