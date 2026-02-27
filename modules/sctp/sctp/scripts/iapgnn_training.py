@@ -23,7 +23,7 @@ class GzipGNNDataset(Dataset):
             raw_data = pickle.load(f)
         data = Data(
             x=torch.from_numpy(raw_data.x).float(),
-            edge_index=torch.from_numpy(raw_data.edge_index).long(),
+            edge_index=torch.from_numpy(raw_data.edge_index).long().t().contiguous(),
             edge_attr=torch.from_numpy(raw_data.edge_attr).float(),
             y=torch.from_numpy(raw_data.y).float(),
         )
