@@ -76,11 +76,8 @@ def test_IAPtraining():
     device = torch.device('cpu')  # Force CPU for debugging
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
-    
+
     num_epochs = 1
     for epoch in range(1, num_epochs+1):
         loss = train_epoch(model, train_loader, optimizer, criterion, device)
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss:.4f}")
-    
-    
-    
+        print(f"Epoch {epoch}/{num_epochs}, Loss: {loss:.4f}")

@@ -104,6 +104,13 @@ sctp-results:
 		--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/ \
 		--num_drones $(SCTP_NUM_DRONES) \
 
+
+.PHONY: iapgnn-train
+iapgnn-train:
+	@echo "Training IAP-GNN"
+	@$(DOCKER_PYTHON) -m sctp.scripts.iapgnn_training
+
+
 # .PHONY: mr-task-vis-net-predictions
 # mr-task-vis-net-predictions: DOCKER_ARGS ?= -it
 # mr-task-vis-net-predictions:
