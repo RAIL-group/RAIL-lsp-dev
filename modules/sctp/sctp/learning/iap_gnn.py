@@ -80,7 +80,7 @@ class BipartiteEdgeRegressor(nn.Module):
         # Node u connects to Edge e, Node v connects to Edge e.
 
         # Source indices (Nodes)
-        node_idx_all = edge_index.flatten() # [Source_0, Target_0, Source_1, Target_1...]
+        node_idx_all = edge_index.t().contiguous().view(-1) # [Source_0, Target_0, Source_1, Target_1...]
 
         # Target indices (Edges)
         # We repeat each edge index twice: [Edge_0, Edge_0, Edge_1, Edge_1...]
