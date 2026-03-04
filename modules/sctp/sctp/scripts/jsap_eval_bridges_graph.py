@@ -63,7 +63,7 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
         use_DAP = False
-        max_uanum = 4
+        max_uanum = 5
         assert args.num_ugvs == num_ugv
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapiap2':
@@ -110,7 +110,7 @@ def _setup(args):
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     
-    assert max_uanum == 4
+    assert max_uanum == 5
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
                                               uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
                                               rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 

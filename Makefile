@@ -118,6 +118,13 @@ shell: DOCKER_ARGS ?= -it
 shell:
 	@$(DOCKER_BASE) bash
 
+tensorboard:
+	@docker run -it \
+		-p 0.0.0.0:6006:6006 \
+		$(DOCKER_CORE_VOLUMES) \
+		$(IMAGE_NAME):$(VERSION) tensorboard \
+		--logdir /data --host 0.0.0.0
+
 .PHONY: notebook
 notebook: DOCKER_ARGS=-it -p 8889:8888
 notebook: build

@@ -19,7 +19,7 @@ class GraphData:
     x: np.ndarray #start, goal
     edge_index: np.ndarray #edge_index
     edge_attr: np.ndarray #edge_attr
-    y: np.ndarray #y [M ,1] M =edges_num valuees - y
+    y: np.ndarray #y [M ,1]
     graph_metadata: Dict
 
 
@@ -65,7 +65,7 @@ def create_graph_datum(
 
 def generate_dataset(
     filepath: str,
-    num_graphs: int,
+    seed: int,
     num_maps: int = 500,
     graph_type: str = 'bridges',
     num_data_per_graph: int = 50,
@@ -79,62 +79,67 @@ def generate_dataset(
     Returns:
         List of GraphData objects
     """
-    seeds = np.arange(1000, 1000+num_graphs)
-    for i in range(num_graphs):
-        np.random.seed(seeds[i])
-        random.seed(seeds[i])
-        # Generate random number of nodes
-        if graph_type == 'islands':
-            _, _, graph = graphs.get_sixIslands_graph()
-        elif graph_type == 'random':
-            _, _, graph = graphs.random_graph()
-        elif graph_type == 'bridges':
-            _, _, graph = graphs.get_bridges_graph()
-        else:
-            raise ValueError(f"Graph type {graph_type} not recognized")
-        edges = ug.get_initial_edges(graph)
-        vertex_positions = ug.get_vertex_positions(graph.vertices)
-        adjacency_matrix, probability_matrix = ug.create_adj_prob_matrices(edges, vertex_positions)
-        count = 0
-        while count < num_data_per_graph:
-            start, goal = random.sample(range(0, len(graph.vertices)), 2)
-            num_known_edges = random.randint(0, len(graph.pois)-1)
-            known_edges = random.sample(graph.pois, num_known_edges)
-            known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
-            known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges]
-            new_probability_matrix = ug.set_edge_probabilities(
-                probs=np.array(known_edge_probs),
-                edges=known_edges_id,
-                probabilities=probability_matrix
+    assert num_maps == 1000
+    # seeds = np.arange(1021, 1021+num_graphs)
+    # for i in range(num_graphs):
+    np.random.seed(seed)
+    random.seed(seed)
+    # Generate random number of nodes
+    if graph_type == 'islands':
+        _, _, graph = graphs.get_sixIslands_graph()
+    elif graph_type == 'random':
+        _, _, graph = graphs.random_graph()
+    elif graph_type == 'bridges':
+        _, _, graph = graphs.get_bridges_graph()
+    else:
+        raise ValueError(f"Graph type {graph_type} not recognized")
+    edges = ug.get_initial_edges(graph)
+    vertex_positions = ug.get_vertex_positions(graph.vertices)
+    adjacency_matrix, probability_matrix = ug.create_adj_prob_matrices(edges, vertex_positions)
+    count = 0
+    while count < num_data_per_graph:
+        start, goal = random.sample(range(0, len(graph.vertices)), 2)
+        num_known_edges = random.randint(0, len(graph.pois)-3)
+        known_edges = random.sample(graph.pois, num_known_edges)
+        known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
+        known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges]
+        new_probability_matrix = ug.set_edge_probabilities(
+            probs=np.array(known_edge_probs),
+            edges=known_edges_id,
+            probabilities=probability_matrix
+        )
+        pg = ug.ProbabilisticGraph(
+            positions=vertex_positions,
+            adjacency=adjacency_matrix,
+            probabilities=new_probability_matrix
+        )
+        values = []
+        edge_list = []
+        for poi in graph.pois:
+            edge = [poi.neighbors[0]-1, poi.neighbors[1]-1] # calculate its value
+            assert edge[0] < edge[1], f"Edge {edge} is not in the correct order"
+            edge_list.append(edge)
+            if edge in known_edges_id:
+                values.append(0.0)
+                continue    
+            
+            bc = ae.get_single_bc_networkX(
+                ugraph=pg,
+                action_edge=[edge],
+                start=start,
+                goalID=goal,
+                n_samples=num_maps
             )
-            pg = ug.ProbabilisticGraph(
-                positions=vertex_positions,
-                adjacency=adjacency_matrix,
-                probabilities=new_probability_matrix
-            )
-            values = []
-            edge_list = []
-            for poi in graph.pois:
-                edge = [poi.neighbors[0]-1, poi.neighbors[1]-1] # calculate its value
-                assert edge[0] < edge[1], f"Edge {edge} is not in the correct order"
-                edge_list.append(edge)
-                if edge in known_edges_id:
-                    values.append(0.0)
-                    continue    
-                
-                bc = ae.get_single_bc_networkX(
-                    ugraph=pg,
-                    action_edge=[edge],
-                    start=start,
-                    goalID=goal,
-                    n_samples=num_maps
-                )
-                values.append(bc)
-            assert len(edge_list) == len(values), f"Number of edges {len(edge_list)} does not match number of values {len(values)}"
-                
-            graph_data = create_graph_datum(graph=pg, edges=edge_list, start=start, goal=goal, values=values)
-            write_datum_to_file(filepath, seeds[i], graph_data, count)
-            count += 1
+            values.append(bc)
+        assert len(edge_list) == len(values), f"Number of edges {len(edge_list)} does not match number of values {len(values)}"
+        # print("Initial values: ", values)
+        min_val = min(values)
+        # make all values no negative but keep the 0.0 values as they are (indicating known edges)
+        if min_val < 0.0:
+            values = [v-min_val if v != 0.0 else 0.0 for v in values]            
+        graph_data = create_graph_datum(graph=pg, edges=edge_list, start=start, goal=goal, values=values)
+        write_datum_to_file(filepath, seed, graph_data, count)
+        count += 1
 
 def write_datum_to_file(filepath, seed, datum, counter):
     """Write a single datum to file and append name to csv record."""
@@ -157,7 +162,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default='/data/sctp')
     parser.add_argument('--num_maps', type=int, default=500)
-    parser.add_argument('--num_graphs', type=int, default=5)
+    parser.add_argument('--seed', type=int, default=1000)
     parser.add_argument('--graph_type', type=str, default='bridges')
     args = parser.parse_args()
 

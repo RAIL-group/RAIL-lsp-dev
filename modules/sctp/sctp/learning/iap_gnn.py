@@ -115,11 +115,15 @@ class BipartiteEdgeRegressor(nn.Module):
         # 4. Layer 3: Nodes pass info to Edges again (Final Context)
         h_edges = self.gat_final((h_nodes, h_edges), bipartite_index)
         h_edges = F.relu(h_edges)
-
-        # 5. Predict on Edges
-        return self.regressor(h_edges)
+        blocking_prob = edge_attr[:, 1]  # Extract the blocking probability from edge attributes
+        mask = (blocking_prob > 0.0) & (blocking_prob < 1.0)  # Only consider edges that are not deterministic        
+        return self.regressor(h_edges), mask
 
     
-    def loss(self, pred, target, mask=None):
+    def loss(self, preds, targets, masks):
         # MSE Loss for regression
-        return F.mse_loss(pred.view(-1), target.view(-1))
+        masked_preds = preds[masks]
+        masked_targets = targets[masks]
+        if masked_preds.numel() == 0:
+            return torch.tensor(0.0, device=preds.device, requires_grad=True)
+        return F.mse_loss(masked_preds, masked_targets)

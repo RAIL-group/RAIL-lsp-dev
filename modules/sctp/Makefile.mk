@@ -1,6 +1,8 @@
 SCTP_BASENAME = sctp
-SCTP_SEED_START = 3037
-SCTP_NUM_EXPERIMENTS =63
+SCTP_SEED_START = 3060
+SCTP_NUM_EXPERIMENTS =40
+SCTP_DATA_SEED = 1000
+SCTP_DATA_NUM = 100
 SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
@@ -11,9 +13,11 @@ define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
 
-GRAPHS = bridges# islands
 
+
+GRAPHS = bridges# islands
 JSAP_PLANNERS = jsapiap
+EXP_NAME = prune_num_action
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
@@ -71,17 +75,20 @@ $(all-targets-jsap-eval):
 		--max_depth 15 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 
+define data_get_seeds
+	$(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED)+$(SCTP_DATA_NUM) - 1)))
+endef
 
 
 .PHONY: sap-generate-data
 sap-generate-data:
-	@echo "Generating training data"
+	@echo "Generating training data for IAP-GNN"
 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data
 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles
 	@$(DOCKER_PYTHON) -m sctp.scripts.data_gen \
 	 	--save_dir data/$(SCTP_BASENAME)/graph_data \
-		--num_maps 500 \
-		--num_graphs 20 \
+		--num_maps 1000 \
+		--seed $(data_get_seeds) \
 		--graph_type 'bridges' \
 		
 
@@ -103,12 +110,15 @@ sctp-results:
 	 	--num_ugvs $(SCTP_NUM_GROUNDS) \
 		--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/ \
 		--num_drones $(SCTP_NUM_DRONES) \
+		--exp_name $(EXP_NAME)
 
 
 .PHONY: iapgnn-train
+iapgnn-train: DOCKER_ARGS ?= -it
 iapgnn-train:
 	@echo "Training IAP-GNN"
 	@$(DOCKER_PYTHON) -m sctp.scripts.iapgnn_training
+	--xpassthrough=$(XPASSTHROUGH)
 
 
 # .PHONY: mr-task-vis-net-predictions

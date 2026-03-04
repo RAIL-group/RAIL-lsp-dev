@@ -392,3 +392,39 @@ def plot_pathArrow(points, ax, color='white'):
             mutation_scale=10
         )
         ax.add_patch(arrow)
+
+
+def plot_madist_allinOne_std(x, data, std, featureNames, yName, 
+                    ranges, rangeStep, envName, xName=None, outpath=None):
+    markers = ['o', '^',  'D', 's', 'p', '*', 'h']
+    colors = ['red', 'magenta', 'orange', 'blue', 'green', 'purple', 'brown']
+    order = 10
+    for ii, dat in enumerate(data):         
+        plt.errorbar(x, dat, std,
+                    color=colors[ii],   
+                    linewidth=2.0, 
+                    # linestyle='None', 
+                    marker=markers[ii],
+                    markersize=9,
+                    label=featureNames[ii],
+                    zorder=order
+                )
+                    
+    plt.title(envName, fontsize=18)
+    plt.ylim(ranges[0], ranges[1])
+    major_ticks = np.arange(ranges[0], ranges[1], rangeStep)
+    plt.grid(axis = "y")
+    plt.legend(fontsize=12, loc='best')
+    
+    # for runtime and travel distances
+    plt.xticks(x,visible=True,fontsize=12)
+    if xName is not None:
+        plt.xlabel(xName, fontsize=15)
+    else:
+        plt.xlabel('number of UGVs', fontsize=15)
+    plt.ylabel(yName, fontsize=15)
+    plt.yticks(major_ticks,fontsize=12)
+    if outpath is not None:
+        plt.savefig(outpath, bbox_inches='tight')
+    else:
+        plt.savefig(f'/data/sctp/Jan30/plot_{envName}_{xName}.pdf', bbox_inches='tight')

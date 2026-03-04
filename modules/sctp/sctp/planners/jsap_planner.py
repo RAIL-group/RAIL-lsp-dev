@@ -25,7 +25,7 @@ class JSAPPlanner(object):
         self.sampling_time = 0.0
         self.revisit_pen = revisit_pen
         self.single_policy_time = 0.0
-        assert self.max_uanum == 4
+        assert self.max_uanum == 5
         
         # assert self.n_maps == 60
         
