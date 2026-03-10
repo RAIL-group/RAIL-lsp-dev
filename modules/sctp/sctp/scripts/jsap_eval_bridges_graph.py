@@ -22,6 +22,7 @@ def _setup(args):
     
     # num_uav = 0
     num_ugv = 1
+    max_uanum = 1
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -44,7 +45,7 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
-        args.num_iterations = 1000 #1000 #(for 1ugv)
+        assert args.num_iterations == 1000 #1000 #(for 1ugv)
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner =='jsap2':
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -53,9 +54,10 @@ def _setup(args):
         use_AVP = False
         use_DAP = False
         args.max_depth = 15
-        args.num_iterations = 1000 #1000 #(for 1ugv)
+        assert args.num_iterations == 1000 #1000 #(for 1ugv)
         assert args.num_drones == 2, "This script only supports 2 UAV"
         assert args.num_ugvs == num_ugv
+        assert args.max_uanum == max_uanum
     elif args.planner == 'jsapiap':
         param.REVISIT_PEN = 0.0
         args.max_depth = 15
@@ -63,7 +65,7 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
         use_DAP = False
-        max_uanum = 5
+        assert args.max_uanum == max_uanum
         assert args.num_ugvs == num_ugv
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapiap2':
@@ -73,10 +75,11 @@ def _setup(args):
         use_AVP = True
         use_DAP = False
         param.REVISIT_PEN = 0.0
-        args.num_iterations = 1000
+        assert args.num_iterations == 1000
         args.max_depth = 15 #(1ugv-2uavs)
         args.sampling_maps = 200
         assert args.num_drones == 2
+        assert args.max_uanum == max_uanum
         assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapdap':
         # args.num_drones = 1
@@ -86,7 +89,9 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
+        assert args.num_iterations == 5000
         assert args.num_ugvs == num_ugv
+        assert args.max_uanum == max_uanum
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapdap2':
         param.REVISIT_PEN = 0.0
@@ -96,6 +101,7 @@ def _setup(args):
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
+        assert args.max_uanum == max_uanum
         assert args.num_drones == 2
         assert args.num_ugvs == num_ugv
     else:
@@ -104,17 +110,16 @@ def _setup(args):
     # assert args.num_iterations == 1000
     assert args.sampling_maps == 200
     print(f"Planner: {args.planner}, a team of {args.num_ugvs} UGV(s)-{args.num_drones} UAV(s), iters.: {args.num_iterations},"
-          f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP: {use_AVP}, DAP: {use_DAP}") 
+          f" max depth: {args.max_depth}, maps: {args.sampling_maps}, AVP: {use_AVP}, DAP: {use_DAP} with max_uanum: {args.max_uanum}") 
     
      
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
     
-    assert max_uanum == 5
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
                                               uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
                                               rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.sampling_maps, 
-                                              use_AVP=use_AVP, use_DAP=use_DAP, max_uanum=max_uanum, verbose=False)
+                                              use_AVP=use_AVP, use_DAP=use_DAP, max_uanum=args.max_uanum, verbose=False)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=False)
 

@@ -69,6 +69,7 @@ def generate_dataset(
     num_maps: int = 500,
     graph_type: str = 'bridges',
     num_data_per_graph: int = 50,
+    verbose=False
 ):
     """
     Generate a dataset of multiple graphs
@@ -97,6 +98,14 @@ def generate_dataset(
     vertex_positions = ug.get_vertex_positions(graph.vertices)
     adjacency_matrix, probability_matrix = ug.create_adj_prob_matrices(edges, vertex_positions)
     count = 0
+    if verbose:
+        file_summary = os.path.join('pickles_new', f'dat_{graph_type}_{seed}.txt')
+        file_summary = os.path.join(filepath, file_summary)
+    
+    vertices_id = [vertex.id for vertex in graph.vertices]
+    for ii in range(len(vertices_id)-1):
+        assert vertices_id[ii] < vertices_id[ii+1], f"Vertices are not in the correct order: {vertices_id}"
+        
     while count < num_data_per_graph:
         start, goal = random.sample(range(0, len(graph.vertices)), 2)
         num_known_edges = random.randint(0, len(graph.pois)-3)
@@ -130,33 +139,39 @@ def generate_dataset(
                 goalID=goal,
                 n_samples=num_maps
             )
-            values.append(bc)
+            values.append(bc) if bc >= 0.0 else values.append(0.0)
         assert len(edge_list) == len(values), f"Number of edges {len(edge_list)} does not match number of values {len(values)}"
-        # print("Initial values: ", values)
-        min_val = min(values)
+        # min_val = min(values)
         # make all values no negative but keep the 0.0 values as they are (indicating known edges)
-        if min_val < 0.0:
-            values = [v-min_val if v != 0.0 else 0.0 for v in values]            
+        # if min_val < 0.0:
+        #     values = [v-min_val if v != 0.0 else 0.0 for v in values]            
         graph_data = create_graph_datum(graph=pg, edges=edge_list, start=start, goal=goal, values=values)
-        write_datum_to_file(filepath, seed, graph_data, count)
+        write_datum_to_file(filepath=filepath, seed=seed, datum=graph_data, counter=count, graph_type=graph_type)
         count += 1
+        if verbose:
+            with open(file_summary, "a+") as f:
+                f.write(f"START: {start} | GOAL: {goal}\n")
+                f.write(f"EDGE_LIST: {edge_list}\n")
+                f.write(f"VALUES: {values}\n")
+            
 
-def write_datum_to_file(filepath, seed, datum, counter):
+
+def write_datum_to_file(filepath, seed, datum, counter, graph_type='bridges'):
     """Write a single datum to file and append name to csv record."""
     # Get the data file name
-    data_filename = os.path.join('pickles', f'dat_{seed}_{counter}.pgz')
+    data_filename = os.path.join('pickles_new', f'dat_{graph_type}_{seed}_{counter}.pgz')
     learning.data.write_compressed_pickle(os.path.join(filepath, data_filename), datum)
-    csv_filename = f'graph_data_address.csv'
+    csv_filename = f'graph_data_address_new.csv'
     with open(os.path.join(filepath, csv_filename), 'a') as f:
         f.write(f'{data_filename}\n')
         
 
 def _setup(args):
-    print(f"Graph_Type: {args.graph_type}, number of maps for sampling {args.num_maps}-number of graph: {args.num_graphs},"
+    print(f"Graph_Type: {args.graph_type}, number of maps for sampling {args.num_maps}-with see: {args.seed},"
           f" saving to: {args.save_dir}") 
-    
-    generate_dataset(filepath=args.save_dir, num_graphs= args.num_graphs,
-                        num_maps = args.num_maps, graph_type=args.graph_type)
+    verbose = False
+    generate_dataset(filepath=args.save_dir, seed=args.seed, num_maps=args.num_maps, \
+                        graph_type=args.graph_type, verbose=verbose)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

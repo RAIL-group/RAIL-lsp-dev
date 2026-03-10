@@ -1,12 +1,15 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from torch import Tensor
+from typing import Optional, Tuple
 # from torch_geometric.data import Data
 import torch.nn.functional as F
 from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import global_mean_pool, global_add_pool
 
 class BipartiteEdgeRegressor(nn.Module):
-    def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=2):
+    def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=4):
         super(BipartiteEdgeRegressor, self).__init__()
 
         # --- 1. Projections ---
@@ -15,7 +18,6 @@ class BipartiteEdgeRegressor(nn.Module):
         self.edge_proj = nn.Linear(edge_in_dim, hidden_dim)
 
         # --- 2. Bipartite GAT Layers ---
-
         # Layer 1: Nodes -> Edges
         # Input: (Node_Features, Edge_Features)
         # Output: Updated Edge_Features
@@ -121,9 +123,35 @@ class BipartiteEdgeRegressor(nn.Module):
 
     
     def loss(self, preds, targets, masks):
+        assert 1 == 0
         # MSE Loss for regression
         masked_preds = preds[masks]
         masked_targets = targets[masks]
+        # assert  targets[masks] >= 0.0, "Targets must be non-negative for"
         if masked_preds.numel() == 0:
             return torch.tensor(0.0, device=preds.device, requires_grad=True)
         return F.mse_loss(masked_preds, masked_targets)
+
+
+    def ig_regression_loss(self,
+        pred:      Tensor,   # [E]
+        target:    Tensor,   # [E]  from prepare_ig_labels()
+        edge_attr: Tensor,   # [E, 2]
+        uncertain_weight: float = 1.0,
+        certain_weight:   float = 0.1,
+    ) -> Tensor:
+        """
+        Weighted Huber loss.
+        Uncertain edges: full weight  (primary learning signal).
+        Certain  edges : small weight (boundary regularisation only).
+        """
+        p         = edge_attr[:, 1]
+        uncertain = (p > 0.0) & (p < 1.0)
+        certain   = ~uncertain
+
+        weights            = torch.zeros_like(pred)
+        weights[uncertain] = uncertain_weight
+        weights[certain]   = certain_weight
+
+        element_loss = F.huber_loss(pred, target, reduction='none')  # [E]
+        return (element_loss * weights).sum() / weights.sum()

@@ -56,8 +56,8 @@ def train_epoch(model, loader, optimizer, device):
             edge_index=batch.edge_index,
             edge_attr=batch.edge_attr,
         )
-        loss = model.loss(output, batch.y, masks)
-    
+        # loss = model.loss(output, batch.y, masks)
+        loss = model.ig_regression_loss(output, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.1)
         # 4. Backward Pass
         loss.backward()
         optimizer.step()
@@ -74,7 +74,8 @@ def evaluate(model, loader, device):
         for batch in loader:
             batch = batch.to(device)
             out, masks = model(batch.x, batch.edge_index, batch.edge_attr)
-            loss = model.loss(out, batch.y, masks)
+            # loss = model.loss(out, batch.y, masks)
+            loss = model.ig_regression_loss(out, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.1)
             total_loss += loss.item() * batch.num_graphs
     return total_loss / len(loader.dataset)
 
@@ -100,11 +101,12 @@ if __name__ == "__main__":
     NODE_IN = 2
     EDGE_IN = 2
     HIDDEN = 64
+    learning_rate = 0.0005
     model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Initialize TensorBoard writer
-    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_experiment_1')
+    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning')
 
     # 5. Execute Training
     num_epochs = 500
@@ -124,7 +126,7 @@ if __name__ == "__main__":
 
         # --- 4. Save Model ---
         # Saving every epoch or just the last one
-        if epoch % 20 == 0:
+        if epoch % 50 == 0:
             torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_epoch_{epoch}.pt')
 
     writer.close()

@@ -1,12 +1,13 @@
 SCTP_BASENAME = sctp
-SCTP_SEED_START = 3060
-SCTP_NUM_EXPERIMENTS =40
-SCTP_DATA_SEED = 1000
+SCTP_SEED_START = 3001
+SCTP_NUM_EXPERIMENTS =99
+SCTP_DATA_SEED = 1100
 SCTP_DATA_NUM = 100
 SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
+SCTP_NUM_PRUNE = 1
 # SCTP_EXPERIMENT_NAME = Oct29_rg${SCTP_NUM_VERTICES}v_jsctp
 SCTP_EXPERIMENT_NAME = Jan30
 define sctp_get_seeds
@@ -15,8 +16,8 @@ endef
 
 
 
-GRAPHS = bridges# islands
-JSAP_PLANNERS = jsapiap
+GRAPHS = bridges
+JSAP_PLANNERS = jsapdap
 EXP_NAME = prune_num_action
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
@@ -69,28 +70,30 @@ $(all-targets-jsap-eval):
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
 		--seed $(jsap_seed) \
-		--num_iterations 1000 \
+		--num_iterations 5000 \
 		--sampling_maps 200 \
 		--C 200 \
 		--max_depth 15 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \
+		--max_uanum $(SCTP_NUM_PRUNE) \
 
-define data_get_seeds
-	$(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED)+$(SCTP_DATA_NUM) - 1)))
-endef
+# define data_get_seeds
+# 	$(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED)+$(SCTP_DATA_NUM) - 1)))
+# endef
 
-
+DATA_SEEDS := $(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED) + $(SCTP_DATA_NUM) - 1)))
 .PHONY: sap-generate-data
-sap-generate-data:
-	@echo "Generating training data for IAP-GNN"
-	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data
-	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles
+sap-generate-data: $(addprefix seed-,$(DATA_SEEDS))
+seed-%:
+	@echo "Generating training data for IAP-GNN with seed: $*"
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles	
 	@$(DOCKER_PYTHON) -m sctp.scripts.data_gen \
 	 	--save_dir data/$(SCTP_BASENAME)/graph_data \
 		--num_maps 1000 \
-		--seed $(data_get_seeds) \
-		--graph_type 'bridges' \
-		
+		--seed $* \
+		--graph_type $(GRAPHS) \
+	
+
 
 .PHONY: sctp-execution-test
 sctp-execution-test: DOCKER_ARGS ?= -it
@@ -118,7 +121,7 @@ iapgnn-train: DOCKER_ARGS ?= -it
 iapgnn-train:
 	@echo "Training IAP-GNN"
 	@$(DOCKER_PYTHON) -m sctp.scripts.iapgnn_training
-	--xpassthrough=$(XPASSTHROUGH)
+	
 
 
 # .PHONY: mr-task-vis-net-predictions

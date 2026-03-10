@@ -178,6 +178,7 @@ def plot_scatter_data(file_path, args):
 
 def processed_data(input_file, output_file, args, prefix=None):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
+    print(f"The input file is {input_file}")
     seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(input_file)
     assert len(seed_costs) == len(seed_truntimes)
     base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist = get_planner_data(seed_costs)
@@ -188,8 +189,9 @@ def processed_data(input_file, output_file, args, prefix=None):
     base_samptimes, jsap_samptimes, jsapavp_samptimes, jsapdap_samptimes, jsapdap2_samptimes, jsap2_samptimes, \
                 jsapavp2_samptimes = get_planner_data(seed_samptimes)
     
-    # print(base_dist)
-    # print(jsap_dist)
+    # print(jsapavp_dist)
+    # print(jsapdap_dist)
+    
     if base_dist[0] != None:
         with open(output_file, "a+") as f:
             f.write(f"PLANNER: CTP        | UGVs: {args.num_ugvs} | AVG_COST: {np.average(base_dist):0.2f} |"
@@ -219,9 +221,6 @@ def processed_data(input_file, output_file, args, prefix=None):
             else:
                 data = data + "\n"
             f.write(data)
-            # f.write(f"PLANNER: JSAP-IAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp_dist):0.2f} |"
-            #     f" AVG_STEP_TIME: {np.average(jsapavp_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp_samptimes):0.2f} |"
-            #     f" T.TIME: {np.average(jsapavp_ttimes):0.2f} \n")
     
     if jsapavp2_dist[0] != None:
         with open(output_file, "a+") as f:
@@ -231,9 +230,17 @@ def processed_data(input_file, output_file, args, prefix=None):
 
     if jsapdap_dist[0] != None:
         with open(output_file, "a+") as f:
-            f.write(f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"
-                f" T.TIME: {np.average(jsapdap_ttimes):0.2f} \n")
+            data = f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"\
+                f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"\
+                f" T.TIME: {np.average(jsapdap_ttimes):0.2f}"
+            if prefix is not None:
+                data = data + prefix
+            else:
+                data = data + "\n"
+            f.write(data)
+            # f.write(f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"
+            #     f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"
+            #     f" T.TIME: {np.average(jsapdap_ttimes):0.2f} \n")
     
     if jsapdap2_dist[0] != None:
         with open(output_file, "a+") as f:
@@ -360,20 +367,21 @@ if __name__ == '__main__':
             #         ranges=(150, 700), rangeStep=100, envName=graph, axis=plt.subplots(1, 1)[1], i=graphs.index(graph))
             # plt.show()
     elif prune_num_actions is not None:
-        output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data.txt'
-        planner  = 'JSAP-IAP-1'
+        num_sampling = 5000
+        output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data_{num_sampling}.txt'
+        # planner  = 'JSAP-IAP-1'
         args.num_ugvs = 1
-        is_data_processed = True
+        is_data_processed = False
         if not is_data_processed:
             for prune_num_action in prune_num_actions:
-                input_filename = Path(file_path) / f'bridges/max_uav_action/1_{prune_num_action}/results_1UGVs.txt'
+                input_filename = Path(file_path) / f'bridges/max_uav_action/1_{prune_num_action}_{num_sampling}/results_1UGVs.txt'
                 prefix = f" | PRUNE_NUM_ACTION: {prune_num_action}\n"
                 processed_data(input_file=input_filename, output_file=output_filename, args=args, prefix=prefix)
         
         data = read_processed_data(output_filename, prune_actions=True)
-        distances = [data[planner][prune_num_action]['avg_cost'] for prune_num_action in prune_num_actions]
-        figure_out = Path(file_path) / f'bridges/max_uav_action/prune_actions_fig.pdf'
-        plotting.plot_madist_allinOne_std(x=prune_num_actions, data=[distances], std=None, featureNames=list(data.keys()), yName="Distances [m]",
-                ranges=(200, 400), rangeStep=50, envName=f"Bridges_Graph", xName="Top-k of drone actions", outpath=figure_out)
+        distances = [[data[planner][prune_num_action]['avg_cost'] for prune_num_action in prune_num_actions] for planner in data]
+        figure_out = Path(file_path) / f'bridges/max_uav_action/prune_actions_fig_{num_sampling}.pdf'
+        plotting.plot_madist_allinOne_std(x=prune_num_actions, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]",
+                ranges=(200, 500), rangeStep=50, envName=f"Bridges_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
         plt.show()
     

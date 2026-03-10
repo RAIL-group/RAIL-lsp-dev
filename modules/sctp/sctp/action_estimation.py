@@ -132,7 +132,7 @@ def get_ugvs_bc_networkX(state, action, pg):
     return act_value
 
 def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
-    # value if the action is passable
+    # the start, goalID, edge are 0-indexed for the underlying graph
     block_value = 0.0
     pass_value = 0.0
     pass_probs = ug.set_edge_probabilities(probs=np.array([0.0]), edges=action_edge, probabilities=ugraph.probabilities)
