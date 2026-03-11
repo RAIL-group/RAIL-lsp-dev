@@ -4,6 +4,7 @@ import numpy as np
 import random
 from sctp import param, core
 from sctp import action_estimation as ae
+from sctp.learning.iap_gnn import load_iap_gnn_model
 from sctp.utils import underlying_graph as ug
 import time
 
@@ -12,8 +13,9 @@ class JSAPState(object):
     @classmethod
     def reset_sampling_time(cls):
         cls.total_sampling_time = 0.0
-    def __init__(self, graph=None, goalIDs=[], ugvs=[], drones=[], 
-                 iscopy=False, n_maps=60, useAVP=False, useDAP=False, max_uanum=3, revisit_pen=20.0):
+    def __init__(self, graph=None, goalIDs=[], ugvs=[], drones=[], iscopy=False, n_maps=60, 
+                 useAVP=False, useDAP=False, useLearning=False, max_uanum=3, revisit_pen=20.0,
+                 model_path=None):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.depth = 0
@@ -40,7 +42,6 @@ class JSAPState(object):
             assert ugvs != []
             self.graph = graph
             self.max_uanum = max_uanum
-            # assert self.max_uanum == 2
             self.goalIDs = goalIDs
             self.history = core.History()
             self.vertices_map = {v.id: v for v in self.graph.vertices + self.graph.pois}
@@ -50,6 +51,7 @@ class JSAPState(object):
             self.ugvs = ugvs
             self.use_AVP = useAVP
             self.use_DAP = useDAP
+            self.use_Learning = useLearning
             # set up underlying graph for sampling
             edges = ug.get_initial_edges(self.graph)
             self.pg_positions = ug.get_vertex_positions(self.graph.vertices)
@@ -57,6 +59,11 @@ class JSAPState(object):
             # set the pruning techniques
             if self.use_AVP or self.use_DAP:
                 assert self.use_AVP != self.use_DAP
+                assert self.use_Learning == False, "AVP and DAP are not compatible with Learning-based pruning"
+            if self.use_Learning:
+                assert self.use_AVP==False and self.use_DAP==False, "Learning-based pruning is not compatible with AVP or DAP"
+                assert model_path is not None, "Model path must be provided when using learning-based pruning"
+                self.model = ae.load_gnn_model(path=model_path)
             self.ugvs_actions = [[] for _ in range(len(self.ugvs))]
             for i, ugv in enumerate(self.ugvs):
                 if ugv.last_node == self.goalIDs[i]:
@@ -104,7 +111,6 @@ class JSAPState(object):
                     self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
                     # get the index of uavs  needing action index
                     time1 = time.perf_counter()
-                    # self.update_action_bc()
                     self.update_action_bc_networkX()
                     self.sampling_time += (time.perf_counter() - time1)
                     if len(self.avail_uav_actions) != len(self.behavior_change):
@@ -120,6 +126,15 @@ class JSAPState(object):
                     self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
                     if len(indices) > 0:
                         self.uav_actions = ae.get_closest_actions(self, indices[0])
+                        for action in self.uav_actions:
+                            action.update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
+                            action.update_robotID(indices[0])
+                        assert len(self.uav_actions) <= self.max_uanum
+                
+                if self.use_Learning: # using learning
+                    self.avail_uav_actions = [core.Action(target=act.target, rtype=param.RobotType.Drone) for act in self.uav_actions]
+                    if len(indices) > 0:
+                        self.uav_actions = ae.get_uav_action_gnn(self, indices[0])
                         for action in self.uav_actions:
                             action.update_pose((self.uavs[indices[0]].cur_pose[0], self.uavs[indices[0]].cur_pose[1]))
                             action.update_robotID(indices[0])
@@ -234,22 +249,6 @@ class JSAPState(object):
         self.behavior_change.clear()
         self.action_values.clear()
         time1 = time.perf_counter()
-        # status_edges = []
-        # probs = []
-        # for act, outcome  in self.history.get_data().items():
-        #     if act.target not in self.graph.poiIDs:
-        #         continue
-        #     neighbors = self.graph.get_poi(act.target).neighbors
-        #     status_edges.append([neighbors[0]-1, neighbors[1]-1])
-        #     if outcome == param.EventOutcome.BLOCK:
-        #         probs.append(1.0)
-        #     else:            
-        #         probs.append(0.0)
-        # if len(status_edges) > 0:
-        #     new_probabilities = ug.set_edge_probabilities(probs=np.array(probs), edges=status_edges, \
-        #                 probabilities=self.pg_probabilities) 
-        # else:
-        #     new_probabilities = self.pg_probabilities.copy()
         new_probabilities = ug.get_updated_prob_matrix(self)
         pg = ug.ProbabilisticGraph(positions=self.pg_positions, adjacency=self.pg_adjacency, \
                                         probabilities=new_probabilities)

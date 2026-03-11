@@ -2,6 +2,7 @@ from sctp import graph as g
 from sctp.utils import paths, plotting
 import numpy as np
 import random
+import torch
 from sctp import param, core
 from sctp.utils import underlying_graph as ug
 
@@ -148,7 +149,46 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
     block_value /= n_samples
     return (block_value - pass_value)
 
-def get_single_bc_GNN(ugraph, action_edge, start, goalID, n_samples=60):
-    # value if the action is passable
-    pass
-    # return (block_value - pass_value)
+def get_uav_action_gnn(state, uav_index):
+    actions = []
+    state.action_values.clear()
+    data = None 
+    
+    all_pred = []
+    with torch.no_grad():
+            pred, _ = state.model(
+                x          = data.x,
+                edge_index = data.edge_index,
+                edge_attr  = data.edge_attr,
+            )   # [E]
+
+    pred_cpu   = pred.cpu()
+    E          = pred_cpu.shape[0]
+
+    src = data.edge_index[0].cpu()   # [E]
+    dst = data.edge_index[1].cpu()   # [E]
+    edge_dict = {}
+    for i in range(E):
+        u      = src[i].item()
+        v      = dst[i].item()
+        pr     = pred_cpu[i].item()
+        if v < u:
+            u, v = v, u
+        edge_dict[(u,v)] = pr
+    drone_pose = state.uavs[uav_index].cur_pose
+    for action in state.avail_uav_actions:
+        target_node = [node for node in state.graph.pois if node.id == action.target][0]
+        edge = tuple(sorted(target_node.neighbors))
+        assert edge in edge_dict, f"Edge {edge} not found in edge_dict. Available edges: {list(edge_dict.keys())}"
+        act_value = edge_dict[edge]        
+        state.action_values[action] = act_value*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(target_node.coord))
+    
+    state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
+    actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
+    for action in actions:
+        assert action in state.behavior_change
+        assert action in state.action_values
+        action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
+        action.update_robotID(uav_index) 
+    return actions
+    

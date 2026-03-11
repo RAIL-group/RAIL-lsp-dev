@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch_geometric.data import DataLoader
 import torch.optim as optim
+from sklearn.model_selection import train_test_split
 
 def test_data_generation():
     graph_type = 'bridges'
@@ -87,101 +88,163 @@ def test_IAPtraining():
         print(f"Epoch {epoch}/{num_epochs}, Loss: {loss:.4f}")
         
     
-def test_IAP_newGNN():
-    torch.manual_seed(0)
+def test_IAPGNN_predictions():
+    print()
+    torch.manual_seed(1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}\n")
+    NODE_IN = 2
+    EDGE_IN = 2
+    HIDDEN = 64
+    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN).to(device)
+    
 
-    # ── example graph ──────────────────────────────────────────────────────
-    n_nodes = 5
-    x = torch.tensor([
-        [1., 0.],  # 0 start
-        [0., 0.],  # 1
-        [0., 0.],  # 2
-        [0., 0.],  # 3
-        [0., 1.],  # 4 goal
-    ])
+    PATH = "/modules/sctp/learning/models/iap_gnn.pt" # The path to your saved model file
 
-    # Forward edges (u < v by convention)
-    fwd_edges = [          # (u, v, distance, p_blocking)
-        (0, 1, 1.0, 0.3),  # uncertain
-        (1, 2, 2.0, 0.0),  # certain: always passable  → IG = 0
-        (2, 4, 1.5, 0.5),  # uncertain
-        (0, 3, 3.0, 0.7),  # uncertain
-        (3, 4, 2.5, 1.0),  # certain: always blocked   → IG = 0
-    ]
-    E = len(fwd_edges)
-    src_f, dst_f, dists, probs = zip(*fwd_edges)
+    # 3. Load the state dictionary
+    # Use weights_only=True as a best practice
+    model.load_state_dict(torch.load(PATH, weights_only=True))
+    
+    # test_model(model, dataset, device, n_samples=2)
+    """
+    Run inference on a random subset of graphs and print predicted vs
+    ground-truth IG values side-by-side for every edge.
 
-    # Forward-only edge_index and edge_attr — reverse is built inside forward()
-    edge_index = torch.tensor([list(src_f), list(dst_f)], dtype=torch.long)
-    edge_attr  = torch.tensor(list(zip(dists, probs)), dtype=torch.float)
+    Parameters
+    ----------
+    model      : trained EdgeIGGNN
+    dataset    : list of PyG Data objects (each must have ig_labels)
+    device     : torch device
+    n_samples  : number of graphs to sample for inspection
+    seed       : random seed for reproducible sampling
+    """
+    model.eval()
+    # torch.manual_seed(seed)
+    data_dir = 'data/sctp/graph_data/pickles/'
+    all_files = glob.glob(os.path.join(data_dir, '*.pgz'))
+    n_samples = 1
+    dataset = GzipGNNDataset(all_files)
 
-    # ── assert structural correctness ──────────────────────────────────────
-    print("Checking edge_index/edge_attr consistency...")
-    iap_gnn2.assert_edge_symmetry(edge_index, edge_attr)
-    print("  ✓ edge_index is [2, E] and edge_attr is [E, edge_dim]\n")
+    indices = torch.randperm(len(dataset))[:n_samples].tolist()
 
-    # ── ground-truth IG labels ([E] values, one per forward edge) ──────────
-    ig_raw = torch.tensor([0.45, -0.01, 0.30, 0.80, 0.02])
-    #                       ^unc   ^cert  ^unc  ^unc  ^cert
+    # ── aggregate metrics across all sampled graphs ────────────────────────
+    all_pred    = []
+    all_target  = []
 
-    print(f"Raw IG labels   : {ig_raw.tolist()}")
-    ig_clean = iap_gnn2.prepare_ig_labels(ig_raw, edge_attr)
-    print(f"Cleaned labels  : {ig_clean.tolist()}")
-    print("  ✓ negatives clamped, certain edges zeroed\n")
+    print("=" * 75)
+    print(f"  MODEL TEST RESULTS  ({n_samples} randomly sampled graphs)")
+    print("=" * 75)
 
-    # ── assert certain edges are zero ──────────────────────────────────────
-    print("Checking certain-edge constraint on cleaned labels...")
-    iap_gnn2.assert_certain_edges_zero(ig_clean, edge_attr)
-    print("  ✓ all certain edges have IG = 0.0\n")
+    for sample_num, idx in enumerate(indices, 1):
+        data   = dataset[idx].to(device)
+        # target = prepare_ig_labels(data.ig_labels, data.edge_attr)
 
-    # ── deliberate failure demo ────────────────────────────────────────────
-    print("Testing assert with bad labels (p=1 edge given IG=0.5)...")
-    bad_labels = ig_clean.clone()
-    bad_labels[4] = 0.5   # edge (3,4) has p=1 → should be 0
-    try:
-        iap_gnn2.assert_certain_edges_zero(bad_labels, edge_attr)
-    except AssertionError as e:
-        print(f"  ✓ AssertionError caught correctly:\n    {e}\n")
+        with torch.no_grad():
+            pred, _ = model(
+                x          = data.x,
+                edge_index = data.edge_index,
+                edge_attr  = data.edge_attr,
+            )   # [E]
 
-    # ── model forward pass ─────────────────────────────────────────────────
-    # data = Data(
-    #     x          = x,
-    #     edge_index = edge_index,
-    #     edge_attr  = edge_attr,
-    #     ig_labels  = ig_clean,
-    # )
+        pred_cpu   = pred.cpu()
+        target_cpu = data.y.cpu()
+        E          = pred_cpu.shape[0]
 
-    # model = EdgeIGGNN(
-    #     node_dim=2, edge_dim=2, hidden_dim=64, n_heads=4, n_layers=3, dropout=0.1
-    # ).to(device)
+        src = data.edge_index[0].cpu()   # [E]
+        dst = data.edge_index[1].cpu()   # [E]
+        p   = data.edge_attr[:, 1].cpu() # [E]
 
-    # n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    # print(f"Trainable parameters: {n_params:,}")
-    # print(f"Output shape expected: [{E}]\n")
+        uncertain_mask = (p > 0.0) & (p < 1.0)
+        certain_mask   = ~uncertain_mask
 
-    # with torch.no_grad():
-    #     ig_out = model(
-    #         x          = data.x.to(device),
-    #         edge_index = data.edge_index.to(device),
-    #         edge_attr  = data.edge_attr.to(device),
-    #     )
+        # ── per-graph header ───────────────────────────────────────────────
+        print(f"\n{'─' * 75}")
+        print(f"  Graph {sample_num}  (dataset index {idx})  |  "
+              f"{E} edges  |  "
+              f"{uncertain_mask.sum().item()} uncertain  |  "
+              f"{certain_mask.sum().item()} certain")
+        print(f"{'─' * 75}")
+        print(f" {'Edge':>7}  {'p_block':>10}  {'Type':>8}  "
+              f"{'GT-IG':>10}  {'Pred IG':>10}  {'Error':>10}  {'AbsErr':>9}")
+        print(f"  {'─'*8}  {'─'*8}  {'─'*10}  {'─'*10}  {'─'*10}  {'─'*10}  {'─'*8}")
 
-    # print(f"Output shape : {ig_out.shape}  ← should be [{E}]")
-    # print(f"Output values: {[round(v, 4) for v in ig_out.tolist()]}")
-    # print(f"\nCertain edge outputs (should be 0.0):")
-    # print(f"  edge (1,2) p=0.0 → IG = {ig_out[1].item():.6f}")
-    # print(f"  edge (3,4) p=1.0 → IG = {ig_out[4].item():.6f}")
+        for i in range(E):
+            u      = src[i].item()
+            v      = dst[i].item()
+            p_val  = p[i].item()
+            gt     = target_cpu[i].item()
+            pr     = pred_cpu[i].item()
+            err    = pr - gt
+            abs_err= abs(err)
+            etype  = "uncertain" if uncertain_mask[i] else "certain"
 
-    # # ── retrieval by edge ──────────────────────────────────────────────────
-    # pos = iap_gnn2.get_edge_position(data.edge_index, 0, 3)
-    # print(f"\nEdge (0,3) is at index {pos},  IG = {ig_out[pos].item():.4f}")
+            # flag large errors
+            flag = " ◄" if abs_err > 1.0 and uncertain_mask[i] else ""
 
-    # # ── all uncertain edges ────────────────────────────────────────────────
-    # uncertain_igs = iap_gnn2.get_all_uncertain_ig(ig_out.cpu(), data.edge_index, data.edge_attr)
-    # print("\nUncertain edge IG values (untrained — inspection only):")
-    # for r in uncertain_igs:
-    #     print(f"  [{r['edge_idx']}] edge {r['edge']}  p={r['p_block']:.1f}  IG={r['ig_score']:.4f}")
+            print(f"  ({u:>2},{v:>2})     "
+                  f"{p_val:>5.3f}  "
+                  f"{etype:>10}  "
+                  f"{gt:>9.4f}  "
+                  f"{pr:>10.4f}  "
+                  f"{err:>+11.4f}  "
+                  f"{abs_err:>8.4f}"
+                  f"{flag}")
 
-    # print("\nSmoke-test passed ✓")
+            if uncertain_mask[i]:
+                all_pred.append(pr)
+                all_target.append(gt)
+
+        # ── per-graph summary ──────────────────────────────────────────────
+        unc_pred   = pred_cpu[uncertain_mask]
+        unc_target = target_cpu[uncertain_mask]
+
+        if uncertain_mask.any():
+            mae  = (unc_pred - unc_target).abs().mean().item()
+            rmse = ((unc_pred - unc_target) ** 2).mean().sqrt().item()
+            bias = (unc_pred - unc_target).mean().item()
+
+            # ranking accuracy: fraction of pairs ordered correctly
+            dp = unc_pred.unsqueeze(0)   - unc_pred.unsqueeze(1)    # [K,K]
+            dt = unc_target.unsqueeze(0) - unc_target.unsqueeze(1)  # [K,K]
+            pairs = dt.abs() > 0.01
+            rank_acc = ((dp * dt) > 0)[pairs].float().mean().item() if pairs.any() else float('nan')
+
+            print(f"\n  Graph {sample_num} uncertain-edge metrics:")
+            print(f"    MAE        = {mae:.4f}")
+            print(f"    RMSE       = {rmse:.4f}")
+            print(f"    Bias       = {bias:+.4f}  "
+                  f"({'over-predicting' if bias > 0 else 'under-predicting'})")
+            print(f"    Rank Acc   = {rank_acc:.3f}  "
+                  f"(fraction of edge pairs ranked correctly)")
+        else:
+            print(f"\n  Graph {sample_num}: no uncertain edges to evaluate.")
+
+    # ── global summary across all sampled graphs ───────────────────────────
+    # if all_pred:
+    #     all_pred   = torch.tensor(all_pred)
+    #     all_target = torch.tensor(all_target)
+
+    #     mae  = (all_pred - all_target).abs().mean().item()
+    #     rmse = ((all_pred - all_target) ** 2).mean().sqrt().item()
+    #     bias = (all_pred - all_target).mean().item()
+    #     rel_err = ((all_pred - all_target).abs() /
+    #                (all_target.abs() + 1e-8)).mean().item() * 100
+
+    #     dp = all_pred.unsqueeze(0)   - all_pred.unsqueeze(1)
+    #     dt = all_target.unsqueeze(0) - all_target.unsqueeze(1)
+    #     pairs    = dt.abs() > 0.01
+    #     rank_acc = ((dp * dt) > 0)[pairs].float().mean().item() if pairs.any() else float('nan')
+
+    #     print(f"\n{'=' * 75}")
+    #     print(f"  GLOBAL SUMMARY  (uncertain edges only, {len(all_pred)} total)")
+    #     print(f"{'=' * 75}")
+    #     print(f"  MAE            = {mae:.4f}")
+    #     print(f"  RMSE           = {rmse:.4f}")
+    #     print(f"  Bias           = {bias:+.4f}  "
+    #           f"({'over-predicting' if bias > 0 else 'under-predicting'})")
+    #     print(f"  Rel. Error     = {rel_err:.2f}%")
+    #     print(f"  Rank Accuracy  = {rank_acc:.3f}")
+    #     print(f"{'=' * 75}\n")
+
+
+    

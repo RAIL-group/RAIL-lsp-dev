@@ -57,7 +57,7 @@ def train_epoch(model, loader, optimizer, device):
             edge_attr=batch.edge_attr,
         )
         # loss = model.loss(output, batch.y, masks)
-        loss = model.ig_regression_loss(output, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.1)
+        loss = model.ig_regression_loss(output, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.2)
         # 4. Backward Pass
         loss.backward()
         optimizer.step()
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning')
 
     # 5. Execute Training
-    num_epochs = 500
+    num_epochs = 200
     print("Starting training...")
     for epoch in range(1, num_epochs + 1):
         loss = train_epoch(model, train_loader, optimizer, device)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
         # --- 4. Save Model ---
         # Saving every epoch or just the last one
-        if epoch % 50 == 0:
+        if epoch % 20 == 0:
             torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_epoch_{epoch}.pt')
 
     writer.close()

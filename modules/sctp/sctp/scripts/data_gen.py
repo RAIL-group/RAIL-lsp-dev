@@ -108,7 +108,7 @@ def generate_dataset(
         
     while count < num_data_per_graph:
         start, goal = random.sample(range(0, len(graph.vertices)), 2)
-        num_known_edges = random.randint(0, len(graph.pois)-3)
+        num_known_edges = random.randint(0, 10)
         known_edges = random.sample(graph.pois, num_known_edges)
         known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
         known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges]
@@ -167,7 +167,7 @@ def write_datum_to_file(filepath, seed, datum, counter, graph_type='bridges'):
         
 
 def _setup(args):
-    print(f"Graph_Type: {args.graph_type}, number of maps for sampling {args.num_maps}-with see: {args.seed},"
+    print(f"Graph_Type: {args.graph_type}, number of maps: {args.num_maps}-with seed: {args.seed},"
           f" saving to: {args.save_dir}") 
     verbose = False
     generate_dataset(filepath=args.save_dir, seed=args.seed, num_maps=args.num_maps, \
