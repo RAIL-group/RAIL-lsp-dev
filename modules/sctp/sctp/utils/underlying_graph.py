@@ -23,7 +23,7 @@ class ProbabilisticGraph:
     probabilities: np.ndarray
 
 def get_initial_edges(graph):
-    # edges with 0-based indices for the underlying graph
+    # return edges with 0-based indices for the underlying graph
     initial_edges = []
     for poi in graph.pois:
         initial_edges.append([poi.neighbors[0]-1, poi.neighbors[1]-1, poi.block_prob])
@@ -63,6 +63,7 @@ def create_adj_prob_matrices(edges, positions):
     """
     adjacency = np.zeros((positions.shape[0], positions.shape[0]), dtype=np.float32)
     probabilities = np.zeros((positions.shape[0], positions.shape[0]), dtype=np.float32)
+    # probabilities = np.ones((positions.shape[0], positions.shape[0]), dtype=np.float32)
     # Compute upper triangle only
     for edge in edges:
         dist = np.linalg.norm(np.array(positions[edge[0]]) - np.array(positions[edge[1]]))

@@ -2,11 +2,13 @@ from sctp import graph as g
 from sctp.utils import paths, plotting
 import numpy as np
 import random
+from typing import List, Dict, Tuple, Optional
 from sctp import param, core
 from sctp import action_estimation as ae
 from sctp.learning.iap_gnn import load_iap_gnn_model
 from sctp.utils import underlying_graph as ug
 import time
+import torch
 
 class JSAPState(object):
     total_sampling_time = 0.0
@@ -53,9 +55,9 @@ class JSAPState(object):
             self.use_DAP = useDAP
             self.use_Learning = useLearning
             # set up underlying graph for sampling
-            edges = ug.get_initial_edges(self.graph)
+            self.edges = ug.get_initial_edges(self.graph)
             self.pg_positions = ug.get_vertex_positions(self.graph.vertices)
-            self.pg_adjacency, self.pg_probabilities = ug.create_adj_prob_matrices(edges, self.pg_positions)
+            self.pg_adjacency, self.pg_probabilities = ug.create_adj_prob_matrices(self.edges, self.pg_positions)
             # set the pruning techniques
             if self.use_AVP or self.use_DAP:
                 assert self.use_AVP != self.use_DAP
@@ -63,7 +65,8 @@ class JSAPState(object):
             if self.use_Learning:
                 assert self.use_AVP==False and self.use_DAP==False, "Learning-based pruning is not compatible with AVP or DAP"
                 assert model_path is not None, "Model path must be provided when using learning-based pruning"
-                self.model = ae.load_gnn_model(path=model_path)
+                self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                self.model = load_iap_gnn_model(path=model_path, device=self.device)
             self.ugvs_actions = [[] for _ in range(len(self.ugvs))]
             for i, ugv in enumerate(self.ugvs):
                 if ugv.last_node == self.goalIDs[i]:
@@ -249,9 +252,9 @@ class JSAPState(object):
         self.behavior_change.clear()
         self.action_values.clear()
         time1 = time.perf_counter()
-        new_probabilities = ug.get_updated_prob_matrix(self)
+        # new_probabilities = ug.get_updated_prob_matrix(self)
         pg = ug.ProbabilisticGraph(positions=self.pg_positions, adjacency=self.pg_adjacency, \
-                                        probabilities=new_probabilities)
+                                        probabilities=self.pg_probabilities)
         min_bc = 0.0
         
         for ii, act in enumerate(self.avail_uav_actions):
@@ -303,7 +306,8 @@ class JSAPState(object):
         # save the underlying graph
         new_state.pg_positions = self.pg_positions
         new_state.pg_adjacency = self.pg_adjacency
-        new_state.pg_probabilities = self.pg_probabilities
+        new_state.pg_probabilities = self.pg_probabilities.copy()
+        new_state.edges = self.edges
         # save the pruning techniques
         if self.use_AVP:
             new_state.avail_uav_actions = self.avail_uav_actions.copy()
@@ -353,10 +357,10 @@ class JSAPState(object):
             
             assert action in temp_state.uav_actions
             if temp_state.cur_ugv_idx != -1:
-                print(f"Assigning action {action.target} to drone {uav_idx} when cur_ugv_idx is {temp_state.cur_ugv_idx}")
+                # print(f"Assigning action {action.target} to drone {uav_idx} when cur_ugv_idx is {temp_state.cur_ugv_idx}")
                 raise ValueError("ERROR: cur_ugv_idx should be -1 when assigning action to UAV")
             if action.target in temp_state.assigned_pois:
-                print(f"Assigning action {action.target} to drone {uav_idx} that is in the assigned_pois {temp_state.assigned_pois}")
+                # print(f"Assigning action {action.target} to drone {uav_idx} that is in the assigned_pois {temp_state.assigned_pois}")
                 raise ValueError("Assigned POI is already assigned to other UAV")
             if np.isnan(start_pos[0]) or np.isnan(start_pos[1]):
                 ValueError("Start position is NaN") 
@@ -569,21 +573,28 @@ def get_new_ugv_node(state, robot_idx, last_node=None, blocked=False):
     new_state = state.copy()
     new_state.cur_ugv_idx = robot_idx
     new_state.action_cost = state.action_cost
+    
     if blocked:
+        prob = 1.0
         new_state.history.add_history(state.ugvs[robot_idx].action, param.EventOutcome.BLOCK)
-        assert last_node is not None
+        assert last_node is not None    
         if last_node != new_state.ugvs[robot_idx].last_node:
             target = last_node
         else:
             target = new_state.ugvs[robot_idx].pl_vertex
         new_state.ugvs_actions[robot_idx] = [core.Action(target=target, \
                     start_pose=(state.ugvs[robot_idx].cur_pose[0], state.ugvs[robot_idx].cur_pose[1]))]
+        edge = state.graph.get_poi(new_state.ugvs[robot_idx].last_node).neighbors
+        edge = [edge[0]-1, edge[1]-1]
     else:
+        prob = 0.0
         new_state.history.add_history(state.ugvs[robot_idx].action, param.EventOutcome.TRAV)
         neighbors = [node for node in state.graph.vertices+state.graph.pois if node.id == state.ugvs[robot_idx].last_node][0].neighbors
         new_state.ugvs_actions[robot_idx] = [core.Action(target=neighbor, \
                                     start_pose=(state.ugvs[robot_idx].cur_pose[0],state.ugvs[robot_idx].cur_pose[1])) \
                                     for neighbor in neighbors if neighbor != state.ugvs[robot_idx].pl_vertex]
+        edge = [neighbors[0]-1, neighbors[1]-1]
+    new_state.pg_probabilities = ug.set_edge_probabilities(probs=np.array([prob]), edges=[edge], probabilities=new_state.pg_probabilities)
     if len(new_state.ugvs_actions[robot_idx]) == 0:
         new_state.noway2goal = True
         new_state.action_cost = param.STUCK_COST
@@ -686,10 +697,15 @@ def get_new_uav_node(state, uav_index, blocked=False):
     new_state.depth += 1
     new_state.cur_ugv_idx = -1
     new_state.action_cost = state.action_cost
+    edge = state.graph.get_poi(state.uavs[uav_index].last_node).neighbors
+    edge = [edge[0]-1, edge[1]-1]
     if blocked:
         new_state.history.add_history(state.uavs[uav_index].action, param.EventOutcome.BLOCK)
+        prob = 1.0
     else:
         new_state.history.add_history(state.uavs[uav_index].action, param.EventOutcome.TRAV)
+        prob = 0.0
+    new_state.pg_probabilities = ug.set_edge_probabilities(probs=np.array([prob]), edges=[edge], probabilities=state.pg_probabilities)
     for i, robot in enumerate(new_state.ugvs):
         if not robot.at_node: # reset if it is in middle of action
             robot.need_action = True # you don't want it to go to get_new_nodes_grobot (no node reached)
@@ -772,3 +788,9 @@ def decsctp_rollout(state):
         return state.heuristic
     return state.update_heuristic()
 
+# def update_prob_matrix(graph, matrix: np.ndarray, poi_id: int, block_prob: float):
+#     edge = graph.get_poi(poi_id).neighbors
+#     assert edge is not None
+#     matrix[edge[0], edge[1]] = block_prob
+#     matrix[edge[1], edge[0]] = block_prob
+#     return matrix

@@ -57,7 +57,7 @@ def train_epoch(model, loader, optimizer, device):
             edge_attr=batch.edge_attr,
         )
         # loss = model.loss(output, batch.y, masks)
-        loss = model.ig_regression_loss(output, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.2)
+        loss = model.ig_regression_loss(output, batch.y, batch.edge_attr, uncertain_weight=1.0, certain_weight=0.1)
         # 4. Backward Pass
         loss.backward()
         optimizer.step()
@@ -100,9 +100,10 @@ if __name__ == "__main__":
     # device = torch.device('cpu')  # Force CPU for debugging
     NODE_IN = 2
     EDGE_IN = 2
-    HIDDEN = 64
+    HIDDEN_S = 64
+    HIDDEN_M = 128
     learning_rate = 0.0005
-    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN).to(device)
+    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN_M).to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Initialize TensorBoard writer
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     num_epochs = 200
     print("Starting training...")
     for epoch in range(1, num_epochs + 1):
-        loss = train_epoch(model, train_loader, optimizer, device)
+        # loss = train_epoch(model, train_loader, optimizer, device)
         train_loss = train_epoch(model, train_loader, optimizer, device)
         
         # Evaluation Step
@@ -127,7 +128,7 @@ if __name__ == "__main__":
         # --- 4. Save Model ---
         # Saving every epoch or just the last one
         if epoch % 20 == 0:
-            torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_epoch_{epoch}.pt')
+            torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_allgraphs_epoch_{epoch}.pt')
 
     writer.close()
         

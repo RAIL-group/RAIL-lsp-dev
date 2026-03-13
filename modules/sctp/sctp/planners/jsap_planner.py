@@ -7,7 +7,7 @@ import sctp.jsap
 class JSAPPlanner(object):
     def __init__(self, init_graph, goalIDs, ugvs, uavs=[], C=200.0, rollout_num = 1000, 
                  rollout_fn = None, tree_depth = 40, n_maps=80, use_AVP = False, revisit_pen=10.0,
-                 max_uanum=3, verbose=False, use_DAP=False):
+                 max_uanum=3, verbose=False, use_DAP=False, useLearning=False, model_path=None):
         self.rollout_num = rollout_num
         self.verbose = verbose
         self.observed_graph = init_graph
@@ -21,6 +21,8 @@ class JSAPPlanner(object):
         self.C = C
         self.use_AVP = use_AVP
         self.use_DAP = use_DAP
+        self.use_Learning = useLearning
+        self.model_path = model_path
         self.max_uanum = max_uanum
         self.sampling_time = 0.0
         self.revisit_pen = revisit_pen
@@ -73,7 +75,8 @@ class JSAPPlanner(object):
                 
         state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
                         revisit_pen=self.revisit_pen, drones=uavs, ugvs=ugvs, useAVP=self.use_AVP, \
-                        useDAP=self.use_DAP, max_uanum=self.max_uanum)
+                        useDAP=self.use_DAP, max_uanum=self.max_uanum, useLearning=self.use_Learning,\
+                            model_path=self.model_path)
         # assert state.uavs != []
         # assert self.max_depth == 12
         # assert self.n_maps == 200

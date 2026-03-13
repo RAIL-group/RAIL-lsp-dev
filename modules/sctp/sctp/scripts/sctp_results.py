@@ -53,15 +53,15 @@ def extract_costs(file_path):
             spolicytime = float(parts[9].split(': ')[1].strip())
             if seed not in seed_costs:
                 seed_costs[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
-                                    "jsapiap2": None, "jsapdap": None, "jsapdap2": None}
+                                    "jsapiap2": None, "jsapdap": None, "jsapdap2": None, "jsapliap": None, "jsapliap2": None}
                 seed_truntimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
-                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None}
+                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None, "jsapliap": None, "jsapliap2": None}
                 seed_steptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
-                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None}
+                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None,"jsapliap": None, "jsapliap2": None}
                 seed_samptimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
-                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None}
+                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None, "jsapliap": None, "jsapliap2": None}
                 seed_spolicytimes[seed] = {"ctp": None, "jsap": None, "jsap2": None, "jsapiap": None, \
-                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None}
+                            "jsapiap2": None,"jsapdap": None, "jsapdap2": None, "jsapliap": None, "jsapliap2": None}
             seed_costs[seed][planner] = cost
             seed_truntimes[seed][planner] = truntime
             seed_steptimes[seed][planner] = steptime
@@ -76,7 +76,10 @@ def get_planner_data(seed_costs):
     jsapavp = []
     jsapavp2 = []
     jsapdap = []
-    dsapavp = []
+    jsapdap2 = []
+    jsapliap = []
+    jsapliap2 = []
+    
     for seed in sorted(seed_costs.keys()):
         jsap.append(seed_costs[seed]["jsap"])
         jsap2.append(seed_costs[seed]["jsap2"])
@@ -84,29 +87,32 @@ def get_planner_data(seed_costs):
         jsapavp.append(seed_costs[seed]["jsapiap"])
         jsapavp2.append(seed_costs[seed]["jsapiap2"])
         jsapdap.append(seed_costs[seed]["jsapdap"])
-        dsapavp.append(seed_costs[seed]["jsapdap2"])
-    return base, jsap, jsapavp, jsapdap, dsapavp, jsap2, jsapavp2
+        jsapdap2.append(seed_costs[seed]["jsapdap2"])
+        jsapliap.append(seed_costs[seed]["jsapliap"])
+        jsapliap2.append(seed_costs[seed]["jsapliap2"])
+    return base, jsap, jsapavp, jsapdap, jsapdap2, jsap2, jsapavp2, jsapliap, jsapliap2
 
 def plot_scatter_data(file_path, args):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
     seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(file_path)
     assert len(seed_costs) == len(seed_truntimes)
-    base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist = get_planner_data(seed_costs)
+    base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist,\
+               jsapliap_dist, jsapliap2_dist = get_planner_data(seed_costs)
     base_ttimes, jsap_ttimes, jsapavp_ttimes, jsapdap_ttimes, jsapdap2_ttimes, jsap2_ttimes, \
-                jsapavp2_ttimes = get_planner_data(seed_truntimes)
+                jsapavp2_ttimes, jsapliap_ttimes, jsapliap2_ttimes = get_planner_data(seed_truntimes)
     base_steptimes, jsap_steptimes, jsapavp_steptimes, jsapdap_steptimes, jsapdap2_steptimes, jsap2_steptimes, \
-                jsapavp2_steptimes = get_planner_data(seed_steptimes)
+                jsapavp2_steptimes, jsapliap_steptimes, jsapliap2_steptimes = get_planner_data(seed_steptimes)
     base_samptimes, jsap_samptimes, jsapavp_samptimes, jsapdap_samptimes, jsapdap2_samptimes, jsap2_samptimes, \
-                jsapavp2_samptimes = get_planner_data(seed_samptimes)
-    base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
-                jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
+                jsapavp2_samptimes, jsapliap_samptimes, jsapliap2_samptimes = get_planner_data(seed_samptimes)
+    # base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
+    #             jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
     
     print(base_dist)
-    print(jsap_dist)
+    # print(jsap_dist)
     if base_dist[0] != None:
         print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
           f"steptime: {np.average(base_steptimes):0.2f}, samptime: {np.average(base_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(base_spolicytimes):0.2f}, total runtime: {np.average(base_ttimes):0.2f}")
+          f"total runtime: {np.average(base_ttimes):0.2f}")
     
     if jsap_dist[0] != None:
         plotting.make_scatter_plot_with_box(base_dist, jsap_dist, xlabel='CTP', ylabel='SAP')
@@ -116,7 +122,7 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAP: costs: {np.average(jsap_dist):0.2f}, "\
           f"steptime: {np.average(jsap_steptimes):0.2f}, samptime: {np.average(jsap_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsap_spolicytimes):0.2f}, total runtime: {np.average(jsap_ttimes):0.2f}")
+          f"total runtime: {np.average(jsap_ttimes):0.2f}")
         
     
     if jsap2_dist[0] != None:
@@ -127,9 +133,11 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAP2: costs: {np.average(jsap2_dist):0.2f},  "\
           f"steptime: {np.average(jsap2_steptimes):0.2f}, samptime: {np.average(jsap2_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsap2_spolicytimes):0.2f}, total runtime: {np.average(jsap2_ttimes):0.2f}")
+          f"total runtime: {np.average(jsap2_ttimes):0.2f}")
     
     if jsapavp_dist[0] != None:
+        print("check check check ")
+        print(jsapavp_dist)
         plotting.make_scatter_plot_with_box(base_dist, jsapavp_dist, xlabel='CTP', ylabel='SAP-IAP')
         args.num_drones = 1
         image_name = Path(args.save_dir) / f'plot_cost_ctp_sapiap_{args.num_drones}UAVs.png'
@@ -137,7 +145,7 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAPIAP: costs: {np.average(jsapavp_dist):0.2f},  "\
           f"steptime: {np.average(jsapavp_steptimes):0.2f}, samptime: {np.average(jsapavp_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsapavp_spolicytimes):0.2f}, total runtime: {np.average(jsapavp_ttimes):0.2f}")
+          f"total runtime: {np.average(jsapavp_ttimes):0.2f}")
     
     if jsapavp2_dist[0] != None:
         plotting.make_scatter_plot_with_box(base_dist, jsapavp2_dist, xlabel='CTP', ylabel='SAP-IAP2')
@@ -147,7 +155,7 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAPIAP2: costs: {np.average(jsapavp2_dist):0.2f},  "\
           f"steptime: {np.average(jsapavp2_steptimes):0.2f}, samptime: {np.average(jsapavp2_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsapavp2_spolicytimes):0.2f}, total runtime: {np.average(jsapavp2_ttimes):0.2f}")
+          f"total runtime: {np.average(jsapavp2_ttimes):0.2f}")
     
     if jsapdap_dist[0] != None:
         plotting.make_scatter_plot_with_box(base_dist, jsapdap_dist, xlabel='CTP', ylabel='SAP-DAP')
@@ -157,11 +165,11 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAP-DAP: costs: {np.average(jsapdap_dist):0.2f},  "\
           f"steptime: {np.average(jsapdap_steptimes):0.2f}, samptime: {np.average(jsapdap_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsapdap_spolicytimes):0.2f}, total runtime: {np.average(jsapdap_ttimes):0.2f}")
+          f"total runtime: {np.average(jsapdap_ttimes):0.2f}")
     
         plotting.make_scatter_plot_with_box(jsapdap_dist, jsapavp_dist, xlabel='SAP-DAP', ylabel='SAP-IAP')
         args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_sapdap_sapiap_{args.num_ugvs}UGVs.pdf='
+        image_name = Path(args.save_dir) / f'plot_cost_sapdap_sapiap_{args.num_ugvs}UGVs.pdf'
         plt.tight_layout()
         plt.savefig(image_name)
     
@@ -173,7 +181,18 @@ def plot_scatter_data(file_path, args):
         plt.savefig(image_name)
         print(f"SAPDAP2: costs: {np.average(jsapdap2_dist):0.2f},  "\
           f"steptime: {np.average(jsapdap2_steptimes):0.2f}, samptime: {np.average(jsapdap2_samptimes):0.2f}, "\
-          f"spolicytime: {np.average(jsapdap2_spolicytimes):0.2f}, total runtime: {np.average(jsapdap2_ttimes):0.2f}")
+          f"total runtime: {np.average(jsapdap2_ttimes):0.2f}")
+ 
+    if jsapliap_dist[0] != None:
+        plotting.make_scatter_plot_with_box(base_dist, jsapliap_dist, xlabel='CTP', ylabel='SAP-LIAP')
+        args.num_drones = 1
+        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapliap_{args.num_ugvs}UGVs.png'
+        plt.tight_layout()
+        plt.savefig(image_name)
+        print(f"SAPLIAP: costs: {np.average(jsapliap_dist):0.2f},  "\
+          f"steptime: {np.average(jsapliap_steptimes):0.2f}, samptime: {np.average(jsapliap_samptimes):0.2f}, "\
+          f"total runtime: {np.average(jsapliap_ttimes):0.2f}")
+
     
 
 def processed_data(input_file, output_file, args, prefix=None):
@@ -238,9 +257,6 @@ def processed_data(input_file, output_file, args, prefix=None):
             else:
                 data = data + "\n"
             f.write(data)
-            # f.write(f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"
-            #     f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"
-            #     f" T.TIME: {np.average(jsapdap_ttimes):0.2f} \n")
     
     if jsapdap2_dist[0] != None:
         with open(output_file, "a+") as f:
@@ -248,41 +264,6 @@ def processed_data(input_file, output_file, args, prefix=None):
                 f" AVG_STEP_TIME: {np.average(jsapdap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap2_samptimes):0.2f} |"
                 f" T.TIME: {np.average(jsapdap2_ttimes):0.2f} \n")
     
-# def plot_madist_allinOne_std(x, data, std, featureNames, yName, 
-#                     ranges, rangeStep, envName, xName=None, outpath=None):
-#     markers = ['o', '^',  'D', 's', 'p', '*', 'h']
-#     colors = ['red', 'magenta', 'orange', 'blue', 'green', 'purple', 'brown']
-#     order = 10
-#     for ii, dat in enumerate(data):         
-#         plt.errorbar(x, dat, std,
-#                     color=colors[ii],   
-#                     linewidth=2.0, 
-#                     # linestyle='None', 
-#                     marker=markers[ii],
-#                     markersize=9,
-#                     label=featureNames[ii],
-#                     zorder=order
-#                 )
-                    
-#     plt.title(envName, fontsize=18)
-#     plt.ylim(ranges[0], ranges[1])
-#     major_ticks = np.arange(ranges[0], ranges[1], rangeStep)
-#     plt.grid(axis = "y")
-#     plt.legend(fontsize=12, loc='best')
-    
-#     # for runtime and travel distances
-#     plt.xticks(x,visible=True,fontsize=12)
-#     if xName is not None:
-#         plt.xlabel(xName, fontsize=15)
-#     else:
-#         plt.xlabel('number of UGVs', fontsize=15)
-#     plt.ylabel(yName, fontsize=15)
-#     plt.yticks(major_ticks,fontsize=12)
-#     if outpath is not None:
-#         plt.savefig(outpath, bbox_inches='tight')
-#     else:
-#         plt.savefig(f'/data/sctp/Jan30/plot_{envName}_{xName}.pdf', bbox_inches='tight')
-
 def read_processed_data(filepath, prune_actions=False):
     data = {}
     with open(filepath, 'r') as file:
@@ -344,6 +325,7 @@ if __name__ == '__main__':
     if scatter_data:
         args.num_ugvs = 1
         input_path = Path(file_path)/ f'plot_data/results_{args.num_ugvs}UGVs.txt'
+        args.save_dir = Path(args.save_dir)/ f'plot_data'
         plot_scatter_data(input_path, args)
     elif plot_all:
         graphs = ['random', 'bridges', 'islands']
@@ -362,10 +344,6 @@ if __name__ == '__main__':
             plotting.plot_madist_allinOne_std(x=ugvs_num, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]", 
                     ranges=(150, 1400), rangeStep=200, envName=graph)
             
-            # distances = [[data[planner][ugv_num]['avg_cost']/float(ugv_num) for ugv_num in ugvs_num] for planner in data]
-            # plot_madist_allinOne_std(x=ugvs_num, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]", 
-            #         ranges=(150, 700), rangeStep=100, envName=graph, axis=plt.subplots(1, 1)[1], i=graphs.index(graph))
-            # plt.show()
     elif prune_num_actions is not None:
         num_sampling = 5000
         output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data_{num_sampling}.txt'

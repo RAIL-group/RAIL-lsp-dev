@@ -10,6 +10,7 @@ from torch_geometric.nn import global_mean_pool, global_add_pool
 NODE_IN = 2
 EDGE_IN = 2
 HIDDEN = 64
+# HIDDEN = 128
 
 class BipartiteEdgeRegressor(nn.Module):
     def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=4):
@@ -160,8 +161,8 @@ class BipartiteEdgeRegressor(nn.Module):
         return (element_loss * weights).sum() / weights.sum()
 
 
-def load_iap_gnn_model(path):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def load_iap_gnn_model(path, device, HIDDEN=HIDDEN):
+    
     model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN).to(device)
     model.load_state_dict(torch.load(path, weights_only=True))
     model.eval()

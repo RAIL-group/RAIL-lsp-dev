@@ -9,7 +9,8 @@ import random
 import sctp.sctp_graphs as graphs
 import sctp.utils.underlying_graph as ug
 import sctp.action_estimation as ae
-
+from torch_geometric.data import Data
+import torch
 import learning
 
 
@@ -22,12 +23,21 @@ class GraphData:
     y: np.ndarray #y [M ,1]
     graph_metadata: Dict
 
+def graphdata_to_pyg(sdata: GraphData, device='cpu') -> Data:
+    """Convert GraphData to PyTorch Geometric Data object"""
+    data = Data(
+        x          = torch.tensor(sdata.x, dtype=torch.float32),
+        edge_index = torch.tensor(sdata.edge_index, dtype=torch.long),   # shape [2, E]
+        edge_attr  = torch.tensor(sdata.edge_attr, dtype=torch.float32),
+        y          = torch.tensor(sdata.y, dtype=torch.float32),
+    )
+    return data.to(device)
 
 def create_graph_datum(
     graph: ug.ProbabilisticGraph,
     edges: List,
-    start: int,
-    goal: int,
+    start: int, # 0-indexed
+    goal: int, # 0-indexed
     values: np.ndarray,
     metadata: Optional[Dict] = None
 ) -> GraphData:

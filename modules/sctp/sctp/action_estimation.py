@@ -5,6 +5,8 @@ import random
 import torch
 from sctp import param, core
 from sctp.utils import underlying_graph as ug
+from sctp.scripts.data_gen import GraphData, create_graph_datum, graphdata_to_pyg
+
 
 NOWAY_PEN = 500.0
 
@@ -152,33 +154,58 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
 def get_uav_action_gnn(state, uav_index):
     actions = []
     state.action_values.clear()
-    data = None 
     
-    all_pred = []
-    with torch.no_grad():
+    prob_graph = ug.ProbabilisticGraph(
+            positions=state.pg_positions,
+            adjacency=state.pg_adjacency,
+            probabilities=state.pg_probabilities
+        )
+    
+    for i, ugv in enumerate(state.ugvs):
+        if ugv.at_node and ugv.last_node == state.goalIDs[i]:
+            continue
+        goal = state.goalIDs[i]-1
+        if ugv.at_node:
+            if ugv.last_node in state.graph.poiIDs:
+                start = ugv.pl_vertex-1
+            else:
+                start = ugv.last_node-1
+        else:
+            start = ugv.edge[0]-1 if ugv.edge[0] not in state.graph.poiIDs else ugv.edge[1]-1
+            
+        edges = [[edge[0], edge[1]] for edge in state.edges]
+        data =  create_graph_datum(graph=prob_graph, edges=edges, start=start, goal=goal, values=np.array([0.0]*len(state.graph.pois)))  
+        
+        data = graphdata_to_pyg(data, state.device)
+        with torch.no_grad():
             pred, _ = state.model(
                 x          = data.x,
                 edge_index = data.edge_index,
                 edge_attr  = data.edge_attr,
             )   # [E]
 
-    pred_cpu   = pred.cpu()
-    E          = pred_cpu.shape[0]
+        pred_cpu   = pred.cpu()
+        E          = pred_cpu.shape[0]
 
-    src = data.edge_index[0].cpu()   # [E]
-    dst = data.edge_index[1].cpu()   # [E]
-    edge_dict = {}
-    for i in range(E):
-        u      = src[i].item()
-        v      = dst[i].item()
-        pr     = pred_cpu[i].item()
-        if v < u:
-            u, v = v, u
-        edge_dict[(u,v)] = pr
+        src = data.edge_index[0].cpu()   # [E]
+        dst = data.edge_index[1].cpu()   # [E]
+        edge_dict = {}
+        for i in range(E):
+            u      = src[i].item()
+            v      = dst[i].item()
+            pr     = pred_cpu[i].item()
+            if v < u:
+                u, v = v, u
+            if (u,v) in edge_dict:
+                edge_dict[(u,v)] = +pr
+            else:
+                edge_dict[(u,v)] = pr
+            
     drone_pose = state.uavs[uav_index].cur_pose
     for action in state.avail_uav_actions:
         target_node = [node for node in state.graph.pois if node.id == action.target][0]
         edge = tuple(sorted(target_node.neighbors))
+        edge = (edge[0]-1, edge[1]-1) if edge[0] < edge[1] else (edge[1]-1, edge[0]-1)
         assert edge in edge_dict, f"Edge {edge} not found in edge_dict. Available edges: {list(edge_dict.keys())}"
         act_value = edge_dict[edge]        
         state.action_values[action] = act_value*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(target_node.coord))
@@ -186,7 +213,6 @@ def get_uav_action_gnn(state, uav_index):
     state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
     actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
     for action in actions:
-        assert action in state.behavior_change
         assert action in state.action_values
         action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
         action.update_robotID(uav_index) 
