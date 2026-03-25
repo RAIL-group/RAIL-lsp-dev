@@ -16,13 +16,19 @@ def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     print_pdf = False
-    starts, goals, graph = graphs.get_bridges_graph()
+    if args.env_type == 'bridges':
+        starts, goals, graph = graphs.get_bridges_graph()
+    elif args.env_type == 'random':
+        starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
+    elif args.env_type == 'islands':
+        starts, goals, graph = graphs.get_sixIslands_graph()
+        
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    
-    # num_uav = 0
     num_ugv = 1
-    max_uanum = 1
+    max_uanum = 2
+    num_iterations = 15000
+    max_depth = 25
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -63,7 +69,7 @@ def _setup(args):
         assert args.max_uanum == max_uanum
     elif args.planner == 'jsapiap':
         param.REVISIT_PEN = 0.0
-        args.max_depth = 15
+        args.max_depth == max_depth
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = True
@@ -89,20 +95,20 @@ def _setup(args):
     elif args.planner == 'jsapdap':
         # args.num_drones = 1
         param.REVISIT_PEN = 0.0
-        args.max_depth = 15
+        assert args.max_depth == max_depth
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = True
         use_Learning = False
-        assert args.num_iterations == 5000
+        assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapdap2':
         param.REVISIT_PEN = 0.0
         max_uanum = 1
-        args.max_depth = 15
+        assert args.max_depth == max_depth
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         use_AVP = False
@@ -114,17 +120,31 @@ def _setup(args):
     elif args.planner == 'jsapliap':
         # args.num_drones = 1
         param.REVISIT_PEN = 0.0
-        args.max_depth = 15
+        
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        model_path = 'modules/sctp/learning/models/iap_gnn_moreknown.pt'
-        assert args.num_iterations == 1000
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        args.max_depth = max_depth
+        assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
         assert args.num_drones == 1, "This script only supports 1 UAV"
+    elif args.planner == 'jsapliap2':
+        param.REVISIT_PEN = 0.0
+        assert args.max_depth == max_depth
+        drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
+                    robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
+        use_AVP = False
+        use_DAP = False 
+        use_Learning = True
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        assert args.num_iterations == 1000
+        assert args.num_ugvs == num_ugv
+        assert args.max_uanum == max_uanum
+        assert args.num_drones == 2, "This script only supports 2 UAVs"
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 
@@ -208,6 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('--sampling_maps', type=int, default=200)
     parser.add_argument('--n_vertex', type=int, default=16)
     parser.add_argument('--max_uanum', type=int, default=1)
+    parser.add_argument('--env_type', type=str, default='bridges')
     args = parser.parse_args()
     args.current_seed = args.seed
 

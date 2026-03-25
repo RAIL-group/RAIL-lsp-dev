@@ -28,7 +28,7 @@ def _get_args():
     args = parser.parse_args(['--save_dir', ''])
     
     args.save_dir = 'data/sctp'
-    args.planner = 'ctp'
+    args.planner = 'jsapliap'
     # args.num_drones = 
     args.num_iterations = 500
     args.C = 200
@@ -415,13 +415,13 @@ def test_jsap_plan_exec_randomgraph():
 def test_jsap_plan_exec_bridges_graph():
     print()
     args = _get_args()
-    args.planner = 'jsapiap'
-    args.seed = 3012
+    args.planner = 'jsapliap'
+    args.seed = 3001
     random.seed(args.seed)
     np.random.seed(args.seed)
     verbose = False
     args.num_ugvs =1
-    starts, goals, graph = graphs.get_insland_bridges_graph()
+    starts, goals, graph = graphs.get_bridges_graph()
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
@@ -430,7 +430,7 @@ def test_jsap_plan_exec_bridges_graph():
     if args.planner == 'ctp':
         args.num_drones =0
         drones = []
-        args.num_iterations = 1500 #2000 
+        args.num_iterations = 1000 #2000 
         args.max_depth = 12
         use_AVP = False
         use_DAP = False
@@ -487,6 +487,22 @@ def test_jsap_plan_exec_bridges_graph():
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         print(f"Testing JSAP-DAP planner with use_DAP={use_DAP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
+    elif args.planner == 'jsapliap':
+        use_AVP=False
+        use_DAP = False
+        use_Learning = True
+        assert args.num_drones > 0
+        assert args.num_ugvs > 0
+        model_path ='modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        args.max_depth = 15
+        # max_uanum = max_uanum
+        args.num_iterations = 1000
+        args.n_maps = 200
+        max_uanum = 1
+        drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
+        print(f"Testing JSAP-IAP planner with use_IAP={use_AVP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
+        
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
     
@@ -494,14 +510,24 @@ def test_jsap_plan_exec_bridges_graph():
                     at_node=True) for i in range(args.num_ugvs)]
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
-                uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
-                rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \
-                use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
     
-    
+    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
+                                              uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
+                                              rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, 
+                                              use_AVP=use_AVP, use_DAP=use_DAP, useLearning=use_Learning, model_path=model_path,\
+                                              max_uanum=max_uanum, verbose=False)
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
-                                                    reached_goal=jsapplanner.reached_goal, verbose=True)
+                                                    reached_goal=jsapplanner.reached_goal, verbose=False)
+
+    
+    # jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
+    #             uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
+    #             rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \
+    #             use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
+    
+    
+    # plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
+    #                                                 reached_goal=jsapplanner.reached_goal, verbose=True)
 
     start_time = time.perf_counter() 
     average_step_time = 0.0
@@ -775,6 +801,7 @@ def test_jsap_plan_exec_island_graph():
                     at_node=True) for i in range(args.num_ugvs)]
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
+    
     jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
                 uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
                 rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \

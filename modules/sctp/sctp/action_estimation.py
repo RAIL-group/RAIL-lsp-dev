@@ -152,6 +152,8 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
     return (block_value - pass_value)
 
 def get_uav_action_gnn(state, uav_index):
+    if uav_index is None:
+        raise ValueError("UAV index is None - get_uav_action_gnn")
     actions = []
     state.action_values.clear()
     

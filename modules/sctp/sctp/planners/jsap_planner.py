@@ -2,6 +2,8 @@ import numpy as np
 import pouct_planner
 import sctp
 import sctp.jsap
+import torch 
+from sctp.learning.iap_gnn import load_iap_gnn_model
 
 
 class JSAPPlanner(object):
@@ -27,9 +29,12 @@ class JSAPPlanner(object):
         self.sampling_time = 0.0
         self.revisit_pen = revisit_pen
         self.single_policy_time = 0.0
-        # assert self.max_uanum == 3
-        
-        # assert self.n_maps == 60
+        self.model = None
+        self.device = None
+        if self.use_Learning:
+            assert model_path is not None, "Model path must be provided when use_Learning is True"
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model = load_iap_gnn_model(path=model_path, device=self.device)
         
     def reached_goal(self):
         return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
@@ -76,7 +81,7 @@ class JSAPPlanner(object):
         state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
                         revisit_pen=self.revisit_pen, drones=uavs, ugvs=ugvs, useAVP=self.use_AVP, \
                         useDAP=self.use_DAP, max_uanum=self.max_uanum, useLearning=self.use_Learning,\
-                            model_path=self.model_path)
+                            gnn_model=self.model, device=self.device)
         # assert state.uavs != []
         # assert self.max_depth == 12
         # assert self.n_maps == 200

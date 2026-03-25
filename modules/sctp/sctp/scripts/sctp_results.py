@@ -94,6 +94,7 @@ def get_planner_data(seed_costs):
 
 def plot_scatter_data(file_path, args):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
+    result_file = Path(args.save_dir) / f'costs.txt'
     seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(file_path)
     assert len(seed_costs) == len(seed_truntimes)
     base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist,\
@@ -104,165 +105,117 @@ def plot_scatter_data(file_path, args):
                 jsapavp2_steptimes, jsapliap_steptimes, jsapliap2_steptimes = get_planner_data(seed_steptimes)
     base_samptimes, jsap_samptimes, jsapavp_samptimes, jsapdap_samptimes, jsapdap2_samptimes, jsap2_samptimes, \
                 jsapavp2_samptimes, jsapliap_samptimes, jsapliap2_samptimes = get_planner_data(seed_samptimes)
-    # base_spolicytimes, jsap_spolicytimes, jsapavp_spolicytimes, jsapdap_spolicytimes, jsapdap2_spolicytimes, jsap2_spolicytimes, \
-    #             jsapavp2_spolicytimes = get_planner_data(seeds_policytimes)
     
-    print(base_dist)
-    # print(jsap_dist)
-    if base_dist[0] != None:
-        print(f"CTP: costs: {np.average(base_dist):0.2f}, "\
-          f"steptime: {np.average(base_steptimes):0.2f}, samptime: {np.average(base_samptimes):0.2f}, "\
-          f"total runtime: {np.average(base_ttimes):0.2f}")
     
-    if jsap_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsap_dist, xlabel='CTP', ylabel='SAP')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sap_{args.num_ugvs}UGVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAP: costs: {np.average(jsap_dist):0.2f}, "\
-          f"steptime: {np.average(jsap_steptimes):0.2f}, samptime: {np.average(jsap_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsap_ttimes):0.2f}")
-        
+    planners = ['CTP', 'JSAP', 'JSAP-DAP', 'JSAP-IAP', 'JSAP-LIAP', 'JSAP-2', 'JSAP-DAP2', 'JSAP-IAP2', 'JSAP-LIAP2']
+    distances = [base_dist, jsap_dist, jsapdap_dist, jsapavp_dist, jsapliap_dist, jsap2_dist, jsapdap2_dist, \
+                    jsapavp2_dist, jsapliap2_dist]
+    steptimes = [base_steptimes, jsap_steptimes, jsapdap_steptimes, jsapavp_steptimes, jsapliap_steptimes, jsap2_steptimes,\
+                     jsapdap2_steptimes, jsapavp2_steptimes, jsapliap2_steptimes]
+    samptimes = [base_samptimes, jsap_samptimes, jsapdap_samptimes, jsapavp_samptimes, jsapliap_samptimes,\
+                     jsap2_samptimes, jsapdap2_samptimes, jsapavp2_samptimes, jsapliap2_samptimes]
+    ttimes = [base_ttimes, jsap_ttimes, jsapdap_ttimes, jsapavp_ttimes, jsapliap_ttimes,\
+                    jsap2_ttimes, jsapdap2_ttimes, jsapavp2_ttimes, jsapliap2_ttimes]
     
-    if jsap2_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsap2_dist, xlabel='CTP', ylabel='SAP2')
-        args.num_drones = 2
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sap2_{args.num_ugvs}UGVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAP2: costs: {np.average(jsap2_dist):0.2f},  "\
-          f"steptime: {np.average(jsap2_steptimes):0.2f}, samptime: {np.average(jsap2_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsap2_ttimes):0.2f}")
-    
-    if jsapavp_dist[0] != None:
-        print("check check check ")
-        print(jsapavp_dist)
-        plotting.make_scatter_plot_with_box(base_dist, jsapavp_dist, xlabel='CTP', ylabel='SAP-IAP')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapiap_{args.num_drones}UAVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAPIAP: costs: {np.average(jsapavp_dist):0.2f},  "\
-          f"steptime: {np.average(jsapavp_steptimes):0.2f}, samptime: {np.average(jsapavp_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsapavp_ttimes):0.2f}")
-    
-    if jsapavp2_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapavp2_dist, xlabel='CTP', ylabel='SAP-IAP2')
-        args.num_drones = 2
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapiap2_{args.num_ugvs}UGVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAPIAP2: costs: {np.average(jsapavp2_dist):0.2f},  "\
-          f"steptime: {np.average(jsapavp2_steptimes):0.2f}, samptime: {np.average(jsapavp2_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsapavp2_ttimes):0.2f}")
-    
-    if jsapdap_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapdap_dist, xlabel='CTP', ylabel='SAP-DAP')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapdap_{args.num_ugvs}UGVs.pdf'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAP-DAP: costs: {np.average(jsapdap_dist):0.2f},  "\
-          f"steptime: {np.average(jsapdap_steptimes):0.2f}, samptime: {np.average(jsapdap_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsapdap_ttimes):0.2f}")
-    
-        plotting.make_scatter_plot_with_box(jsapdap_dist, jsapavp_dist, xlabel='SAP-DAP', ylabel='SAP-IAP')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_sapdap_sapiap_{args.num_ugvs}UGVs.pdf'
-        plt.tight_layout()
-        plt.savefig(image_name)
-    
-    if jsapdap2_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapdap2_dist, xlabel='CTP', ylabel='SAP-DAP2')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapdap2_{args.num_ugvs}UGVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAPDAP2: costs: {np.average(jsapdap2_dist):0.2f},  "\
-          f"steptime: {np.average(jsapdap2_steptimes):0.2f}, samptime: {np.average(jsapdap2_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsapdap2_ttimes):0.2f}")
- 
-    if jsapliap_dist[0] != None:
-        plotting.make_scatter_plot_with_box(base_dist, jsapliap_dist, xlabel='CTP', ylabel='SAP-LIAP')
-        args.num_drones = 1
-        image_name = Path(args.save_dir) / f'plot_cost_ctp_sapliap_{args.num_ugvs}UGVs.png'
-        plt.tight_layout()
-        plt.savefig(image_name)
-        print(f"SAPLIAP: costs: {np.average(jsapliap_dist):0.2f},  "\
-          f"steptime: {np.average(jsapliap_steptimes):0.2f}, samptime: {np.average(jsapliap_samptimes):0.2f}, "\
-          f"total runtime: {np.average(jsapliap_ttimes):0.2f}")
-
-    
+    assert distances[0][0] != None
+    num_steps = np.average(ttimes[0]) / np.average(steptimes[0]) if np.average(steptimes[0]) > 0.0 else 0.0
+    with open(result_file, "a+") as f:
+        f.write(f"{planners[0]}: costs: {np.average(distances[0]):0.2f}, "\
+                f"samptime_step: {np.average(samptimes[0])/num_steps:0.2f}, steptime: {np.average(steptimes[0]):0.2f}, "\
+                f"num_steps: {num_steps:0.1f}, total runtime: {np.average(ttimes[0]):0.2f}\n")
+    for i in range(1, len(planners)):
+        if distances[i][0] != None:
+            steptime_avg = np.average(steptimes[i])
+            total_time_avg = np.average(ttimes[i])
+            samptime_avg = np.average(samptimes[i])
+            num_steps = total_time_avg / steptime_avg if steptime_avg > 0.0 else 0.0
+            samptime_step = samptime_avg / num_steps if num_steps > 0.0 else 0.0
+            with open(result_file, "a+") as f:
+                f.write(f"{planners[i]}: costs: {np.average(distances[i]):0.2f}, "\
+                        f"samptime_step: {samptime_step:0.2f}, steptime: {np.average(steptimes[i]):0.2f}, "\
+                        f"num_steps: {num_steps:0.1f}, total runtime: {np.average(ttimes[i]):0.2f}\n")
+            plotting.make_scatter_plot_with_box(base_dist, distances[i], xlabel='CTP', ylabel=planners[i])
+            if (i==2 or i==4 or i==6 or i==8):
+                args.num_drones = 2
+            else:
+                args.num_drones = 1
+            image_name = Path(args.save_dir) / f'plot_cost_ctp_{planners[i].lower()}_{args.num_ugvs}UGVs.png'
+            plt.tight_layout()
+            plt.savefig(image_name)
+     
 
 def processed_data(input_file, output_file, args, prefix=None):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
-    print(f"The input file is {input_file}")
+    # print(f"The input file is {input_file}")
     seed_costs, seed_truntimes, seed_steptimes, seed_samptimes, seeds_policytimes = extract_costs(input_file)
-    assert len(seed_costs) == len(seed_truntimes)
-    base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist = get_planner_data(seed_costs)
+    base_dist, jsap_dist, jsapavp_dist, jsapdap_dist, jsapdap2_dist, jsap2_dist, jsapavp2_dist,\
+               jsapliap_dist, jsapliap2_dist = get_planner_data(seed_costs)
     base_ttimes, jsap_ttimes, jsapavp_ttimes, jsapdap_ttimes, jsapdap2_ttimes, jsap2_ttimes, \
-                jsapavp2_ttimes = get_planner_data(seed_truntimes)
+                jsapavp2_ttimes, jsapliap_ttimes, jsapliap2_ttimes = get_planner_data(seed_truntimes)
     base_steptimes, jsap_steptimes, jsapavp_steptimes, jsapdap_steptimes, jsapdap2_steptimes, jsap2_steptimes, \
-                jsapavp2_steptimes = get_planner_data(seed_steptimes)
+                jsapavp2_steptimes, jsapliap_steptimes, jsapliap2_steptimes = get_planner_data(seed_steptimes)
     base_samptimes, jsap_samptimes, jsapavp_samptimes, jsapdap_samptimes, jsapdap2_samptimes, jsap2_samptimes, \
-                jsapavp2_samptimes = get_planner_data(seed_samptimes)
+                jsapavp2_samptimes, jsapliap_samptimes, jsapliap2_samptimes = get_planner_data(seed_samptimes)
     
-    # print(jsapavp_dist)
-    # print(jsapdap_dist)
+    assert len(seed_costs) == len(seed_truntimes)    
+    planners = ['CTP', 'JSAP', 'JSAP-DAP', 'JSAP-IAP', 'JSAP-LIAP', 'JSAP-2', 'JSAP-DAP2', 'JSAP-IAP2', 'JSAP-LIAP2']
+    distances = [base_dist, jsap_dist, jsapdap_dist, jsapavp_dist, jsapliap_dist, jsap2_dist, jsapdap2_dist, \
+                    jsapavp2_dist, jsapliap2_dist]
+    steptimes = [base_steptimes, jsap_steptimes, jsapdap_steptimes, jsapavp_steptimes, jsapliap_steptimes, jsap2_steptimes,\
+                     jsapdap2_steptimes, jsapavp2_steptimes, jsapliap2_steptimes]
+    samptimes = [base_samptimes, jsap_samptimes, jsapdap_samptimes, jsapavp_samptimes, jsapliap_samptimes,\
+                     jsap2_samptimes, jsapdap2_samptimes, jsapavp2_samptimes, jsapliap2_samptimes]
+    ttimes = [base_ttimes, jsap_ttimes, jsapdap_ttimes, jsapavp_ttimes, jsapliap_ttimes,\
+                    jsap2_ttimes, jsapdap2_ttimes, jsapavp2_ttimes, jsapliap2_ttimes]
     
-    if base_dist[0] != None:
-        with open(output_file, "a+") as f:
-            f.write(f"PLANNER: CTP        | UGVs: {args.num_ugvs} | AVG_COST: {np.average(base_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(base_steptimes):0.2f} | SAMP_TIME: {np.average(base_samptimes):0.2f} |"
-                f" T.TIME: {np.average(base_ttimes):0.2f} \n")    
+    for i in range(0, len(planners)):
+        if distances[i][0] != None:
+            # print(f"The planner is: {planners[i]}")
+            steptime_avg = np.average(steptimes[i])
+            total_time_avg = np.average(ttimes[i])
+            samptime_avg = np.average(samptimes[i])
+            num_steps = total_time_avg / steptime_avg if steptime_avg > 0.0 else 0.0
+            samptime_step = samptime_avg / num_steps if num_steps > 0.0 else 0.0
+            with open(output_file, "a+") as f:
+                data = f"PLANNER: {planners[i]} | costs: {np.average(distances[i]):0.2f} | "\
+                        f"samptime_step: {samptime_step:0.2f} | steptime: {np.average(steptimes[i]):0.2f} | "\
+                        f"num_steps: {num_steps:0.1f} | total runtime: {np.average(ttimes[i]):0.2f}"
+                if prefix is not None:
+                    data = data + prefix
+                
+                data = data + "\n"
+                f.write(data)
+    
+    
+    # if base_dist[0] != None:
+    #     with open(output_file, "a+") as f:
+    #         f.write(f"PLANNER: CTP        | UGVs: {args.num_ugvs} | AVG_COST: {np.average(base_dist):0.2f} |"
+    #             f" AVG_STEP_TIME: {np.average(base_steptimes):0.2f} | SAMP_TIME: {np.average(base_samptimes):0.2f} |"
+    #             f" T.TIME: {np.average(base_ttimes):0.2f} \n")    
    
-    if jsap_dist[0] != None:
-        with open(output_file, "a+") as f:
-            f.write(f"PLANNER: JSAP-1     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(jsap_steptimes):0.2f} | SAMP_TIME: {np.average(jsap_samptimes):0.2f} |"
-                f" T.TIME: {np.average(jsap_ttimes):0.2f} \n")    
+    # if jsap_dist[0] != None:
+    #     with open(output_file, "a+") as f:
+    #         f.write(f"PLANNER: JSAP-1     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap_dist):0.2f} |"
+    #             f" AVG_STEP_TIME: {np.average(jsap_steptimes):0.2f} | SAMP_TIME: {np.average(jsap_samptimes):0.2f} |"
+    #             f" T.TIME: {np.average(jsap_ttimes):0.2f} \n")    
     
-    if jsap2_dist[0] != None:
-        with open(output_file, "a+") as f:
-            f.write(f"PLANNER: JSAP-2     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap2_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(jsap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsap2_samptimes):0.2f} |"
-                f" T.TIME: {np.average(jsap2_ttimes):0.2f} \n")    
+    # if jsap2_dist[0] != None:
+    #     with open(output_file, "a+") as f:
+    #         f.write(f"PLANNER: JSAP-2     | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsap2_dist):0.2f} |"
+    #             f" AVG_STEP_TIME: {np.average(jsap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsap2_samptimes):0.2f} |"
+    #             f" T.TIME: {np.average(jsap2_ttimes):0.2f} \n")    
     
         
-    if jsapavp_dist[0] != None:
-        with open(output_file, "a+") as f:
-            data = f"PLANNER: JSAP-IAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp_dist):0.2f} |"\
-                f" AVG_STEP_TIME: {np.average(jsapavp_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp_samptimes):0.2f} |"\
-                f" T.TIME: {np.average(jsapavp_ttimes):0.2f}"
-            if prefix is not None:
-                data = data + prefix
-            else:
-                data = data + "\n"
-            f.write(data)
-    
-    if jsapavp2_dist[0] != None:
-        with open(output_file, "a+") as f:
-            f.write(f"PLANNER: JSAP-IAP-2 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp2_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(jsapavp2_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp2_samptimes):0.2f} |"
-                f" T.TIME: {np.average(jsapavp2_ttimes):0.2f} \n")
-
-    if jsapdap_dist[0] != None:
-        with open(output_file, "a+") as f:
-            data = f"PLANNER: JSAP-DAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap_dist):0.2f} |"\
-                f" AVG_STEP_TIME: {np.average(jsapdap_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap_samptimes):0.2f} |"\
-                f" T.TIME: {np.average(jsapdap_ttimes):0.2f}"
-            if prefix is not None:
-                data = data + prefix
-            else:
-                data = data + "\n"
-            f.write(data)
-    
-    if jsapdap2_dist[0] != None:
-        with open(output_file, "a+") as f:
-            f.write(f"PLANNER: JSAP-DAP-2 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapdap2_dist):0.2f} |"
-                f" AVG_STEP_TIME: {np.average(jsapdap2_steptimes):0.2f} | SAMP_TIME: {np.average(jsapdap2_samptimes):0.2f} |"
-                f" T.TIME: {np.average(jsapdap2_ttimes):0.2f} \n")
+    # if jsapavp_dist[0] != None:
+    #     with open(output_file, "a+") as f:
+    #         data = f"PLANNER: JSAP-IAP-1 | UGVs: {args.num_ugvs} | AVG_COST: {np.average(jsapavp_dist):0.2f} |"\
+    #             f" AVG_STEP_TIME: {np.average(jsapavp_steptimes):0.2f} | SAMP_TIME: {np.average(jsapavp_samptimes):0.2f} |"\
+    #             f" T.TIME: {np.average(jsapavp_ttimes):0.2f}"
+    #         if prefix is not None:
+    #             data = data + prefix
+    #         else:
+    #             data = data + "\n"
+    #         f.write(data)
     
 def read_processed_data(filepath, prune_actions=False):
     data = {}
@@ -270,18 +223,26 @@ def read_processed_data(filepath, prune_actions=False):
         for line in file:
             parts = line.split('|')
             planner = parts[0].split(':')[1].strip()
-            ugvs = int(parts[1].split(':')[1].strip())
-            avg_cost = float(parts[2].split(':')[1].strip())
-            avg_step_time = float(parts[3].split(':')[1].strip())
-            samp_time = float(parts[4].split(':')[1].strip())
-            total_time = float(parts[5].split(':')[1].strip())
-            if len(parts) > 6:
-                prune_num_action = int(parts[6].split(':')[1].strip())
+            # ugvs = int(parts[1].split(':')[1].strip())
+            # avg_cost = float(parts[2].split(':')[1].strip())
+            # avg_step_time = float(parts[3].split(':')[1].strip())
+            # samp_time = float(parts[4].split(':')[1].strip())
+            # total_time = float(parts[5].split(':')[1].strip())
+            # if len(parts) > 6:
+            #     prune_num_action = int(parts[6].split(':')[1].strip())
                 # print(f"The number of prune_action: {prune_num_action}")
             if planner not in data:
                 data[planner] = {}
             
             if prune_actions:
+        
+                avg_cost = float(parts[1].split(':')[1].strip())
+                samp_time = float(parts[2].split(':')[1].strip())
+                avg_step_time = float(parts[3].split(':')[1].strip())
+                avg_step_nums = float(parts[4].split(':')[1].strip())
+                total_time = float(parts[5].split(':')[1].strip())
+                prune_num_action = int(parts[6].split(':')[1].strip())
+        
                 assert len(parts) > 6, "Prune num action is specified but not found in the data"
                 data[planner][prune_num_action] = {
                     'avg_cost': avg_cost,
@@ -290,6 +251,13 @@ def read_processed_data(filepath, prune_actions=False):
                     'total_time': total_time,
                 }
             else:
+                ugvs = int(parts[1].split(':')[1].strip())
+                avg_cost = float(parts[2].split(':')[1].strip())
+                samp_time = float(parts[3].split(':')[1].strip())
+                avg_step_time = float(parts[4].split(':')[1].strip())
+                avg_step_nums = float(parts[5].split(':')[1].strip())
+                total_time = float(parts[6].split(':')[1].strip())
+                
                 data[planner][ugvs] = {
                     'avg_cost': avg_cost,
                     'avg_step_time': avg_step_time,
@@ -323,7 +291,7 @@ if __name__ == '__main__':
     file_path = args.save_dir
     
     if scatter_data:
-        args.num_ugvs = 1
+        args.num_ugvs = 3
         input_path = Path(file_path)/ f'plot_data/results_{args.num_ugvs}UGVs.txt'
         args.save_dir = Path(args.save_dir)/ f'plot_data'
         plot_scatter_data(input_path, args)
@@ -349,11 +317,11 @@ if __name__ == '__main__':
         output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data_{num_sampling}.txt'
         # planner  = 'JSAP-IAP-1'
         args.num_ugvs = 1
-        is_data_processed = False
+        is_data_processed = True
         if not is_data_processed:
             for prune_num_action in prune_num_actions:
                 input_filename = Path(file_path) / f'bridges/max_uav_action/1_{prune_num_action}_{num_sampling}/results_1UGVs.txt'
-                prefix = f" | PRUNE_NUM_ACTION: {prune_num_action}\n"
+                prefix = f" | PRUNE_NUM_ACTION: {prune_num_action}"
                 processed_data(input_file=input_filename, output_file=output_filename, args=args, prefix=prefix)
         
         data = read_processed_data(output_filename, prune_actions=True)
