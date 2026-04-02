@@ -9,7 +9,7 @@ MAX_ISLAND_DISTANCE = 35.0
 MIN_ISLAND_DISTANCE = 20.0
 
 
-def random_graph(n_vertex=8, xmin=0, ymin=0, SG_pairs=1):
+def random_graph(n_vertex=14, xmin=0, ymin=0, SG_pairs=3):
     """Generate a random graph with Delaunay triangulation and weighted edges."""    
     count = 0
     while True:

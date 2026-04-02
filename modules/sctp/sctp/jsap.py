@@ -17,7 +17,7 @@ class JSAPState(object):
         cls.total_sampling_time = 0.0
     def __init__(self, graph=None, goalIDs=[], ugvs=[], drones=[], iscopy=False, n_maps=60, 
                  useAVP=False, useDAP=False, useLearning=False, max_uanum=3, revisit_pen=20.0,
-                 gnn_model=None, device=None):
+                 gnn_model=None, device=None, gnn_cache=None):
         self.action_cost = 0.0
         self.heuristic = -1.0
         self.depth = 0
@@ -36,7 +36,8 @@ class JSAPState(object):
         self.revisit_pen = revisit_pen
         self.action_values = dict() # map action to its value
         self.behavior_change = dict() # map action to its value
-        self.got_sampling_time = False  
+        self.got_sampling_time = False
+        self.gnn_cache = gnn_cache # cache for GNN predictions, map from state representation to action values
         
         if not iscopy: # the first state
             # need to filter the visited POIs
@@ -274,7 +275,7 @@ class JSAPState(object):
         return self.noway2goal
 
     def copy(self):
-        new_state = JSAPState(iscopy=True)
+        new_state = JSAPState(iscopy=True, gnn_cache=self.gnn_cache)
         new_state.cur_ugv_idx = self.cur_ugv_idx
         new_state.heuristic = self.heuristic
         new_state.vertices_map = self.vertices_map.copy()

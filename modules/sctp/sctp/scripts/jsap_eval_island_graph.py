@@ -19,7 +19,7 @@ def _setup(args):
     if args.env_type == 'islands':
         starts, goals, graph = graphs.get_sixIslands_graph()
     elif args.env_type == 'bridges':
-        starts, goals, graph = graphs.get_insland_bridges_graph()
+        starts, goals, graph = graphs.get_bridges_graph()
     elif args.env_type == 'random':
         starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     else:

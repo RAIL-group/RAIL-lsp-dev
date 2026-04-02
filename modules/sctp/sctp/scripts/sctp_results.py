@@ -291,7 +291,7 @@ if __name__ == '__main__':
     file_path = args.save_dir
     
     if scatter_data:
-        args.num_ugvs = 3
+        args.num_ugvs = 1
         input_path = Path(file_path)/ f'plot_data/results_{args.num_ugvs}UGVs.txt'
         args.save_dir = Path(args.save_dir)/ f'plot_data'
         plot_scatter_data(input_path, args)
@@ -313,11 +313,11 @@ if __name__ == '__main__':
                     ranges=(150, 1400), rangeStep=200, envName=graph)
             
     elif prune_num_actions is not None:
-        num_sampling = 5000
+        num_sampling = 15000
         output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data_{num_sampling}.txt'
         # planner  = 'JSAP-IAP-1'
         args.num_ugvs = 1
-        is_data_processed = True
+        is_data_processed = False
         if not is_data_processed:
             for prune_num_action in prune_num_actions:
                 input_filename = Path(file_path) / f'bridges/max_uav_action/1_{prune_num_action}_{num_sampling}/results_1UGVs.txt'
@@ -328,6 +328,6 @@ if __name__ == '__main__':
         distances = [[data[planner][prune_num_action]['avg_cost'] for prune_num_action in prune_num_actions] for planner in data]
         figure_out = Path(file_path) / f'bridges/max_uav_action/prune_actions_fig_{num_sampling}.pdf'
         plotting.plot_madist_allinOne_std(x=prune_num_actions, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]",
-                ranges=(200, 500), rangeStep=50, envName=f"Bridges_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
+                ranges=(200, 400), rangeStep=40, envName=f"Bridges_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
         plt.show()
     

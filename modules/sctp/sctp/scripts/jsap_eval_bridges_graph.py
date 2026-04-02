@@ -26,9 +26,9 @@ def _setup(args):
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     num_ugv = 1
-    max_uanum = 2
-    num_iterations = 15000
-    max_depth = 25
+    max_uanum = 1
+    num_iterations = 1000
+    max_depth = 15
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -126,12 +126,20 @@ def _setup(args):
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        # model_path = ''
+        if args.env_type == 'random':
+            model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
+        elif args.env_type =='islands':
+            model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
+        elif args.env_type == 'bridges':
+            model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
+        else:
+            model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
         args.max_depth = max_depth
         assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
-        assert args.num_drones == 1, "This script only supports 1 UAV"
+        args.num_drones = 1 #, "This script only supports 1 UAV"
     elif args.planner == 'jsapliap2':
         param.REVISIT_PEN = 0.0
         assert args.max_depth == max_depth
@@ -140,11 +148,20 @@ def _setup(args):
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        
+        if args.env_type == 'random':
+            model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
+        elif args.env_type =='islands':
+            model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
+        elif args.env_type == 'bridges':
+            model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
+        else:
+            model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
         assert args.num_iterations == 1000
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
-        assert args.num_drones == 2, "This script only supports 2 UAVs"
+        args.num_drones = 2 #, "This script only supports 2 UAVs"
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 

@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.data import Data
 import sctp.scripts.data_gen as data_gen
+import argparse
 
 
 sys.modules['__main__'].GraphData = data_gen.GraphData
@@ -81,8 +82,15 @@ def evaluate(model, loader, device):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--graph_type', type=str, default='bridges')
+    args = parser.parse_args()
+    
+    
     # --- 1. Data Preparation & Splitting ---
-    data_dir = 'data/sctp/graph_data/pickles/'
+    data_dir = 'data/sctp/graph_data/pickles_'+ args.graph_type+'/'
+    print(f"Loading data from {data_dir}...")
+    # exit(0)
     all_files = glob.glob(os.path.join(data_dir, '*.pgz'))
     
     # 80/20 Split
@@ -98,19 +106,20 @@ if __name__ == "__main__":
     # 1. Setup Device & Model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')  # Force CPU for debugging
-    NODE_IN = 2
-    EDGE_IN = 2
-    HIDDEN_S = 64
-    HIDDEN_M = 128
+    # NODE_IN = 2
+    # EDGE_IN = 2
+    # HIDDEN_S = 64
+    # HIDDEN_M = 128
     learning_rate = 0.0005
-    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN_M).to(device)
+    # model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN_M).to(device)
+    model = BipartiteEdgeRegressor().to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Initialize TensorBoard writer
-    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning')
+    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning_'+args.graph_type+'_logs')
 
     # 5. Execute Training
-    num_epochs = 200
+    num_epochs = 180
     print("Starting training...")
     for epoch in range(1, num_epochs + 1):
         # loss = train_epoch(model, train_loader, optimizer, device)
@@ -127,8 +136,8 @@ if __name__ == "__main__":
 
         # --- 4. Save Model ---
         # Saving every epoch or just the last one
-        if epoch % 20 == 0:
-            torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_allgraphs_epoch_{epoch}.pt')
+        if epoch % 10 == 0 and epoch > 80:
+            torch.save(model.state_dict(), f'data/sctp/training/iap_gnn_{args.graph_type}_epoch_{epoch}.pt')
 
     writer.close()
         

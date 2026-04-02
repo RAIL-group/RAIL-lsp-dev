@@ -31,6 +31,7 @@ class JSAPPlanner(object):
         self.single_policy_time = 0.0
         self.model = None
         self.device = None
+        self.gnn_cache = {}
         if self.use_Learning:
             assert model_path is not None, "Model path must be provided when use_Learning is True"
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -42,6 +43,7 @@ class JSAPPlanner(object):
     def update(self, observations, ugv_data, uav_data=None):
         if observations:
             self.observed_graph.update(observations)
+            self.gnn_cache.clear()
         for i, ugv in enumerate(self.ugvs):
             ugv.cur_pose = np.array([ugv_data[i][0][0],ugv_data[i][0][1]])
             ugv.at_node = ugv_data[i][1]
@@ -81,10 +83,7 @@ class JSAPPlanner(object):
         state = sctp.jsap.JSAPState(graph=self.observed_graph, goalIDs=self.goalIDs, n_maps=self.n_maps, \
                         revisit_pen=self.revisit_pen, drones=uavs, ugvs=ugvs, useAVP=self.use_AVP, \
                         useDAP=self.use_DAP, max_uanum=self.max_uanum, useLearning=self.use_Learning,\
-                            gnn_model=self.model, device=self.device)
-        # assert state.uavs != []
-        # assert self.max_depth == 12
-        # assert self.n_maps == 200
+                            gnn_model=self.model, device=self.device, gnn_cache=self.gnn_cache)
         mdepth = self.max_depth
         action, cost, [ordering, costs, sampling_time, s_policy_time] = pouct_planner.core.po_mcts(state, \
                         n_iterations=self.rollout_num, C=self.C, depth= mdepth, \

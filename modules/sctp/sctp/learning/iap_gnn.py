@@ -9,8 +9,12 @@ from torch_geometric.nn import global_mean_pool, global_add_pool
 
 NODE_IN = 2
 EDGE_IN = 2
-# HIDDEN = 64
+HIDDEN = 64
 HIDDEN = 128
+# NUM_ROUNDS = 3
+# NUM_HEADS = 8
+NUM_ROUNDS = 2
+NUM_HEADS = 6
 
 # class BipartiteEdgeRegressor(nn.Module):
 #     def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=6):
@@ -145,7 +149,8 @@ HIDDEN = 128
 
 
 class BipartiteEdgeRegressor(nn.Module):
-    def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=64, num_heads=8, num_rounds=3, dropout=0.1):
+    def __init__(self, node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=64, num_heads=NUM_HEADS, \
+                    num_rounds=NUM_ROUNDS, dropout=0.1):
         super(BipartiteEdgeRegressor, self).__init__()
 
         # --- 1. Projections with LayerNorm ---
@@ -272,7 +277,8 @@ class BipartiteEdgeRegressor(nn.Module):
 
 def load_iap_gnn_model(path, device):
     
-    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN).to(device)
+    model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, \
+                num_heads=NUM_HEADS, num_rounds=NUM_ROUNDS, hidden_dim=64).to(device)
     model.load_state_dict(torch.load(path, weights_only=True))
     model.eval()
     return model

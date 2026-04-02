@@ -7,7 +7,7 @@ SCTP_NUM_DRONES = 1
 SCTP_NUM_GROUNDS = 1
 SCTP_NUM_VERTICES = 14
 SCTP_NUM_ISLANDs = 5
-SCTP_NUM_PRUNE = 2
+SCTP_NUM_PRUNE = 1
 SCTP_EXPERIMENT_NAME = Jan30
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
@@ -15,15 +15,17 @@ endef
 
 
 
-GRAPHS = bridges
-JSAP_PLANNERS = jsapdap jsapliap
-EXP_NAME = prune_num_action#statistics# 
+GRAPHS = bridges islands
+JSAP_PLANNERS = jsapliap jsapliap2
+EXP_NAME = statistics#prune_num_action# 
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
-					$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)/sctp_eval_planner_$(planner)_seed_$(seed)_$(SCTP_NUM_DRONES)UAVs.png))
+					$(foreach graph, $(GRAPHS),\
+					$(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/_graph_$(graph)_/$(SCTP_NUM_GROUNDS)/sctp_eval_planner_$(planner)_seed_$(seed)_$(SCTP_NUM_DRONES)UAVs.png)))
 $(all-targets-jsap-eval): jsap_seed = $(shell echo $@ | grep -oE '_seed_[0-9]+' | cut -d'_' -f3)
 $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a-z0-9]+' | cut -d'_' -f3)
+$(all-targets-jsap-eval): jsap_graph = $(shell echo $@ | grep -oE '_graph_[a-z]+' | cut -d'_' -f3)
 
 
 # .PHONY: jsap-eval-island-graphs
@@ -62,20 +64,20 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 .PHONY: jsap-eval-bridges-graphs
 jsap-eval-bridges-graphs: $(all-targets-jsap-eval)
 $(all-targets-jsap-eval):
-	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
+	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed), graph: $(jsap_graph)"
 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
 	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_bridges_graph \
-	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
+	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/_graph_$(jsap_graph)_/$(SCTP_NUM_GROUNDS) \
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
 		--seed $(jsap_seed) \
-		--num_iterations 15000 \
+		--num_iterations 1000 \
 		--sampling_maps 200 \
 		--C 200 \
-		--max_depth 25 \
+		--max_depth 15 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 		--max_uanum $(SCTP_NUM_PRUNE) \
-		--env_type $(GRAPHS) \
+		--env_type $(jsap_graph) \
 
 
 DATA_SEEDS := $(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED) + $(SCTP_DATA_NUM) - 1)))
@@ -89,6 +91,7 @@ seed-%:
 		--num_maps 1000 \
 		--seed $* \
 		--graph_type $(GRAPHS) \
+		--n_vertex $(SCTP_NUM_VERTICES) \
 	
 
 
@@ -104,30 +107,19 @@ sctp-execution-test:
 		--resolution 0.05 \
 
 .PHONY: sctp-results
+sctp-results: DOCKER_ARGS ?= -it
 sctp-results:
 	@$(call xhost_activate)
 	@$(DOCKER_PYTHON) -m sctp.scripts.sctp_results \
 	 	--num_ugvs $(SCTP_NUM_GROUNDS) \
 		--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/ \
 		--num_drones $(SCTP_NUM_DRONES) \
-		--exp_name $(EXP_NAME)
+		--exp_name $(EXP_NAME) \
 
 
 .PHONY: iapgnn-train
 iapgnn-train: DOCKER_ARGS ?= -it
 iapgnn-train:
 	@echo "Training IAP-GNN"
-	@$(DOCKER_PYTHON) -m sctp.scripts.iapgnn_training
-	
-
-
-# .PHONY: mr-task-vis-net-predictions
-# mr-task-vis-net-predictions: DOCKER_ARGS ?= -it
-# mr-task-vis-net-predictions:
-# 	@rm -f $(DATA_BASE_DIR)/$(SCTP_BASENAME)/raihan_nn/network_output.txt
-# 	@touch $(DATA_BASE_DIR)/$(SCTP_BASENAME)/raihan_nn/network_output.txt
-# 	@$(DOCKER_PYTHON) -m mr_task.scripts.vis_net_predictions \
-# 	 	--save_dir data/$(SCTP_BASENAME)/raihan_nn \
-# 		--network_file data/$(SCTP_BASENAME)/raihan_nn/fcnn.pt \
-# 		--seed 2020 \
-# 		--resolution 0.05
+	@$(DOCKER_PYTHON) -m sctp.scripts.iapgnn_training \
+		--graph_type $(GRAPHS) \

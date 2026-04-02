@@ -4,6 +4,7 @@ import numpy as np
 import random
 import torch
 from sctp import param, core
+import heapq
 from sctp.utils import underlying_graph as ug
 from sctp.scripts.data_gen import GraphData, create_graph_datum, graphdata_to_pyg
 
@@ -151,72 +152,180 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
     block_value /= n_samples
     return (block_value - pass_value)
 
+# def get_uav_action_gnn(state, uav_index):
+#     if uav_index is None:
+#         raise ValueError("UAV index is None - get_uav_action_gnn")
+#     actions = []
+#     state.action_values.clear()
+    
+#     prob_graph = ug.ProbabilisticGraph(
+#             positions=state.pg_positions,
+#             adjacency=state.pg_adjacency,
+#             probabilities=state.pg_probabilities
+#         )
+    
+#     for i, ugv in enumerate(state.ugvs):
+#         if ugv.at_node and ugv.last_node == state.goalIDs[i]:
+#             continue
+#         goal = state.goalIDs[i]-1
+#         if ugv.at_node:
+#             if ugv.last_node in state.graph.poiIDs:
+#                 start = ugv.pl_vertex-1
+#             else:
+#                 start = ugv.last_node-1
+#         else:
+#             start = ugv.edge[0]-1 if ugv.edge[0] not in state.graph.poiIDs else ugv.edge[1]-1
+            
+#         edges = [[edge[0], edge[1]] for edge in state.edges]
+#         data =  create_graph_datum(graph=prob_graph, edges=edges, start=start, goal=goal, values=np.array([0.0]*len(state.graph.pois)))  
+        
+#         data = graphdata_to_pyg(data, state.device)
+#         with torch.no_grad():
+#             pred, _ = state.model(
+#                 x          = data.x,
+#                 edge_index = data.edge_index,
+#                 edge_attr  = data.edge_attr,
+#             )   # [E]
+
+#         pred_cpu   = pred.cpu()
+#         E          = pred_cpu.shape[0]
+
+#         src = data.edge_index[0].cpu()   # [E]
+#         dst = data.edge_index[1].cpu()   # [E]
+#         edge_dict = {}
+#         for i in range(E):
+#             u      = src[i].item()
+#             v      = dst[i].item()
+#             pr     = pred_cpu[i].item()
+#             if v < u:
+#                 u, v = v, u
+#             if (u,v) in edge_dict:
+#                 edge_dict[(u,v)] += pr
+#             else:
+#                 edge_dict[(u,v)] = pr
+            
+#     drone_pose = state.uavs[uav_index].cur_pose
+#     for action in state.avail_uav_actions:
+#         target_node = [node for node in state.graph.pois if node.id == action.target][0]
+#         edge = tuple(sorted(target_node.neighbors))
+#         edge = (edge[0]-1, edge[1]-1) if edge[0] < edge[1] else (edge[1]-1, edge[0]-1)
+#         assert edge in edge_dict, f"Edge {edge} not found in edge_dict. Available edges: {list(edge_dict.keys())}"
+#         act_value = edge_dict[edge]        
+#         state.action_values[action] = act_value*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(target_node.coord))
+    
+#     state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
+#     actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
+#     for action in actions:
+#         assert action in state.action_values
+#         action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
+#         action.update_robotID(uav_index) 
+#     return actions
+
 def get_uav_action_gnn(state, uav_index):
     if uav_index is None:
         raise ValueError("UAV index is None - get_uav_action_gnn")
-    actions = []
+
     state.action_values.clear()
-    
-    prob_graph = ug.ProbabilisticGraph(
-            positions=state.pg_positions,
-            adjacency=state.pg_adjacency,
-            probabilities=state.pg_probabilities
-        )
-    
+    edge_dict = {}
+
+    # ── GNN per UGV with individual caching ──
     for i, ugv in enumerate(state.ugvs):
         if ugv.at_node and ugv.last_node == state.goalIDs[i]:
             continue
-        goal = state.goalIDs[i]-1
-        if ugv.at_node:
-            if ugv.last_node in state.graph.poiIDs:
-                start = ugv.pl_vertex-1
-            else:
-                start = ugv.last_node-1
+
+        goal  = state.goalIDs[i] - 1
+        start = _get_ugv_start(ugv, state.graph)
+
+        # Cache key is per-UGV — only what affects THIS UGV's GNN call
+        cache_key = (
+            i,                                        # UGV index
+            start,                                    # UGV start node
+            goal,                                     # UGV goal node
+            tuple(state.pg_probabilities.flatten()),  # shared graph belief
+        )
+
+        if state.gnn_cache is not None and cache_key in state.gnn_cache:
+            ugv_edge_dict = state.gnn_cache[cache_key]   # ← cache hit
         else:
-            start = ugv.edge[0]-1 if ugv.edge[0] not in state.graph.poiIDs else ugv.edge[1]-1
-            
-        edges = [[edge[0], edge[1]] for edge in state.edges]
-        data =  create_graph_datum(graph=prob_graph, edges=edges, start=start, goal=goal, values=np.array([0.0]*len(state.graph.pois)))  
-        
-        data = graphdata_to_pyg(data, state.device)
-        with torch.no_grad():
-            pred, _ = state.model(
-                x          = data.x,
-                edge_index = data.edge_index,
-                edge_attr  = data.edge_attr,
-            )   # [E]
+            # ── Build data and run GNN ──
+            prob_graph = ug.ProbabilisticGraph(
+                positions=state.pg_positions,
+                adjacency=state.pg_adjacency,
+                probabilities=state.pg_probabilities
+            )
+            edges = [[edge[0], edge[1]] for edge in state.edges]
+            data  = create_graph_datum(
+                graph=prob_graph, edges=edges,
+                start=start, goal=goal,
+                values=np.zeros(len(state.graph.pois))
+            )
+            data = graphdata_to_pyg(data, state.device)
 
-        pred_cpu   = pred.cpu()
-        E          = pred_cpu.shape[0]
+            with torch.no_grad():
+                pred, _ = state.model(
+                    x          = data.x,
+                    edge_index = data.edge_index,
+                    edge_attr  = data.edge_attr,
+                )
 
-        src = data.edge_index[0].cpu()   # [E]
-        dst = data.edge_index[1].cpu()   # [E]
-        edge_dict = {}
-        for i in range(E):
-            u      = src[i].item()
-            v      = dst[i].item()
-            pr     = pred_cpu[i].item()
-            if v < u:
-                u, v = v, u
-            if (u,v) in edge_dict:
-                edge_dict[(u,v)] = +pr
-            else:
-                edge_dict[(u,v)] = pr
-            
-    drone_pose = state.uavs[uav_index].cur_pose
+            pred_cpu = pred.cpu()
+            src = data.edge_index[0].cpu()
+            dst = data.edge_index[1].cpu()
+
+            ugv_edge_dict = {}
+            for j in range(pred_cpu.shape[0]):
+                u, v = src[j].item(), dst[j].item()
+                if v < u:
+                    u, v = v, u
+                ugv_edge_dict[(u, v)] = ugv_edge_dict.get((u, v), 0.0) + pred_cpu[j].item()
+
+            # ── Store per-UGV result ──
+            if state.gnn_cache is not None:
+                state.gnn_cache[cache_key] = ugv_edge_dict   # ← cache miss, store
+
+        # Accumulate across UGVs
+        for edge, val in ugv_edge_dict.items():
+            edge_dict[edge] = edge_dict.get(edge, 0.0) + val
+
+    # ── Score and rank UAV actions ──
+    drone_pose = np.array(state.uavs[uav_index].cur_pose)
+
     for action in state.avail_uav_actions:
-        target_node = [node for node in state.graph.pois if node.id == action.target][0]
-        edge = tuple(sorted(target_node.neighbors))
-        edge = (edge[0]-1, edge[1]-1) if edge[0] < edge[1] else (edge[1]-1, edge[0]-1)
-        assert edge in edge_dict, f"Edge {edge} not found in edge_dict. Available edges: {list(edge_dict.keys())}"
-        act_value = edge_dict[edge]        
-        state.action_values[action] = act_value*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(target_node.coord))
-    
-    state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
-    actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
+        target_node = state.graph.get_poi(action.target)
+        # target_node = next(n for n in state.graph.pois if n.id == action.target)
+        edge = tuple(sorted((target_node.neighbors[0] - 1, target_node.neighbors[1] - 1)))
+
+        assert edge in edge_dict, (
+            f"Edge {edge} not found in edge_dict. Available: {list(edge_dict.keys())}"
+        )
+        dist = np.linalg.norm(drone_pose - np.array(target_node.coord))
+        state.action_values[action] = edge_dict[edge] * param.VEL_RATIO / dist
+
+    # state.action_values = dict(
+    #     sorted(state.action_values.items(), key=lambda item: item[1], reverse=True)
+    # )
+    # actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
+
+    # ── Get top K without full sort ──
+    k = min(state.max_uanum, len(state.action_values))
+    actions = [
+        action for action, _ in
+        heapq.nlargest(k, state.action_values.items(), key=lambda x: x[1])
+    ]
+
     for action in actions:
-        assert action in state.action_values
-        action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-        action.update_robotID(uav_index) 
+        action.update_pose((drone_pose[0], drone_pose[1]))
+        action.update_robotID(uav_index)
+
     return actions
+
+def _get_ugv_start(ugv, graph):
+    if ugv.at_node:
+        if ugv.last_node in graph.poiIDs:
+            start = ugv.pl_vertex-1
+        else:
+            start = ugv.last_node-1
+    else:
+        start = ugv.edge[0]-1 if ugv.edge[0] not in graph.poiIDs else ugv.edge[1]-1
+    return start
     

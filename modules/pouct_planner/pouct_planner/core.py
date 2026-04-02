@@ -45,17 +45,14 @@ def po_mcts(state, n_iterations=1000, C=10.0, depth=100, rollout_fn=None):
     s_policy_time = 0.0
     root = POUCTNode(state)
     
-    if len(root.unexplored_actions) == 0:
-        print("Warning: No available actions at root node")
-        print(f"UGV at nodes {[ugv.last_node for ugv in root.state.ugvs]} and the goals are {root.state.goalIDs}")
+    assert len(root.unexplored_actions) > 0
     for i in range(n_iterations):
-        leaf, sa = traverse(root, C=C, max_depth=depth)
-        if not leaf.state.got_sampling_time:
-            # print(f"Does it go here???????????? with {leaf.state.sampling_time}s")
-            sampling_time += leaf.state.sampling_time
-            s_policy_time += leaf.state.s_policy_time
-            leaf.state.got_sampling_time = True
-        simulation_result, g, b, rl_cost = rollout(leaf, rollout_fn=rollout_fn)
+        leaf = traverse(root, C=C, max_depth=depth)
+        # if not leaf.state.got_sampling_time:
+        #     sampling_time += leaf.state.sampling_time
+        #     s_policy_time += leaf.state.s_policy_time
+        #     leaf.state.got_sampling_time = True
+        simulation_result = rollout(leaf, rollout_fn=rollout_fn)
         leaf.total_n += 1
         backpropagate(leaf, simulation_result)
         
@@ -67,48 +64,48 @@ def traverse(node, C=1.0, max_depth=100):
     save_action = []
     while node.is_fully_expanded() and not node.is_terminal_node():
         if node.state.depth > max_depth:
-            return node, save_action
+            return node#, save_action
         action = node.get_best_uct_action(C=C)
-        save_action.append(action) 
+        # save_action.append(action) 
         child_node = get_chance_node(node, action)
         if child_node not in node.children:
             node.children.add(child_node)
-            return child_node, save_action
+            return child_node#, save_action
         else:
             node = child_node
     if node.is_terminal_node():
-        return node, save_action
+        return node#, save_action
     # 1. pick a new action
     action = node.unexplored_actions.pop()
-    save_action.append(action) 
+    # save_action.append(action) 
     # 2. create a new node
     new_child = get_chance_node(node, action)
     # 3. add to the children
     node.children.add(new_child)
-    return new_child, save_action
+    return new_child#, save_action
 
 def rollout(node, rollout_fn=None):
     reach_goal = False 
     block = True 
     if rollout_fn is not None:
         rollout_value = rollout_fn(node.state)
-        if rollout_value == 0.0:
-            reach_goal = True
-            block = False
-        elif rollout_value == STUCK_COST:
-            block = True 
-            reach_goal = False
-        else:
-            reach_goal = False
-            block = False
-        return node.cost + rollout_value, reach_goal, block, rollout_value
+        # if rollout_value == 0.0:
+        #     reach_goal = True
+        #     block = False
+        # elif rollout_value == STUCK_COST:
+        #     block = True 
+        #     reach_goal = False
+        # else:
+        #     reach_goal = False
+        #     block = False
+        return node.cost + rollout_value#, reach_goal, block, rollout_value
     else:
         # do a random rollout
         rollout_cost = 0.0
         while not node.is_terminal_node():
             action = np.random.choice(node.unexplored_actions)
             node = get_chance_node(node, action)
-        return node.cost + rollout_cost, reach_goal, block, rollout_cost
+        return node.cost + rollout_cost #, reach_goal, block, rollout_cost
 
 def backpropagate(node, result):
     if node.parent is not None:

@@ -99,7 +99,7 @@ def generate_dataset(
     if graph_type == 'islands':
         _, _, graph = graphs.get_sixIslands_graph()
     elif graph_type == 'random':
-        _, _, graph = graphs.random_graph()
+        _, _, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     elif graph_type == 'bridges':
         _, _, graph = graphs.get_bridges_graph()
     else:
@@ -118,15 +118,18 @@ def generate_dataset(
         
     while count < num_data_per_graph:
         start, goal = random.sample(range(0, len(graph.vertices)), 2)
-        num_known_edges = random.randint(0, 10)
+        num_known_edges = random.randint(0, 15)
+        assert num_known_edges <= len(graph.pois), f"Number of known edges {num_known_edges} cannot exceed total number of edges {len(graph.pois)}"
         known_edges = random.sample(graph.pois, num_known_edges)
         known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
-        known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges]
+        known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges] #0-index
         new_probability_matrix = ug.set_edge_probabilities(
             probs=np.array(known_edge_probs),
             edges=known_edges_id,
             probabilities=probability_matrix
         )
+        result = new_probability_matrix[np.isin(new_probability_matrix, [0.0, 1.0])]
+        assert result.size > 5, f"Not enough known edges: {result.size} found, expected at least 5"
         pg = ug.ProbabilisticGraph(
             positions=vertex_positions,
             adjacency=adjacency_matrix,
@@ -189,6 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_maps', type=int, default=500)
     parser.add_argument('--seed', type=int, default=1000)
     parser.add_argument('--graph_type', type=str, default='bridges')
+    parser.add_argument('--n_vertex', type=int, default=14, help='Number of vertices for random graph')
     args = parser.parse_args()
 
     _setup(args)

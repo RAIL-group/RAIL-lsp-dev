@@ -51,7 +51,7 @@ class Graph():
         if poi_id not in self.poiIDs:
             print(f"The poiID: {poi_id} is not in the list of poi's IDs: {self.poiIDs}")
             raise ValueError("POI ID not found in graph.")
-        indx = self.poiIDs.index(poi_id)
+        # indx = self.poiIDs.index(poi_id)
         # print("The poi's ID: ", indx)
         return self.pois[self.poiIDs.index(poi_id)]
     
