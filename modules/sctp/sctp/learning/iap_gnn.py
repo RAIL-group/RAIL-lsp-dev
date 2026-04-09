@@ -9,12 +9,14 @@ from torch_geometric.nn import global_mean_pool, global_add_pool
 
 NODE_IN = 2
 EDGE_IN = 2
-HIDDEN = 64
 HIDDEN = 128
-# NUM_ROUNDS = 3
-# NUM_HEADS = 8
-NUM_ROUNDS = 2
-NUM_HEADS = 6
+NUM_ROUNDS = 3
+# NUM_HEADS = 6
+# NUM_HEADS = 4
+NUM_HEADS = 8
+DROPOUT = 0.30
+# DROPOUT = 0.2
+
 
 # class BipartiteEdgeRegressor(nn.Module):
 #     def __init__(self, node_in_dim=2, edge_in_dim=2, hidden_dim=32, num_heads=6):
@@ -149,8 +151,8 @@ NUM_HEADS = 6
 
 
 class BipartiteEdgeRegressor(nn.Module):
-    def __init__(self, node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=64, num_heads=NUM_HEADS, \
-                    num_rounds=NUM_ROUNDS, dropout=0.1):
+    def __init__(self, node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN, num_heads=NUM_HEADS, \
+                    num_rounds=NUM_ROUNDS, dropout=DROPOUT):
         super(BipartiteEdgeRegressor, self).__init__()
 
         # --- 1. Projections with LayerNorm ---
@@ -233,16 +235,24 @@ class BipartiteEdgeRegressor(nn.Module):
         # --- Multiple message-passing rounds with residuals ---
         for i in range(self.num_rounds):
             # Nodes -> Edges (with residual)
+            # h_edges_new = self.gat_n2e_layers[i]((h_nodes, h_edges), bipartite_n2e)
+            # h_edges = self.edge_norms[i](F.relu(h_edges_new) + h_edges)  # residual
+
+            # # Edges -> Nodes (with residual)
+            # h_nodes_new = self.gat_e2n_layers[i]((h_edges, h_nodes), bipartite_e2n)
+            # h_nodes = self.node_norms[i](F.relu(h_nodes_new) + h_nodes)  # residual
+            # Nodes -> Edges
             h_edges_new = self.gat_n2e_layers[i]((h_nodes, h_edges), bipartite_n2e)
-            h_edges = self.edge_norms[i](F.relu(h_edges_new) + h_edges)  # residual
+            h_edges = h_edges + self.edge_norms[i](F.relu(h_edges_new))  #
 
-            # Edges -> Nodes (with residual)
+            # Edges -> Nodes
             h_nodes_new = self.gat_e2n_layers[i]((h_edges, h_nodes), bipartite_e2n)
-            h_nodes = self.node_norms[i](F.relu(h_nodes_new) + h_nodes)  # residual
-
+            h_nodes = h_nodes + self.node_norms[i](F.relu(h_nodes_new))  # 
+            
         # --- Final refinement ---
         h_edges_final = self.gat_final((h_nodes, h_edges), bipartite_n2e)
-        h_edges = self.final_norm(F.relu(h_edges_final) + h_edges)
+        # h_edges = self.final_norm(F.relu(h_edges_final) + h_edges)
+        h_edges = h_edges + self.final_norm(F.relu(h_edges_final))
 
         h_edges = self.dropout(h_edges)
 
@@ -256,7 +266,7 @@ class BipartiteEdgeRegressor(nn.Module):
         target:    Tensor,   # [E]  from prepare_ig_labels()
         edge_attr: Tensor,   # [E, 2]
         uncertain_weight: float = 1.0,
-        certain_weight:   float = 0.1,
+        certain_weight:   float = 0.0,
     ) -> Tensor:
         """
         Weighted Huber loss.
@@ -278,7 +288,7 @@ class BipartiteEdgeRegressor(nn.Module):
 def load_iap_gnn_model(path, device):
     
     model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, \
-                num_heads=NUM_HEADS, num_rounds=NUM_ROUNDS, hidden_dim=64).to(device)
+                num_heads=NUM_HEADS, num_rounds=NUM_ROUNDS, hidden_dim=HIDDEN).to(device)
     model.load_state_dict(torch.load(path, weights_only=True))
     model.eval()
     return model

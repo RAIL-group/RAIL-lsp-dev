@@ -108,7 +108,17 @@ def get_certain_adj_matrix(prob_matrix: np.ndarray, adj_matrix: np.ndarray):
     # Apply to adjacency, keep only upper triangle
     sampled = np.triu(adj_matrix * edge_exists, k=1)
     return sampled + sampled.T
-    
+
+def get_optimistic_adj_matrix(prob_matrix: np.ndarray, adj_matrix: np.ndarray):
+    n = prob_matrix.shape[0]
+
+    # Generate random values for upper triangle
+    # ones_thres = np.ones((n, n))
+    edge_exists = prob_matrix < 1.0 #ones_thres
+
+    # Apply to adjacency, keep only upper triangle
+    sampled = np.triu(adj_matrix * edge_exists, k=1)
+    return sampled + sampled.T
 
 
 def compute_shortest_path_length(adjacency: np.ndarray, start: int=0, end: int=-1) -> float:

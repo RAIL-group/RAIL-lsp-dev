@@ -22,15 +22,23 @@ def get_closest_actions(state, uav_idx):
         # return state.avail_uav_actions
     else:
         for action in state.avail_uav_actions:
-            target_node = [node for node in state.graph.pois if node.id == action.target][0]
+            target_node = state.graph.get_poi(action.target)
+            # target_node = [node for node in state.graph.pois if node.id == action.target][0]
             distance = 0.0
             for ugv in state.ugvs:
                 ugv_pose = (ugv.cur_pose[0], ugv.cur_pose[1])
                 distance += np.linalg.norm(np.array(ugv_pose) - np.array(target_node.coord))
             # distance = np.linalg.norm(np.array(uav_pose) - np.array(target_node.coord))
             action_dict.update({action: distance})
-        sorted_dict = dict(sorted(action_dict.items(), key=lambda item: item[1]))
-        actions = list(sorted_dict.keys())[:state.max_uanum]
+        # sorted_dict = dict(sorted(action_dict.items(), key=lambda item: item[1]))
+        # actions = list(sorted_dict.keys())[:state.max_uanum]
+        k = min(state.max_uanum, len(action_dict))
+        actions = [
+            action for action, _ in
+            # heapq.nsmallest(k, state.action_values.items(), key=lambda x: x[1])
+            heapq.nsmallest(k, action_dict.items(), key=lambda x: x[1])
+        ]
+
     for action in actions:
         action.update_pose((uav.cur_pose[0],uav.cur_pose[1]))
         action.update_robotID(uav_idx)
@@ -152,75 +160,6 @@ def get_single_bc_networkX(ugraph, action_edge, start, goalID, n_samples=60):
     block_value /= n_samples
     return (block_value - pass_value)
 
-# def get_uav_action_gnn(state, uav_index):
-#     if uav_index is None:
-#         raise ValueError("UAV index is None - get_uav_action_gnn")
-#     actions = []
-#     state.action_values.clear()
-    
-#     prob_graph = ug.ProbabilisticGraph(
-#             positions=state.pg_positions,
-#             adjacency=state.pg_adjacency,
-#             probabilities=state.pg_probabilities
-#         )
-    
-#     for i, ugv in enumerate(state.ugvs):
-#         if ugv.at_node and ugv.last_node == state.goalIDs[i]:
-#             continue
-#         goal = state.goalIDs[i]-1
-#         if ugv.at_node:
-#             if ugv.last_node in state.graph.poiIDs:
-#                 start = ugv.pl_vertex-1
-#             else:
-#                 start = ugv.last_node-1
-#         else:
-#             start = ugv.edge[0]-1 if ugv.edge[0] not in state.graph.poiIDs else ugv.edge[1]-1
-            
-#         edges = [[edge[0], edge[1]] for edge in state.edges]
-#         data =  create_graph_datum(graph=prob_graph, edges=edges, start=start, goal=goal, values=np.array([0.0]*len(state.graph.pois)))  
-        
-#         data = graphdata_to_pyg(data, state.device)
-#         with torch.no_grad():
-#             pred, _ = state.model(
-#                 x          = data.x,
-#                 edge_index = data.edge_index,
-#                 edge_attr  = data.edge_attr,
-#             )   # [E]
-
-#         pred_cpu   = pred.cpu()
-#         E          = pred_cpu.shape[0]
-
-#         src = data.edge_index[0].cpu()   # [E]
-#         dst = data.edge_index[1].cpu()   # [E]
-#         edge_dict = {}
-#         for i in range(E):
-#             u      = src[i].item()
-#             v      = dst[i].item()
-#             pr     = pred_cpu[i].item()
-#             if v < u:
-#                 u, v = v, u
-#             if (u,v) in edge_dict:
-#                 edge_dict[(u,v)] += pr
-#             else:
-#                 edge_dict[(u,v)] = pr
-            
-#     drone_pose = state.uavs[uav_index].cur_pose
-#     for action in state.avail_uav_actions:
-#         target_node = [node for node in state.graph.pois if node.id == action.target][0]
-#         edge = tuple(sorted(target_node.neighbors))
-#         edge = (edge[0]-1, edge[1]-1) if edge[0] < edge[1] else (edge[1]-1, edge[0]-1)
-#         assert edge in edge_dict, f"Edge {edge} not found in edge_dict. Available edges: {list(edge_dict.keys())}"
-#         act_value = edge_dict[edge]        
-#         state.action_values[action] = act_value*param.VEL_RATIO/np.linalg.norm(np.array(drone_pose)-np.array(target_node.coord))
-    
-#     state.action_values = dict(sorted(state.action_values.items(), key=lambda item: item[1], reverse=True))
-#     actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
-#     for action in actions:
-#         assert action in state.action_values
-#         action.update_pose((state.uavs[uav_index].cur_pose[0],state.uavs[uav_index].cur_pose[1]))
-#         action.update_robotID(uav_index) 
-#     return actions
-
 def get_uav_action_gnn(state, uav_index):
     if uav_index is None:
         raise ValueError("UAV index is None - get_uav_action_gnn")
@@ -292,7 +231,6 @@ def get_uav_action_gnn(state, uav_index):
 
     for action in state.avail_uav_actions:
         target_node = state.graph.get_poi(action.target)
-        # target_node = next(n for n in state.graph.pois if n.id == action.target)
         edge = tuple(sorted((target_node.neighbors[0] - 1, target_node.neighbors[1] - 1)))
 
         assert edge in edge_dict, (
@@ -300,12 +238,6 @@ def get_uav_action_gnn(state, uav_index):
         )
         dist = np.linalg.norm(drone_pose - np.array(target_node.coord))
         state.action_values[action] = edge_dict[edge] * param.VEL_RATIO / dist
-
-    # state.action_values = dict(
-    #     sorted(state.action_values.items(), key=lambda item: item[1], reverse=True)
-    # )
-    # actions = list(state.action_values.keys())[:min(state.max_uanum, len(state.action_values))]
-
     # ── Get top K without full sort ──
     k = min(state.max_uanum, len(state.action_values))
     actions = [
@@ -328,4 +260,54 @@ def _get_ugv_start(ugv, graph):
     else:
         start = ugv.edge[0]-1 if ugv.edge[0] not in graph.poiIDs else ugv.edge[1]-1
     return start
-    
+
+def get_ugvs_heuristic(state):
+    heuristic = 0.0
+    pg = ug.ProbabilisticGraph(positions=state.pg_positions, adjacency=state.pg_adjacency, \
+                                        probabilities=state.pg_probabilities)
+    for i, ugv in enumerate(state.ugvs):
+        if ugv.at_node and ugv.last_node == state.goalIDs[i]:
+            continue
+        if ugv.at_node:
+            if ugv.last_node in state.graph.poiIDs: # at a poi
+                poi = state.graph.get_poi(ugv.last_node)
+                assert len(poi.neighbors) == 2, f"POI {poi.id} has {len(poi.neighbors)} neighbors"
+                start1 = poi.neighbors[0]
+                start2 = poi.neighbors[1]
+                if pg.probabilities[start1-1, start2-1] == 1.0:
+                    bc = _cal_optimistic_path(ugraph=pg, start=ugv.pl_vertex-1, goalID=state.goalIDs[i]-1)
+                else:
+                    bc1 = _cal_optimistic_path(ugraph=pg, start=start1-1, goalID=state.goalIDs[i]-1)
+                    bc2 = _cal_optimistic_path(ugraph=pg, start=start2-1, goalID=state.goalIDs[i]-1)
+                    dist = pg.adjacency[start1-1, start2-1]/2.0
+                    bc = min(bc1 + dist, bc2 + dist)
+            else: # a node
+                start = ugv.last_node
+                bc = _cal_optimistic_path(ugraph=pg, start=start-1, goalID=state.goalIDs[i]-1)
+        else:
+            edge = ugv.edge
+            # start = ugv.pl_vertex if ugv.last_node in state.graph.poiIDs else ugv.last_node
+            if edge[0] in state.graph.poiIDs:
+                start1 = edge[1] # ugv.pl_vertex-1
+                poiId = edge[0]
+            else:
+                start1 = edge[0]
+                poiId = edge[1]
+            poi = state.graph.get_poi(poiId)
+            start2 = poi.neighbors[0] if poi.neighbors[0] != start1 else poi.neighbors[1]
+            if pg.probabilities[start1-1, start2-1] == 1.0:
+                bc = _cal_optimistic_path(ugraph=pg, start=start1-1, goalID=state.goalIDs[i]-1) 
+            else:
+                bc1 = _cal_optimistic_path(ugraph=pg, start=start1-1, goalID=state.goalIDs[i]-1) 
+                bc2 = _cal_optimistic_path(ugraph=pg, start=start2-1, goalID=state.goalIDs[i]-1) 
+                dist1 = np.linalg.norm(np.array(state.vertices_map[start1].coord) - np.array(ugv.cur_pose))
+                dist2 = np.linalg.norm(np.array(state.vertices_map[start2].coord) - np.array(ugv.cur_pose))
+                bc = min(bc1 + dist1, bc2 + dist2)
+        heuristic += bc
+    return heuristic
+
+def _cal_optimistic_path(ugraph, start, goalID):
+    # the start, goalID, edge are 0-indexed for the underlying graph
+    adjacency_matrix = ug.get_optimistic_adj_matrix(ugraph.probabilities, ugraph.adjacency)
+    val = ug.compute_shortest_path_length(adjacency_matrix, start=start, end=goalID)
+    return val if val >=0 else NOWAY_PEN

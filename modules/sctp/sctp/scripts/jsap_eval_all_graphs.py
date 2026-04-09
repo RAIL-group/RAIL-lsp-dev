@@ -25,7 +25,7 @@ def _setup(args):
         
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    num_ugv = 1
+    num_ugv = 2
     max_uanum = 1
     num_iterations = 1000
     max_depth = 15
@@ -56,6 +56,7 @@ def _setup(args):
         assert args.num_iterations == 1000 #1000 #(for 1ugv)
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner =='jsap2':
+        args.num_drones = 2
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         param.REVISIT_PEN = 0.0
@@ -93,7 +94,7 @@ def _setup(args):
         assert args.max_uanum == max_uanum
         assert args.num_ugvs == num_ugv
     elif args.planner == 'jsapdap':
-        # args.num_drones = 1
+        
         param.REVISIT_PEN = 0.0
         assert args.max_depth == max_depth
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -106,6 +107,7 @@ def _setup(args):
         assert args.max_uanum == max_uanum
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapdap2':
+        args.num_drones = 2
         param.REVISIT_PEN = 0.0
         max_uanum = 1
         assert args.max_depth == max_depth
@@ -120,48 +122,53 @@ def _setup(args):
     elif args.planner == 'jsapliap':
         # args.num_drones = 1
         param.REVISIT_PEN = 0.0
-        
+        args.num_drones = 1 #, "This script only supports 1 UAV"
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        # model_path = ''
-        if args.env_type == 'random':
-            model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
-        elif args.env_type =='islands':
-            model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
-        elif args.env_type == 'bridges':
-            model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
-        else:
-            model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_60k.pt' 
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_128_3_8_April6.pt'
+        # if args.env_type == 'random':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
+        # elif args.env_type =='islands':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
+        # elif args.env_type == 'bridges':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
+        # else:
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
         args.max_depth = max_depth
         assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
-        args.num_drones = 1 #, "This script only supports 1 UAV"
+        assert args.num_drones == 1, "This script only supports 1 UAV"
+        
     elif args.planner == 'jsapliap2':
         param.REVISIT_PEN = 0.0
         assert args.max_depth == max_depth
+        args.num_drones = 2 #, "This script only supports 2 UAVs"
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        
-        if args.env_type == 'random':
-            model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
-        elif args.env_type =='islands':
-            model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
-        elif args.env_type == 'bridges':
-            model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
-        else:
-            model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_128_3_8_April6.pt'
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_60k.pt' # best for 1ugv-2uavs, 2ugvs-2uavs islands graph
+        # if args.env_type == 'random':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
+        # elif args.env_type =='islands':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
+        # elif args.env_type == 'bridges':
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
+        # else:
+        #     model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
         # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
         assert args.num_iterations == 1000
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
-        args.num_drones = 2 #, "This script only supports 2 UAVs"
+        assert args.num_drones == 2, "This script only supports 2 UAVs"
+        
     else:
         raise ValueError(f'Planner {args.planner} not recognized')
 
@@ -194,7 +201,7 @@ def _setup(args):
         )
         time1 = time.perf_counter()
         joint_actions, cost = jsapplanner.compute_joint_action()
-        average_step_time += (time.perf_counter() - time1)
+        # average_step_time += (time.perf_counter() - time1)
         count_steps += 1
         plan_exec.save_joint_actions(joint_actions, cost)
     
@@ -203,7 +210,7 @@ def _setup(args):
     cost_aver = np.average(robot_net_times)
     
     runtime = time.perf_counter() - start_time
-    average_step_time /= count_steps
+    average_step_time = runtime/count_steps
     gpaths = []
     for robot in robots:
         x_g = [pose[0] for pose in robot.all_poses]
@@ -229,7 +236,8 @@ def _setup(args):
     with open(logfile, "a+") as f:
         f.write(f"SEED: {args.seed} | UAVs: {args.num_drones} | PLANNER: {args.planner} | SUCC: {int(plan_exec.success)} "
                 f"| COST_AVER: {cost_aver:0.3f} | COST_SUM: {cost_sum:0.3f} | T.TIME: {runtime:0.2f} | STEP.TIME : {average_step_time:0.2f} "
-                f"| SAMP.TIME : {jsap.JSAPState.total_sampling_time:0.2f} | SPOLICY.TIME : {jsapplanner.single_policy_time:0.2f}\n")    
+                f"| SAMP.TIME : {jsap.JSAPState.total_sampling_time:0.2f} | PLAN-STEPs : {count_steps} | INIT.TIME : {jsap.JSAPState.total_init_time:0.2f} " 
+                f"| HEU.TIME : {jsap.JSAPState.total_heuristic_time:0.2f} \n")    
 
 
 if __name__ == '__main__':

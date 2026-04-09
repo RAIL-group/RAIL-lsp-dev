@@ -394,21 +394,27 @@ def plot_pathArrow(points, ax, color='white'):
         ax.add_patch(arrow)
 
 
-def plot_madist_allinOne_std(x, data, std, featureNames, yName, 
+def plot_allinOne_std(x, data, std, featureNames, yName, 
                     ranges, rangeStep, envName, xName=None, outpath=None):
-    markers = ['o', '^',  'D', 's', 'p', '*', 'h']
-    colors = ['red', 'magenta', 'orange', 'blue', 'green', 'purple', 'brown']
+    markers = ['p', 's', 'D', 'o', '^', '*', 'h']
+    colors = [ 'green', 'blue', 'magenta', 'red', 'orange', 'purple', 'brown']
     order = 10
-    for ii, dat in enumerate(data):         
+    count = 0
+    for ii, dat in enumerate(data):
+        # print(featureNames[ii]) 
+        if featureNames[ii] == 'JSAP-2' or featureNames[ii] == 'JSAP-DAP2' \
+            or featureNames[ii] == 'JSAP-IAP2' or featureNames[ii] == 'JSAP-LIAP2':
+            continue
         plt.errorbar(x, dat, std,
-                    color=colors[ii],   
+                    color=colors[count],   
                     linewidth=2.0, 
                     # linestyle='None', 
-                    marker=markers[ii],
+                    marker=markers[count],
                     markersize=9,
                     label=featureNames[ii],
                     zorder=order
                 )
+        count += 1
                     
     plt.title(envName, fontsize=18)
     plt.ylim(ranges[0], ranges[1])
@@ -427,4 +433,5 @@ def plot_madist_allinOne_std(x, data, std, featureNames, yName,
     if outpath is not None:
         plt.savefig(outpath, bbox_inches='tight')
     else:
-        plt.savefig(f'/data/sctp/Jan30/plot_{envName}_{xName}.pdf', bbox_inches='tight')
+        plt.savefig(f'/data/sctp/Jan30/plot_{envName}_gnnApril6.pdf', bbox_inches='tight')
+    plt.close()

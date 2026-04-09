@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sctp.sctp_graphs as graphs
+import sctp.utils.underlying_graph as ug
 from sctp.utils.underlying_graph import (
     ProbabilisticGraph,
     get_vertex_positions,
@@ -128,111 +129,97 @@ def test_shortest_path_island_bridges_graph():
     print(sample)
     print(cost)
 
-# def test_create_probabilistic_graph():
-#     """Test the convenience function creates a valid ProbabilisticGraph."""
-#     pg = create_probabilistic_graph(num_vertices=50, threshold=30.0)
 
-#     assert isinstance(pg, ProbabilisticGraph)
-#     assert pg.positions.shape == (50, 2)
-#     assert pg.adjacency.shape == (50, 50)
-#     assert pg.probabilities.shape == (50, 50)
-
-#     # Verify symmetry
-#     np.testing.assert_array_equal(pg.adjacency, pg.adjacency.T)
-#     np.testing.assert_array_equal(pg.probabilities, pg.probabilities.T)
+def make_inputs(prob_list, adj_list, n):
+    """Helper to build square matrices from flat lists."""
+    return (np.array(prob_list, dtype=float).reshape(n, n),
+            np.array(adj_list, dtype=float).reshape(n, n))
 
 
-# def test_sample_graph_symmetry():
-#     """Test that sampled graph is symmetric."""
-#     pg = create_probabilistic_graph(num_vertices=50, threshold=30.0)
-#     sampled = sample_graph(pg)
-#     np.testing.assert_array_equal(sampled, sampled.T)
+# class TestGetOptimisticAdjMatrix:
 
+def test_no_blocked_edges():
+    """All probs < 1.0 → full graph preserved."""
+    prob, adj = make_inputs(
+        [0,   0.2, 0.5,
+            0.2, 0,   0.3,
+            0.5, 0.3, 0  ],
+        [0, 1, 2,
+            1, 0, 3,
+            2, 3, 0], n=3
+    )
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    np.testing.assert_array_equal(result, adj)
 
-# def test_sample_graph_subset():
-#     """Test that sampled edges are a subset of original adjacency."""
-#     pg = create_probabilistic_graph(num_vertices=50, threshold=30.0)
-#     sampled = sample_graph(pg)
+def test_all_blocked_edges():
+    """All probs == 1.0 → empty graph (all zeros)."""
+    prob, adj = make_inputs(
+        [1, 1, 1,
+            1, 1, 1,
+            1, 1, 1],
+        [0, 5, 9,
+            5, 0, 3,
+            9, 3, 0], n=3
+    )
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    np.testing.assert_array_equal(result, np.zeros((3, 3)))
 
-#     # Sampled should only have edges where adjacency has edges
-#     assert np.all((sampled > 0) <= (pg.adjacency > 0))
+def test_some_blocked_edges():
+    """Only edges with prob == 1.0 are removed."""
+    prob, adj = make_inputs(
+        [0,   1.0, 0.5,
+            1.0, 0,   0.0,
+            0.5, 0.0, 0  ],
+        [0, 10, 20,
+            10, 0,  30,
+            20, 30,  0], n=3
+    )
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    expected = np.array([
+        [0,  0, 20],
+        [0,  0, 30],
+        [20, 30,  0]
+    ], dtype=float)
+    np.testing.assert_array_equal(result, expected)
 
-#     # Where sampled is non-zero, it should equal adjacency
-#     nonzero_mask = sampled > 0
-#     np.testing.assert_array_equal(sampled[nonzero_mask], pg.adjacency[nonzero_mask])
+def test_zero_prob_edge_kept():
+    """prob == 0.0 means definitely passable → edge must be kept."""
+    prob, adj = make_inputs(
+        [0,   0.0,
+            0.0, 0  ],
+        [0, 7,
+            7, 0], n=2
+    )
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    np.testing.assert_array_equal(result, adj)
 
+def test_symmetry():
+    """Output matrix must always be symmetric."""
+    rng = np.random.default_rng(42)
+    n = 5
+    prob = np.triu(rng.uniform(0, 1, (n, n)), k=1)
+    prob = prob + prob.T                       # symmetric prob matrix
+    adj  = np.triu(rng.integers(1, 20, (n, n)).astype(float), k=1)
+    adj  = adj + adj.T
 
-# def test_sample_graph_respects_probability_one():
-#     """Test that edges with probability 1.0 always exist."""
-#     positions = np.array([[0, 0], [3, 4]])
-#     adjacency = np.array([[0, 5.0], [5.0, 0]])
-#     probabilities = np.array([[0, 1.0], [1.0, 0]])  # Probability 1.0
-#     pg = ProbabilisticGraph(positions=positions, adjacency=adjacency, probabilities=probabilities)
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    np.testing.assert_array_equal(result, result.T)
 
-#     # Sample many times - edge should always exist
-#     for _ in range(10):
-#         sampled = sample_graph(pg)
-#         assert sampled[0, 1] == 5.0
-#         assert sampled[1, 0] == 5.0
+def test_diagonal_untouched():
+    """Diagonal should remain 0 (self-loops ignored by triu k=1)."""
+    prob, adj = make_inputs(
+        [0.5, 0.5,
+            0.5, 0.5],
+        [99, 1,
+            1, 99], n=2
+    )
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    assert result[0, 0] == 0
+    assert result[1, 1] == 0
 
-
-# def test_sample_graph_respects_probability_zero():
-#     """Test that edges with probability 0.0 never exist."""
-#     positions = np.array([[0, 0], [3, 4]])
-#     adjacency = np.array([[0, 5.0], [5.0, 0]])
-#     probabilities = np.array([[0, 0.0], [0.0, 0]])  # Probability 0.0
-#     pg = ProbabilisticGraph(positions=positions, adjacency=adjacency, probabilities=probabilities)
-
-#     sampled = sample_graph(pg)
-#     assert sampled[0, 1] == 0.0
-#     assert sampled[1, 0] == 0.0
-
-
-# def test_shortest_path_known_graph():
-#     """Test shortest path on a simple known graph."""
-#     # Triangle: 0 -- 1 -- 2, with direct edge 0 -- 2
-#     # Edge weights: 0-1: 1.0, 1-2: 1.0, 0-2: 3.0
-#     # Shortest 0->2 should be 2.0 (via 1), not 3.0 (direct)
-#     adjacency = np.array([
-#         [0, 1.0, 3.0],
-#         [1.0, 0, 1.0],
-#         [3.0, 1.0, 0],
-#     ])
-
-#     path_cost = compute_shortest_path(adjacency, start=0, end=2)
-#     assert path_cost == 2.0
-
-
-# def test_shortest_path_no_path():
-#     """Test that None is returned when no path exists."""
-#     # Two disconnected vertices
-#     adjacency = np.array([
-#         [0, 0],
-#         [0, 0],
-#     ])
-
-#     path_cost = compute_shortest_path(adjacency, start=0, end=1)
-#     assert path_cost is None
-
-
-# def test_shortest_path_negative_index():
-#     """Test that negative index works for end vertex."""
-#     adjacency = np.array([
-#         [0, 1.0, 0],
-#         [1.0, 0, 2.0],
-#         [0, 2.0, 0],
-#     ])
-
-#     # end=-1 should be vertex 2
-#     path_cost = compute_shortest_path(adjacency, start=0, end=-1)
-#     assert path_cost == 3.0  # 0 -> 1 -> 2
-
-
-# def test_plot_returns_figure():
-#     """Test that plotting function returns a matplotlib Figure."""
-#     pg = create_probabilistic_graph(num_vertices=20, threshold=40.0)
-#     fig = plot_probabilistic_graph_with_samples(pg, num_samples=3, seed=42)
-
-#     assert isinstance(fig, plt.Figure)
-#     assert len(fig.axes) == 5  # 2x2 grid + colorbar
-#     plt.close(fig)
+def test_single_vertex():
+    """1×1 graph edge case should return a 1×1 zero matrix."""
+    prob = np.array([[0.0]])
+    adj  = np.array([[0.0]])
+    result = ug.get_optimistic_adj_matrix(prob, adj)
+    np.testing.assert_array_equal(result, np.zeros((1, 1)))

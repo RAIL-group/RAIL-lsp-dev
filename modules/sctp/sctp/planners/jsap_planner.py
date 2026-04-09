@@ -36,6 +36,7 @@ class JSAPPlanner(object):
             assert model_path is not None, "Model path must be provided when use_Learning is True"
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.model = load_iap_gnn_model(path=model_path, device=self.device)
+        sctp.jsap.JSAPState.reset_sampling_time()
         
     def reached_goal(self):
         return all([ugv.last_node == self.goalIDs[i] for i, ugv in enumerate(self.ugvs)])
@@ -43,7 +44,7 @@ class JSAPPlanner(object):
     def update(self, observations, ugv_data, uav_data=None):
         if observations:
             self.observed_graph.update(observations)
-            self.gnn_cache.clear()
+            # self.gnn_cache.clear()
         for i, ugv in enumerate(self.ugvs):
             ugv.cur_pose = np.array([ugv_data[i][0][0],ugv_data[i][0][1]])
             ugv.at_node = ugv_data[i][1]

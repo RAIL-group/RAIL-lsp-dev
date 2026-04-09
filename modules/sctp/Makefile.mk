@@ -2,22 +2,21 @@ SCTP_BASENAME = sctp
 SCTP_SEED_START = 3000
 SCTP_NUM_EXPERIMENTS =100
 SCTP_DATA_SEED = 1000
-SCTP_DATA_NUM = 200
+SCTP_DATA_NUM = 400
 SCTP_NUM_DRONES = 1
-SCTP_NUM_GROUNDS = 1
-SCTP_NUM_VERTICES = 14
+SCTP_NUM_GROUNDS = 2
+SCTP_NUM_VERTICES = 16
 SCTP_NUM_ISLANDs = 5
 SCTP_NUM_PRUNE = 1
+SCTP_NUM_SAMPLE = 1000
 SCTP_EXPERIMENT_NAME = Jan30
 define sctp_get_seeds
 	$(shell seq $(SCTP_SEED_START) $$(($(SCTP_SEED_START)+$(SCTP_NUM_EXPERIMENTS) - 1)))
 endef
 
-
-
-GRAPHS = bridges islands
-JSAP_PLANNERS = jsapliap jsapliap2
-EXP_NAME = statistics#prune_num_action# 
+GRAPHS = islands#random#  bridges
+JSAP_PLANNERS = jsapliap jsapliap2#
+EXP_NAME = statistics#plot_all#prune_num_action# 
 
 all-targets-jsap-eval = $(foreach planner, $(JSAP_PLANNERS), \
 					$(foreach seed, $(call sctp_get_seeds), \
@@ -28,56 +27,24 @@ $(all-targets-jsap-eval): jsap_planner = $(shell echo $@ | grep -oE '_planner_[a
 $(all-targets-jsap-eval): jsap_graph = $(shell echo $@ | grep -oE '_graph_[a-z]+' | cut -d'_' -f3)
 
 
-# .PHONY: jsap-eval-island-graphs
-# jsap-eval-island-graphs: $(all-targets-jsap-eval)
-# $(all-targets-jsap-eval):
-# 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
-# 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-# 	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_island_graph \
-# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
-# 		--num_drones $(SCTP_NUM_DRONES) \
-# 		--planner $(jsap_planner) \
-# 		--seed $(jsap_seed) \
-# 		--num_iterations 1500 \
-# 		--sampling_maps 200 \
-# 		--C 200 \
-# 		--max_depth 15 \
-# 		--num_ugvs $(SCTP_NUM_GROUNDS) \
-# 		--env_type $(GRAPHS) \
-
-# .PHONY: jsap-eval-random-graphs
-# jsap-eval-random-graphs: $(all-targets-jsap-eval)
-# $(all-targets-jsap-eval):
-# 	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed)"
-# 	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-# 	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_dense_graph \
-# 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS) \
-# 		--num_drones $(SCTP_NUM_DRONES) \
-# 		--planner $(jsap_planner) \
-# 		--seed $(jsap_seed) \
-# 		--num_iterations 1000 \
-# 		--sampling_maps 200 \
-# 		--C 200 \
-# 		--max_depth 20 \
-# 		--num_ugvs $(SCTP_NUM_GROUNDS) \
-
-.PHONY: jsap-eval-bridges-graphs
-jsap-eval-bridges-graphs: $(all-targets-jsap-eval)
+.PHONY: jsap-eval-all-graphs
+jsap-eval-all-graphs: $(all-targets-jsap-eval)
 $(all-targets-jsap-eval):
-	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed), graph: $(jsap_graph)"
-	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/$(GRAPHS)/$(SCTP_NUM_GROUNDS)
-	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_bridges_graph \
+	@echo "Evaluating: planner: $(jsap_planner), seed: $(jsap_seed), graph: $(jsap_graph), action candidates: $(SCTP_NUM_PRUNE), sample num: $(SCTP_NUM_SAMPLE)"
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/_graph_$(jsap_graph)_/$(SCTP_NUM_GROUNDS)
+	@$(DOCKER_PYTHON) -m sctp.scripts.jsap_eval_all_graphs \
 	 	--save_dir data/$(SCTP_BASENAME)/$(SCTP_EXPERIMENT_NAME)/_graph_$(jsap_graph)_/$(SCTP_NUM_GROUNDS) \
 		--num_drones $(SCTP_NUM_DRONES) \
 		--planner $(jsap_planner) \
 		--seed $(jsap_seed) \
-		--num_iterations 1000 \
+		--num_iterations $(SCTP_NUM_SAMPLE) \
 		--sampling_maps 200 \
 		--C 200 \
 		--max_depth 15 \
 		--num_ugvs $(SCTP_NUM_GROUNDS) \
 		--max_uanum $(SCTP_NUM_PRUNE) \
 		--env_type $(jsap_graph) \
+		--n_vertex $(SCTP_NUM_VERTICES)
 
 
 DATA_SEEDS := $(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED) + $(SCTP_DATA_NUM) - 1)))
@@ -85,7 +52,7 @@ DATA_SEEDS := $(shell seq $(SCTP_DATA_SEED) $$(($(SCTP_DATA_SEED) + $(SCTP_DATA_
 sap-generate-data: $(addprefix seed-,$(DATA_SEEDS))
 seed-%:
 	@echo "Generating training data for IAP-GNN with seed: $*"
-	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles	
+	@mkdir -p $(DATA_BASE_DIR)/$(SCTP_BASENAME)/graph_data/pickles_new
 	@$(DOCKER_PYTHON) -m sctp.scripts.data_gen \
 	 	--save_dir data/$(SCTP_BASENAME)/graph_data \
 		--num_maps 1000 \

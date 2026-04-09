@@ -99,6 +99,7 @@ def generate_dataset(
     if graph_type == 'islands':
         _, _, graph = graphs.get_sixIslands_graph()
     elif graph_type == 'random':
+        assert args.n_vertex == 16, f"Number of vertices for random graph should be at least 10, got {args.n_vertex}"
         _, _, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     elif graph_type == 'bridges':
         _, _, graph = graphs.get_bridges_graph()
@@ -117,8 +118,12 @@ def generate_dataset(
         assert vertices_id[ii] < vertices_id[ii+1], f"Vertices are not in the correct order: {vertices_id}"
         
     while count < num_data_per_graph:
-        start, goal = random.sample(range(0, len(graph.vertices)), 2)
-        num_known_edges = random.randint(0, 15)
+        while True:
+            start, goal = random.sample(range(0, len(graph.vertices)), 2)
+            dist = np.linalg.norm(np.array(graph.vertices[start].coord) - np.array(graph.vertices[goal].coord))
+            if dist > 25.0: # ensure start and goal are not too close
+                break
+        num_known_edges = random.randint(0, 8)
         assert num_known_edges <= len(graph.pois), f"Number of known edges {num_known_edges} cannot exceed total number of edges {len(graph.pois)}"
         known_edges = random.sample(graph.pois, num_known_edges)
         known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
@@ -154,10 +159,101 @@ def generate_dataset(
             )
             values.append(bc) if bc >= 0.0 else values.append(0.0)
         assert len(edge_list) == len(values), f"Number of edges {len(edge_list)} does not match number of values {len(values)}"
-        # min_val = min(values)
-        # make all values no negative but keep the 0.0 values as they are (indicating known edges)
-        # if min_val < 0.0:
-        #     values = [v-min_val if v != 0.0 else 0.0 for v in values]            
+        graph_data = create_graph_datum(graph=pg, edges=edge_list, start=start, goal=goal, values=values)
+        write_datum_to_file(filepath=filepath, seed=seed, datum=graph_data, counter=count, graph_type=graph_type)
+        count += 1
+        if verbose:
+            with open(file_summary, "a+") as f:
+                f.write(f"START: {start} | GOAL: {goal}\n")
+                f.write(f"EDGE_LIST: {edge_list}\n")
+                f.write(f"VALUES: {values}\n")
+
+def generate_dataset_by_rollout(
+    filepath: str,
+    seed: int,
+    num_maps: int = 500,
+    graph_type: str = 'bridges',
+    num_data_per_graph: int = 50,
+    verbose=False
+):
+    """
+    Generate a dataset of multiple graphs
+    Args:
+        num_graphs: Number of graphs to generate
+        graph_type: Type of graph ('random', 'bridges', 'islands')
+    
+    Returns:
+        List of GraphData objects
+    """
+    assert num_maps == 1000
+    # seeds = np.arange(1021, 1021+num_graphs)
+    # for i in range(num_graphs):
+    np.random.seed(seed)
+    random.seed(seed)
+    # Generate random number of nodes
+    if graph_type == 'islands':
+        _, _, graph = graphs.get_sixIslands_graph()
+    elif graph_type == 'random':
+        assert args.n_vertex == 16, f"Number of vertices for random graph should be at least 10, got {args.n_vertex}"
+        _, _, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
+    elif graph_type == 'bridges':
+        _, _, graph = graphs.get_bridges_graph()
+    else:
+        raise ValueError(f"Graph type {graph_type} not recognized")
+    edges = ug.get_initial_edges(graph)
+    vertex_positions = ug.get_vertex_positions(graph.vertices)
+    adjacency_matrix, probability_matrix = ug.create_adj_prob_matrices(edges, vertex_positions)
+    count = 0
+    if verbose:
+        file_summary = os.path.join('pickles_new', f'dat_{graph_type}_{seed}.txt')
+        file_summary = os.path.join(filepath, file_summary)
+    
+    vertices_id = [vertex.id for vertex in graph.vertices]
+    for ii in range(len(vertices_id)-1):
+        assert vertices_id[ii] < vertices_id[ii+1], f"Vertices are not in the correct order: {vertices_id}"
+        
+    while count < num_data_per_graph:
+        while True:
+            start, goal = random.sample(range(0, len(graph.vertices)), 2)
+            dist = np.linalg.norm(np.array(graph.vertices[start].coord) - np.array(graph.vertices[goal].coord))
+            if dist > 25.0: # ensure start and goal are not too close
+                break
+        num_known_edges = random.randint(0, 8)
+        assert num_known_edges <= len(graph.pois), f"Number of known edges {num_known_edges} cannot exceed total number of edges {len(graph.pois)}"
+        known_edges = random.sample(graph.pois, num_known_edges)
+        known_edge_probs = [0.0 if random.random() >= poi.block_prob else 1.0 for poi in known_edges]
+        known_edges_id = [[poi.neighbors[0]-1, poi.neighbors[1]-1] for poi in known_edges] #0-index
+        new_probability_matrix = ug.set_edge_probabilities(
+            probs=np.array(known_edge_probs),
+            edges=known_edges_id,
+            probabilities=probability_matrix
+        )
+        result = new_probability_matrix[np.isin(new_probability_matrix, [0.0, 1.0])]
+        assert result.size > 5, f"Not enough known edges: {result.size} found, expected at least 5"
+        pg = ug.ProbabilisticGraph(
+            positions=vertex_positions,
+            adjacency=adjacency_matrix,
+            probabilities=new_probability_matrix
+        )
+        values = []
+        edge_list = []
+        for poi in graph.pois:
+            edge = [poi.neighbors[0]-1, poi.neighbors[1]-1] # calculate its value
+            assert edge[0] < edge[1], f"Edge {edge} is not in the correct order"
+            edge_list.append(edge)
+            if edge in known_edges_id:
+                values.append(0.0)
+                continue    
+            
+            bc = ae.get_single_bc_networkX(
+                ugraph=pg,
+                action_edge=[edge],
+                start=start,
+                goalID=goal,
+                n_samples=num_maps
+            )
+            values.append(bc) if bc >= 0.0 else values.append(0.0)
+        assert len(edge_list) == len(values), f"Number of edges {len(edge_list)} does not match number of values {len(values)}"          
         graph_data = create_graph_datum(graph=pg, edges=edge_list, start=start, goal=goal, values=values)
         write_datum_to_file(filepath=filepath, seed=seed, datum=graph_data, counter=count, graph_type=graph_type)
         count += 1

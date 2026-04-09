@@ -23,7 +23,7 @@ def _get_args():
     parser.add_argument('--C', type=int, default=300)
     parser.add_argument('--max_depth', type=int, default=500)
     parser.add_argument('--n_maps', type=int, default=80)
-    parser.add_argument('--n_vertex', type=int, default=14)
+    parser.add_argument('--n_vertex', type=int, default=16)
 
     args = parser.parse_args(['--save_dir', ''])
     
@@ -277,14 +277,20 @@ def test_jsap_plan_exec_mgraph():
 def test_jsap_plan_exec_randomgraph():
     print()
     args = _get_args()
-    args.planner = 'jsapiap'
-    args.seed = 3010
+    args.planner = 'jsapdap'
+    args.seed = 3022
     random.seed(args.seed)
     np.random.seed(args.seed)
-    args.num_ugvs =1
+    args.num_ugvs =2
     args.num_drones =1
-    verbose = False
-    starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=args.num_ugvs)
+    verbose = True
+    args.n_vertex = 16
+    # args.num_ugvs = 2
+    env_type = 'random'
+    if env_type == 'bridges':
+       starts, goals, graph = graphs.get_bridges_graph()
+    elif env_type == 'random': 
+        starts, goals, graph = graphs.random_graph(n_vertex=args.n_vertex, SG_pairs=3)
     plotGraph = graph.copy()
     policyGraph = graph.copy()
     
@@ -337,13 +343,16 @@ def test_jsap_plan_exec_randomgraph():
     elif args.planner == 'jsapdap':
         use_AVP=False
         use_DAP = True
+        use_Learning=False
+        model_path =""
         assert args.num_drones == 1
-        assert args.num_ugvs == 1
+        assert args.num_ugvs == 2
         args.max_depth = 15
         # max_uanum = max_uanum
         args.num_iterations = 1000
         args.n_maps = 200
         max_uanum = 1
+        
         drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
                 robot_type=RobotType.Drone, at_node=True) for i in range(args.num_drones)]
         print(f"Testing JSAP-DAP planner with use_DAP={use_DAP} and num_iterations={args.num_iterations} and max_depth={args.max_depth}")
@@ -354,14 +363,28 @@ def test_jsap_plan_exec_randomgraph():
                     at_node=True) for i in range(args.num_ugvs)]
     planner_robots = [robot.copy() for robot in robots]
     planner_drones = [drone.copy() for drone in drones]
-    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
-                uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
-                rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \
-                use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
     
+    # poi17 = graph.get_poi(17)
+    # print(f"POI17 has {len(poi17.neighbors)} neighbors: {poi17.neighbors}")
+    # jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
+    #             uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, revisit_pen=param.REVISIT_PEN, \
+    #             rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, use_DAP=use_DAP, \
+    #             use_AVP=use_AVP, max_uanum=max_uanum, verbose=True)
+    jsapplanner = planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, 
+                                              uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=args.C, 
+                                              rollout_num=args.num_iterations, tree_depth=args.max_depth, n_maps=args.n_maps, 
+                                              use_AVP=use_AVP, use_DAP=use_DAP, useLearning=use_Learning, model_path=model_path,\
+                                              max_uanum=max_uanum, verbose=True)
     
     plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
                                                     reached_goal=jsapplanner.reached_goal, verbose=True)
+
+    goals_cords = [goal.coord for goal in goals]
+    starts_cords = [start.coord for start in starts]
+    plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=[[[0.0]]], dpaths=[[[0.0]]], \
+                    graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
+                        seed=args.seed, cost=0.0, ttime=0.0, stime=0.0, verbose=verbose)
+    plt.savefig(f'{args.save_dir}/figures/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs_Test.pdf')    
 
     start_time = time.perf_counter() 
     average_step_time = 0.0
@@ -402,8 +425,8 @@ def test_jsap_plan_exec_randomgraph():
         x = [pose[0] for pose in drone.all_poses]
         y = [pose[1] for pose in drone.all_poses]
         dpaths.append([x, y])
-    goals_cords = [goal.coord for goal in goals]
-    starts_cords = [start.coord for start in starts]
+    # goals_cords = [goal.coord for goal in goals]
+    # starts_cords = [start.coord for start in starts]
     plotting.plot_plan_exec(graph=graph, plt=plt, name=args.planner, gpaths=gpaths, dpaths=dpaths, \
                     graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
                         seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=verbose)
@@ -419,7 +442,7 @@ def test_jsap_plan_exec_bridges_graph():
     args.seed = 3001
     random.seed(args.seed)
     np.random.seed(args.seed)
-    verbose = False
+    verbose = True
     args.num_ugvs =1
     starts, goals, graph = graphs.get_bridges_graph()
     plotGraph = graph.copy()
