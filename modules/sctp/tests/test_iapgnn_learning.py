@@ -3,7 +3,7 @@ import random, os
 import glob
 from sctp.learning.iap_gnn import BipartiteEdgeRegressor
 # from sctp.learning.iap_gnn2 import EdgeIGGNN
-from sctp.scripts.data_gen import generate_dataset
+from sctp.scripts.data_gen import generate_dataset, generate_dataset_by_rollout
 from sctp.scripts.iapgnn_training import GzipGNNDataset, train_epoch
 import pickle, gzip
 import torch
@@ -18,6 +18,8 @@ from sctp import jsap
 from sctp.planners import jsap_planner
 from sctp.planners import jsap_plan_exe as plan_loop
 from sctp.utils import plotting
+from sctp import action_estimation as ae
+from sctp.learning.iap_gnn import load_iap_gnn_model
 import time
 import matplotlib.pyplot as plt
 
@@ -32,6 +34,19 @@ def test_data_generation():
     
     generate_dataset(filepath=filepath, num_graphs=graph_nums, num_maps=sampling_nums, 
                         graph_type=graph_type, num_data_per_graph=num_data_per_graph)
+
+def test_data_generation_rollout():
+    graph_type = 'bridges'
+    sampling_nums = 1000
+    num_steps = 18
+    seed = 1000
+    filepath ='data/sctp/graph_data/rollouts/'
+    print(f"Graph_Type: {graph_type}, number of maps for sampling {sampling_nums}, "
+          f" saving to: {filepath}") 
+    
+    generate_dataset_by_rollout(filepath=filepath, seed=seed, num_maps=sampling_nums, 
+                        graph_type=graph_type, num_steps=num_steps)
+
 
 
 def test_GNN_model():
@@ -237,7 +252,8 @@ def test_jsap_gnn_state():
     num_ugvs = 1
     
     verbose = False
-    starts, goals, graph = graphs.get_sixIslands_graph()
+    # starts, goals, graph = graphs.get_sixIslands_graph()
+    starts, goals, graph = graphs.random_graph(n_vertex=16,SG_pairs=3)
     # print("All the nodes in the graph with their block_prob:")
     # for v in graph.vertices:
     #     print(f"Node {v.id}: block_prob={v.block_prob}")
@@ -249,7 +265,7 @@ def test_jsap_gnn_state():
     use_Learning = True
     num_drones = 1 
     max_depth = 15
-    max_uanum = 1
+    max_uanum = 2
     num_iterations = 1000
     n_maps = 200
     model_path = "/modules/sctp/learning/models/iap_gnn_allgraphs_m.pt"
@@ -293,6 +309,103 @@ def test_jsap_gnn_state():
         count_steps += 1
         plan_exec.save_joint_actions(joint_actions, cost)
     
+    robot_net_times = [robot.net_time for robot in robots]
+    cost_sum = np.sum(robot_net_times)
+    cost_aver = np.average(robot_net_times)
+    
+    runtime = time.perf_counter() - start_time
+    average_step_time /= count_steps
+    gpaths = []
+    for robot in robots:
+        x_g = [pose[0] for pose in robot.all_poses]
+        y_g = [pose[1] for pose in robot.all_poses]
+        gpaths.append([x_g, y_g])
+    
+    dpaths = []
+    for drone in drones:
+        x = [pose[0] for pose in drone.all_poses]
+        y = [pose[1] for pose in drone.all_poses]
+        dpaths.append([x, y])
+    goals_cords = [goal.coord for goal in goals]
+    starts_cords = [start.coord for start in starts]
+    plotting.plot_plan_exec(graph=graph, plt=plt, name=planner, gpaths=gpaths, dpaths=dpaths, \
+                    graph_plot=plotGraph, start_coords=starts_cords, goal_coords=goals_cords, \
+                        seed=seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=False)
+    plt.show()
+
+
+def test_jsap_uavMaxActions():
+    print()
+    planner = 'jsapliap'
+    seed = 3012
+    random.seed(seed)
+    np.random.seed(seed)
+    num_ugvs = 2
+    
+    verbose = False
+    # starts, goals, graph = graphs.get_sixIslands_graph()
+    starts, goals, graph = graphs.random_graph(n_vertex=16,SG_pairs=3)
+    fig, ax = plt.subplots(1,1,figsize=(12,6))
+    # plotting.plot_sctpgraph(graph, ax, verbose=True, initG=True)
+    plotGraph = graph.copy()
+    policyGraph = graph.copy()
+    
+    use_AVP=False
+    use_DAP = False
+    use_Learning = True
+    num_drones = 1 
+    max_depth = 25
+    max_uanum = 1
+    num_iterations = 10000
+    n_maps = 200
+    model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_200_May03.pt'
+    # gnn_model = BipartiteEdgeRegressor(node_in_dim=2, edge_in_dim=2, hidden_dim=64).to('cpu')
+    # gnn_cache = {}
+    # if use_Learning:
+    #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #     gnn_model = load_iap_gnn_model(path=model_path, device=device)
+        
+    drones = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+            robot_type=RobotType.Drone, at_node=True) for i in range(num_drones)]
+    
+    
+    robots = [Robot(position=[starts[i].coord[0], starts[i].coord[1]], cur_node=starts[i].id, \
+                    at_node=True) for i in range(num_ugvs)]
+    planner_robots = [robot.copy() for robot in robots]
+    planner_drones = [drone.copy() for drone in drones]
+    
+    # init_state = jsap.JSAPState(graph=policyGraph, goalIDs=[goal.id for goal in goals], n_maps=n_maps, \
+    #                     revisit_pen=0.0, drones=drones, ugvs=robots, useAVP=use_AVP, useDAP=use_DAP, \
+    #                     useLearning=use_Learning, max_uanum=max_uanum, gnn_model=gnn_model, device=device, gnn_cache=gnn_cache)
+    
+    # actions = ae.get_uav_action_gnn(init_state, 0)
+    jsapplanner = jsap_planner.JSAPPlanner(init_graph=policyGraph, goalIDs=[goal.id for goal in goals], ugvs=planner_robots, \
+                uavs=planner_drones, rollout_fn=jsap.decsctp_rollout, C=200.0, revisit_pen=0.0, \
+                rollout_num=num_iterations, tree_depth=max_depth, n_maps=n_maps, use_DAP=use_DAP, \
+                use_AVP=use_AVP, useLearning=use_Learning, model_path=model_path, max_uanum=max_uanum, \
+                verbose=True)
+    
+    
+    plan_exec = plan_loop.JSAPPlanExe(graph=graph, ugvs=robots, uavs=drones, goalIDs=[goal.id for goal in goals],\
+                                                    reached_goal=jsapplanner.reached_goal, verbose=True)
+
+    start_time = time.perf_counter() 
+    average_step_time = 0.0
+    count_steps = 0
+    
+    for step_data in plan_exec:
+        jsapplanner.update(
+            step_data['observed_pois'],
+            step_data['ugvs'],
+            step_data['uavs']
+        )
+        time1 = time.perf_counter()
+        joint_actions, cost = jsapplanner.compute_joint_action()
+        average_step_time += (time.perf_counter() - time1)
+        count_steps += 1
+        plan_exec.save_joint_actions(joint_actions, cost)
+        # if count_steps > 2:
+        break
     robot_net_times = [robot.net_time for robot in robots]
     cost_sum = np.sum(robot_net_times)
     cost_aver = np.average(robot_net_times)

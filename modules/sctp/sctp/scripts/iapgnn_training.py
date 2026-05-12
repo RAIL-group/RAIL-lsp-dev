@@ -88,15 +88,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
     train_files_all = []
     test_files_all = []
-    graph_types = ['bridges', 'islands', 'random']
+    # graph_types = ['bridges', 'islands', 'random']
+    graph_types = ['random']
     for graph_type in graph_types:
         # --- 1. Data Preparation & Splitting ---
-        data_dir = 'data/sctp/graph_data/pickles_'+ graph_type+'/'
+        data_dir = 'data/sctp/graph_data/rollouts/'+ graph_type+'/'
         print(f"Loading data from {data_dir}...")
         all_files = glob.glob(os.path.join(data_dir, '*.pgz'))
         
         # 85/15 Split
-        train_files, test_files = train_test_split(all_files, test_size=0.15, random_state=42)
+        train_files, test_files = train_test_split(all_files, test_size=0.2, random_state=42)
         train_files_all.extend(train_files)
         test_files_all.extend(test_files)
     
@@ -113,16 +114,16 @@ if __name__ == "__main__":
     learning_rate = 0.0005
     # model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, hidden_dim=HIDDEN_M).to(device)
     model = BipartiteEdgeRegressor().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3) # weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
        optimizer, mode='min', patience=8, factor=0.5 )
 
     # Initialize TensorBoard writer
     # writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning_'+args.graph_type+'_logs')
-    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_trainning_allgraphs_logs_dropout0.12')
+    writer = SummaryWriter(log_dir='data/sctp/training/iap_gnn_allgraphs_logs_dropout25_L2')
 
     # 5. Execute Training
-    num_epochs = 150
+    num_epochs = 200
     print("Starting training...")
     for epoch in range(1, num_epochs + 1):
         # loss = train_epoch(model, train_loader, optimizer, device)

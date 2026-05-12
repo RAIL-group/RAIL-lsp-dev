@@ -210,13 +210,16 @@ def get_uav_action_gnn(state, uav_index):
             pred_cpu = pred.cpu()
             src = data.edge_index[0].cpu()
             dst = data.edge_index[1].cpu()
+            probs = data.edge_attr[:,1].cpu()
 
             ugv_edge_dict = {}
             for j in range(pred_cpu.shape[0]):
                 u, v = src[j].item(), dst[j].item()
                 if v < u:
                     u, v = v, u
-                ugv_edge_dict[(u, v)] = ugv_edge_dict.get((u, v), 0.0) + pred_cpu[j].item()
+                # ugv_edge_dict[(u, v)] = ugv_edge_dict.get((u, v), 0.0) + pred_cpu[j].item()
+                block_prob = probs[j].item()
+                ugv_edge_dict[(u, v)] =  block_prob*(1.0-block_prob)*pred_cpu[j].item()
 
             # ── Store per-UGV result ──
             if state.gnn_cache is not None:
@@ -228,7 +231,6 @@ def get_uav_action_gnn(state, uav_index):
 
     # ── Score and rank UAV actions ──
     drone_pose = np.array(state.uavs[uav_index].cur_pose)
-
     for action in state.avail_uav_actions:
         target_node = state.graph.get_poi(action.target)
         edge = tuple(sorted((target_node.neighbors[0] - 1, target_node.neighbors[1] - 1)))
@@ -238,6 +240,7 @@ def get_uav_action_gnn(state, uav_index):
         )
         dist = np.linalg.norm(drone_pose - np.array(target_node.coord))
         state.action_values[action] = edge_dict[edge] * param.VEL_RATIO / dist
+        # print(f"Action {action} | Edge {edge} | GNN Value {edge_dict[edge]:.4f} | Dist {dist:.4f} | Final Value {state.action_values[action]:.4f}")
     # ── Get top K without full sort ──
     k = min(state.max_uanum, len(state.action_values))
     actions = [
@@ -248,8 +251,71 @@ def get_uav_action_gnn(state, uav_index):
     for action in actions:
         action.update_pose((drone_pose[0], drone_pose[1]))
         action.update_robotID(uav_index)
-
+    # if state.depth>20:
+    #     print(f"The depth is {state.depth} with total of {len(state.avail_uav_actions)} available UAV actions.")
+    #     print(f"Selected UAV Actions: {[act.target for act in actions]}")
+    #     print("-------------------------------------------------------")
     return actions
+
+def get_bestAction_gnn(edges, graph, startID, goalID, \
+            device, gnn_model, drone_pose, actions): 
+    pg_positions = ug.get_vertex_positions(graph.vertices)
+    pg_adjacency, pg_probabilities = ug.create_adj_prob_matrices(edges, pg_positions)
+    goal  = goalID - 1
+    start = startID - 1
+
+    # ── Build data and run GNN ──
+    prob_graph = ug.ProbabilisticGraph(
+        positions=pg_positions,
+        adjacency=pg_adjacency,
+        probabilities=pg_probabilities
+    )
+    es = [[edge[0], edge[1]] for edge in edges]
+    data  = create_graph_datum(
+        graph=prob_graph, edges=es,
+        start=start, goal=goal,
+        values=np.zeros(len(es))
+    )
+    data = graphdata_to_pyg(data, device)
+
+    with torch.no_grad():
+        pred, _ = gnn_model(
+            x          = data.x,
+            edge_index = data.edge_index,
+            edge_attr  = data.edge_attr,
+        )
+    pred_cpu = pred.cpu()
+    src = data.edge_index[0].cpu()
+    dst = data.edge_index[1].cpu()
+    prob = data.edge_attr[1].cpu()
+    ugv_edge_dict = {}
+    for j in range(pred_cpu.shape[0]):
+        u, v = src[j].item(), dst[j].item()
+        if v < u:
+            u, v = v, u
+        ugv_edge_dict[(u, v)] = ugv_edge_dict.get((u, v), 0.0) + pred_cpu[j].item()
+        # block_prob = prob[j].item()
+        # ugv_edge_dict[(u, v)] = block_prob*(1-block_prob)*pred_cpu[j].item()
+
+
+    action_values = {}
+    
+    for action in actions:
+        target_node = graph.get_poi(action.target)
+        if (target_node.block_prob ==0.0 or target_node.block_prob == 1.0):
+            continue
+        edge = tuple(sorted((target_node.neighbors[0] - 1, target_node.neighbors[1] - 1)))
+
+        dist = np.linalg.norm(drone_pose - np.array(target_node.coord))
+        action_values[action] = ugv_edge_dict[edge] * param.VEL_RATIO / dist
+    actions = [
+        action for action, _ in
+        heapq.nlargest(1, action_values.items(), key=lambda x: x[1])
+    ]
+    action = actions[0]
+    action.update_pose((drone_pose[0], drone_pose[1]))
+
+    return action
 
 def _get_ugv_start(ugv, graph):
     if ugv.at_node:

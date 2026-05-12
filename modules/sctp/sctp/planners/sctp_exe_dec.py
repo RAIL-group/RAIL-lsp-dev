@@ -79,7 +79,7 @@ class SCTPDecExe(object):
             robot.need_action = True
             robot.remaining_time = 0.0 
         for drone in self.drones:
-            drone.need_action = True 
+            drone.neednum_steps_action = True 
             drone.remaining_time = 0.0
         return need_replan, robots_action[len(self.robots):]
         

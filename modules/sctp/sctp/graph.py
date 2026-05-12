@@ -12,18 +12,21 @@ class Graph():
         self.edges = edges
         self.pois = []
         self.poiIDs = []
+        self.vertices_map = {vertex.id: vertex for vertex in self.vertices+self.pois}
 
     def add_vertex(self, vertex):
         if isinstance(vertex, list):
             self.vertices.extend(vertex)
         else:
             self.vertices.append(vertex)
+        self.vertices_map[vertex.id] = vertex
 
     def add_edge(self, vertex1, vertex2, block_prob=0.0):
         if vertex1 not in self.vertices or vertex2 not in self.vertices:
             raise ValueError("Vertices not in graph. Add vertices before adding edges.")
         poi_coord = (0.5*(vertex1.coord[0]+vertex2.coord[0]),0.5*(vertex1.coord[1]+vertex2.coord[1]))
         POI = Vertex(coord=poi_coord, block_prob=block_prob)
+        self.vertices_map[POI.id] = POI
         self.pois.append(POI)
         self.poiIDs.append(POI.id)
         rand_cost = np.random.randint(1,10)
@@ -51,15 +54,13 @@ class Graph():
         if poi_id not in self.poiIDs:
             print(f"The poiID: {poi_id} is not in the list of poi's IDs: {self.poiIDs}")
             raise ValueError("POI ID not found in graph.")
-        # indx = self.poiIDs.index(poi_id)
-        # print("The poi's ID: ", indx)
         return self.pois[self.poiIDs.index(poi_id)]
     
     def get_vertex_by_id(self, vertex_id):
-        for vertex in self.vertices+self.pois:
-            if vertex.id == vertex_id:
-                return vertex
-        raise ValueError("Vertex not found in graph.")
+        if vertex_id not in self.vertices_map:
+            print(f"The vertex ID: {vertex_id} is not in the graph.")
+            raise ValueError("Vertex ID not found in graph.")
+        return self.vertices_map[vertex_id]
 
     def update(self, observations):
         for key, value in observations.items():
@@ -76,10 +77,10 @@ class Graph():
         for edge in self.edges:
             vs = [v for v in new_vertices+new_pois if v.id == edge.v1.id or v.id == edge.v2.id]
             edges.append(Edge(vs[0], vs[1]))
-        # new_graph = Graph(vertices=new_vertices, edges=self.edges.copy())
         new_graph = Graph(vertices=new_vertices, edges=edges)
         new_graph.pois = new_pois
         new_graph.poiIDs = self.poiIDs.copy()
+        new_graph.vertices_map = {vertex.id: vertex for vertex in new_graph.vertices+new_graph.pois}
         return new_graph
     
     def print_graph_config(self):

@@ -27,6 +27,8 @@ class Robot:
         elif self.robot_type == RobotType.Drone:
             self.vel = 1.0*VEL_RATIO
             self.edge = []
+        else:
+            raise NotImplementedError(f'Robot type {self.robot_type} is not implemented')
         self.need_action = True 
         self.action = None
         self.remaining_time = 0.0

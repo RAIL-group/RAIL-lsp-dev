@@ -15,7 +15,7 @@ from sctp.planners import jsap_plan_exe as plan_loop
 def _setup(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
-    print_pdf = False
+    print_pdf = True
     if args.env_type == 'bridges':
         starts, goals, graph = graphs.get_bridges_graph()
     elif args.env_type == 'random':
@@ -25,10 +25,10 @@ def _setup(args):
         
     plotGraph = graph.copy()
     policyGraph = graph.copy()
-    num_ugv = 2
+    num_ugv = 1
     max_uanum = 1
     num_iterations = 1000
-    max_depth = 15
+    max_depth = 30
     
     assert args.num_ugvs == num_ugv, f"This script only supports {num_ugv} UGV(s)"
     
@@ -43,7 +43,7 @@ def _setup(args):
         use_Learning = False
         args.max_depth = 12
         args.num_iterations = 1000 #5000 #(for 1ugv)
-        assert args.num_drones == 0
+        args.num_drones == 0
         assert args.num_ugvs == num_ugv
     elif args.planner =='jsap':
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -53,7 +53,7 @@ def _setup(args):
         use_DAP = False
         use_Learning = False
         args.max_depth = 15
-        assert args.num_iterations == 1000 #1000 #(for 1ugv)
+        assert args.num_iterations == num_iterations #1000 #(for 1ugv)
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner =='jsap2':
         args.num_drones = 2
@@ -64,7 +64,7 @@ def _setup(args):
         use_DAP = False
         use_Learning = False
         args.max_depth = 15
-        assert args.num_iterations == 1000 #1000 #(for 1ugv)
+        assert args.num_iterations == num_iterations #1000 #(for 1ugv)
         assert args.num_drones == 2, "This script only supports 2 UAV"
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
@@ -78,8 +78,10 @@ def _setup(args):
         use_Learning = False
         assert args.max_uanum == max_uanum
         assert args.num_ugvs == num_ugv
+        assert args.num_iterations == num_iterations
         assert args.num_drones == 1, "This script only supports 1 UAV"
     elif args.planner == 'jsapiap2':
+        args.num_drones = 2
         max_uanum = 1
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
                     robot_type=RobotType.Drone, at_node=True) for _ in range(args.num_drones)]
@@ -87,7 +89,7 @@ def _setup(args):
         use_DAP = False
         use_Learning = False
         param.REVISIT_PEN = 0.0
-        assert args.num_iterations == 1000
+        assert args.num_iterations == num_iterations
         args.max_depth = 15 #(1ugv-2uavs)
         args.sampling_maps = 200
         assert args.num_drones == 2
@@ -119,8 +121,8 @@ def _setup(args):
         assert args.max_uanum == max_uanum
         assert args.num_drones == 2
         assert args.num_ugvs == num_ugv
+        assert args.num_iterations == num_iterations
     elif args.planner == 'jsapliap':
-        # args.num_drones = 1
         param.REVISIT_PEN = 0.0
         args.num_drones = 1 #, "This script only supports 1 UAV"
         drones = [Robot(position=[starts[0].coord[0], starts[0].coord[1]], cur_node=starts[0].id, \
@@ -128,16 +130,11 @@ def _setup(args):
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_60k.pt' 
-        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_128_3_8_April6.pt'
-        # if args.env_type == 'random':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
-        # elif args.env_type =='islands':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
-        # elif args.env_type == 'bridges':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
-        # else:
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
+        
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_128_3_8_April6.pt' # third best for 1ugv-1uav
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_150_April30.pt' # second best for 1ugv-1uav
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_200_May03.pt' # best for 1ugv-1uav
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_70_May03.pt' # 
         args.max_depth = max_depth
         assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
@@ -153,18 +150,11 @@ def _setup(args):
         use_AVP = False
         use_DAP = False 
         use_Learning = True
-        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_128_3_8_April6.pt'
-        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_60k.pt' # best for 1ugv-2uavs, 2ugvs-2uavs islands graph
-        # if args.env_type == 'random':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_random.pt'
-        # elif args.env_type =='islands':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_islands.pt'
-        # elif args.env_type == 'bridges':
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_bridges.pt'
-        # else:
-        #     model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
-        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_l.pt'
-        assert args.num_iterations == 1000
+        
+        model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_60k.pt' # current best for 1ugv-2uavs, 2ugvs-2uavs islands graph
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_150_April30.pt'
+        # model_path = 'modules/sctp/learning/models/iap_gnn_allgraphs_70_May03.pt' # 
+        assert args.num_iterations == num_iterations
         assert args.num_ugvs == num_ugv
         assert args.max_uanum == max_uanum
         assert args.num_drones == 2, "This script only supports 2 UAVs"
@@ -229,6 +219,16 @@ def _setup(args):
                         seed=args.seed, cost=cost_sum, ttime=runtime, stime=average_step_time, verbose=False)
     
     if print_pdf:
+        path_file = Path(args.save_dir) / f'sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.txt'
+        with open(path_file, "a+") as f:
+            f.write(f"PLANNER {args.planner}\n")
+            if dpaths != []:
+                f.write("UAV PATHS:\n")
+                for pose in drones[0].all_poses:
+                    f.write(f"{pose}\n")
+            f.write("UGV PATHS:\n")
+            for pose in robots[0].all_poses:
+                f.write(f"{pose}\n")
         plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.pdf')    
     plt.savefig(f'{args.save_dir}/sctp_eval_planner_{args.planner}_seed_{args.seed}_{args.num_drones}UAVs.png')
 

@@ -146,7 +146,23 @@ def plot_scatter_data(file_path, args):
             image_name = Path(args.save_dir) / f'plot_cost_ctp_{planners[i].lower()}_{args.num_ugvs}UGVs.png'
             plt.tight_layout()
             plt.savefig(image_name)
-     
+    compare_IAP_DAP = True
+    if compare_IAP_DAP:
+        dap_dist = distances[2]
+        iap_dist = distances[3]
+        x_planner = planners[2]
+        y_planner = planners[3]
+        
+        steptime_avg = np.average(steptimes[i])
+        total_time_avg = np.average(ttimes[i])
+        samptime_avg = np.average(samptimes[i])
+        num_steps = total_time_avg / steptime_avg if steptime_avg > 0.0 else 0.0
+        samptime_step = samptime_avg / num_steps if num_steps > 0.0 else 0.0
+        plotting.make_scatter_plot_with_box(dap_dist, iap_dist, xlabel=x_planner, ylabel=y_planner)
+        image_name = Path(args.save_dir) / f'plot_cost_{x_planner.lower()}_{y_planner.lower()}_{args.num_ugvs}UGVs.pdf'
+        plt.tight_layout()
+        plt.savefig(image_name)
+      
 
 def processed_data(input_file, output_file, args, prefix=None):
     # file_path = Path(args.save_dir) / f'log_{args.num_drones}.txt'
@@ -188,47 +204,37 @@ def processed_data(input_file, output_file, args, prefix=None):
                 
                 data = data + "\n"
                 f.write(data)
-    
-    
-    # if base_dist[0] != None:
-    #     with open(output_file, "a+") as f:
-    #         f.write(f"PLANNER: CTP        | UGVs: {args.num_ugvs} | AVG_COST: {np.average(base_dist):0.2f} |"
-    #             f" AVG_STEP_TIME: {np.average(base_steptimes):0.2f} | SAMP_TIME: {np.average(base_samptimes):0.2f} |"
-    #             f" T.TIME: {np.average(base_ttimes):0.2f} \n")    
-   
-    
+        
 def read_processed_data(filepath, prune_actions=False):
     data = {}
     with open(filepath, 'r') as file:
         for line in file:
             parts = line.split('|')
             planner = parts[0].split(':')[1].strip()
-            # ugvs = int(parts[1].split(':')[1].strip())
-            # avg_cost = float(parts[2].split(':')[1].strip())
-            # avg_step_time = float(parts[3].split(':')[1].strip())
-            # samp_time = float(parts[4].split(':')[1].strip())
-            # total_time = float(parts[5].split(':')[1].strip())
-            # if len(parts) > 6:
-            #     prune_num_action = int(parts[6].split(':')[1].strip())
-                # print(f"The number of prune_action: {prune_num_action}")
             if planner not in data:
                 data[planner] = {}
             
             if prune_actions:
-        
-                avg_cost = float(parts[1].split(':')[1].strip())
-                samp_time = float(parts[2].split(':')[1].strip())
-                avg_step_time = float(parts[3].split(':')[1].strip())
-                avg_step_nums = float(parts[4].split(':')[1].strip())
-                total_time = float(parts[5].split(':')[1].strip())
-                prune_num_action = int(parts[6].split(':')[1].strip())
-        
+                avg_cost = float(parts[2].split(':')[1].strip())
+                samp_time = float(parts[3].split(':')[1].strip())
+                avg_step_time = float(parts[4].split(':')[1].strip())
+                avg_step_nums = float(parts[5].split(':')[1].strip())
+                total_time = float(parts[6].split(':')[1].strip())
+                prune_num_action = int(parts[7].split(':')[1].strip())
+                rollouts = ''
+                
+                if len(parts) > 8:
+                    rollouts = str(parts[8].split(':')[1].strip())
+                if data[planner].get(rollouts) is None:
+                    data[planner][rollouts] = {}
+                
                 assert len(parts) > 6, "Prune num action is specified but not found in the data"
-                data[planner][prune_num_action] = {
+                data[planner][rollouts][prune_num_action] = {
                     'avg_cost': avg_cost,
                     'avg_step_time': avg_step_time,
                     'samp_time': samp_time,
                     'total_time': total_time,
+                    # 'rollouts': rollouts,
                 }
             else:
                 ugvs = int(parts[1].split(':')[1].strip())
@@ -258,35 +264,37 @@ if __name__ == '__main__':
     prune_num_actions = None
     scatter_data = False
     need_to_process = True
-    plot_all = False
+    # plot_all = False
     file_path = args.save_dir
     
     if args.exp_name == 'statistics':
-        args.num_ugvs = 2
+        args.num_ugvs = 1
         input_path = Path(file_path)/ f'plot_data/results_{args.num_ugvs}UGVs.txt'
         args.save_dir = Path(args.save_dir)/ f'plot_data'
         plot_scatter_data(input_path, args)
     elif args.exp_name == 'plot_all':
-        # graphs = ['random', 'bridges', 'islands']
-        graphs = ['islands']
+        graphs = ['random', 'bridges', 'islands']
+        # graphs = ['islands']
         ugvs_num = [1,2,3]
         if need_to_process:
             for graph in graphs:
-                output_path = Path(file_path)/ f'_graph_{graph}_/processed_results_April6.txt'    
+                output_path = Path(file_path)/ f'_graph_{graph}_/processed_results_May10.txt'    
+                print(output_path)
                 for ugv_num in ugvs_num:
                     args.num_ugvs = ugv_num
-                    input_path = Path(file_path)/ f'_graph_{graph}_/{ugv_num}_gnn128_3_8_April6/results_{ugv_num}UGVs.txt'
+                    input_path = Path(file_path)/ f'_graph_{graph}_/{ugv_num}_best/results_{ugv_num}UGVs.txt'
                     processed_data(input_path, output_path, args)
         for graph in graphs:
-            output_path = Path(file_path)/ f'_graph_{graph}_/processed_results_April6.txt'
-               
+            output_path = Path(file_path)/ f'_graph_{graph}_/processed_results_May10.txt'
+            print(f"Plotting data from {output_path}")
+            outfile_name = Path(file_path)/ f'plot_{graph}_gnnMay10.pdf'
             data = read_processed_data(output_path)
             distances = [[data[planner][ugv_num]['avg_cost'] for ugv_num in ugvs_num] for planner in data]
             plotting.plot_allinOne_std(x=ugvs_num, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]", 
-                    ranges=(150, 1400), rangeStep=200, envName=graph)
+                    ranges=(150, 1400), rangeStep=200, envName=graph, outpath=outfile_name)
             
     elif args.exp_name == 'prune_num_action':
-        prune_num_actions = [1,2,3,4,5]
+        prune_num_actions = [1,2,3,4]
         num_sampling = 15000
         output_filename = Path(file_path) / f'bridges/max_uav_action/processed_data_{num_sampling}.txt'
         # planner  = 'JSAP-IAP-1'
@@ -303,6 +311,33 @@ if __name__ == '__main__':
         figure_out = Path(file_path) / f'bridges/max_uav_action/prune_actions_fig_{num_sampling}.pdf'
         plotting.plot_madist_allinOne_std(x=prune_num_actions, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]",
                 ranges=(200, 400), rangeStep=40, envName=f"Bridges_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
+        plt.show()
+    elif args.exp_name == 'action_candidates':
+        prune_num_actions = [1,2,3,4]
+        num_samplings = ['1k', '2k', '4k','8k']
+        output_filename = Path(file_path) / f'_graph_random_/uav_actions/processed_data_pruning.txt'
+        # planner  = 'JSAP-IAP-1'
+        args.num_ugvs = 1
+        is_data_processed = False
+        if not is_data_processed:
+            for num_sampling in num_samplings:
+                for prune_num_action in prune_num_actions:
+                    input_filename = Path(file_path) / f'_graph_random_/uav_actions/1_{prune_num_action}_{num_sampling}/results_1UGVs.txt'
+                    prefix = f" | PRUNE_NUM_ACTION: {prune_num_action} | NUM_SAMPLING: {num_sampling}"
+                    processed_data(input_file=input_filename, output_file=output_filename, args=args, prefix=prefix)
+        
+        data = read_processed_data(output_filename, prune_actions=True)
+        planner = 'JSAP-LIAP'
+        distances = [[data[planner][sampling][prune_num_action]['avg_cost'] 
+                        for prune_num_action in prune_num_actions]
+                        for sampling in num_samplings]
+                        # for planner in data]
+        figure_out = Path(file_path) / f'_graph_random_/uav_actions/prune_actions.pdf'
+        plotting.plot_allinOne_std(x=prune_num_actions, data=distances, std=None, featureNames=num_samplings, yName="Distances [m]",
+                ranges=(150, 300), rangeStep=30, envName=f"Random_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
+        
+        # plotting.plot_madist_allinOne_std(x=prune_num_actions, data=distances, std=None, featureNames=list(data.keys()), yName="Distances [m]",
+        #         ranges=(200, 400), rangeStep=40, envName=f"Bridges_Graph", xName="number of candidate actions after pruning", outpath=figure_out)
         plt.show()
     else:
         raise ValueError(f"Unknown exp_name {args.exp_name}")

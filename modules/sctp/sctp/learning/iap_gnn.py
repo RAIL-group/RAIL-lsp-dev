@@ -14,7 +14,7 @@ NUM_ROUNDS = 3
 # NUM_HEADS = 6
 # NUM_HEADS = 4
 NUM_HEADS = 8
-DROPOUT = 0.30
+DROPOUT = 0.25
 # DROPOUT = 0.2
 
 
@@ -286,7 +286,6 @@ class BipartiteEdgeRegressor(nn.Module):
 
 
 def load_iap_gnn_model(path, device):
-    
     model = BipartiteEdgeRegressor(node_in_dim=NODE_IN, edge_in_dim=EDGE_IN, \
                 num_heads=NUM_HEADS, num_rounds=NUM_ROUNDS, hidden_dim=HIDDEN).to(device)
     model.load_state_dict(torch.load(path, weights_only=True))

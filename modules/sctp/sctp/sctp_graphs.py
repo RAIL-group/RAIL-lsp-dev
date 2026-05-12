@@ -35,7 +35,9 @@ def get_bridges_graph():
         starts, goals, graph = create_bridges_graph()
         start_goal_connected = True
         for i, start in enumerate(starts):
-            if not g.check_graph_valid(startID=start.id, goalID=goals[i].id, graph=graph):
+            if not g.check_graph_valid(startID=start.id, goalID=goals[0].id, graph=graph) or \
+                not g.check_graph_valid(startID=start.id, goalID=goals[1].id, graph=graph) or \
+                    not g.check_graph_valid(startID=start.id, goalID=goals[2].id, graph=graph):
                 start_goal_connected = False
                 break
         if start_goal_connected:

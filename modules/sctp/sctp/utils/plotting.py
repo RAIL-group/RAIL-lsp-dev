@@ -43,13 +43,13 @@ def plot_plan_exec(graph, plt, name="Graph", gpaths=[], dpaths=[], graph_plot=No
         
     box = plot_sctpgraph(graph, ax[1])
     if len(gpaths[0][0]) > 1:        
-        colors = [['purple', 'pink'], ['yellow', 'olive'], ['cyan', 'magenta']]
+        colors = [['pink', 'red'], ['yellow', 'olive'], ['cyan', 'magenta']]
         for i, path in enumerate(gpaths):
             ax[1].scatter(path[0],path[1], marker='s', s=4.5)
             plot_path_fromPoints(ax=ax[1], xy=path, colors=colors[i])
 
     if dpaths != [] and len(dpaths[0][0]) >1:
-        colors = ['navy', 'blue', 'green']
+        colors = ['blue', 'navy', 'green']
         for i, path in enumerate(dpaths):
             ax[1].scatter(path[0], path[1], marker='P', s=4.5, alpha=1.0)            
             plot_pathArrow(points=list(zip(path[0], path[1])), ax=ax[1], color=colors[i])
@@ -140,14 +140,30 @@ def plot_path_fromPoints(ax, xy, colors, ugv=False):
 
 def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):
     from matplotlib.patches import FancyArrowPatch
+    # from matplotlib.colors import LinearSegmentedColormap
     
     # Create colormap
     cmap = LinearSegmentedColormap.from_list('custom', color_pair)
     
-    linewidth = LINE_WIDTH    
+    linewidth = 1.1*LINE_WIDTH    
     for i in range(len(points) - 1):
         if points[i] == points[i + 1]:
             continue
+        
+        # Get start and end points
+        # x_values = [points[i][0], points[i+1][0]]
+        # y_values = [points[i][1], points[i+1][1]]
+        
+        # # Draw the line segment
+        # ax.plot(
+        #     x_values, 
+        #     y_values, 
+        #     color=cmap(i / (len(points) - 1)),
+        #     linewidth=linewidth,
+        #     alpha=0.95,
+        #     solid_capstyle='round' # Makes the joints look smoother
+        # )
+        
         
         # Get start and end points
         start = points[i]
@@ -158,6 +174,7 @@ def plot_arrows_withColor(ax, points, color_pair=['orange', 'green']):
             start,
             end,
             arrowstyle='-|>,head_width=0.27,head_length=0.38',
+            # arrowstyle='-|>,head_width=0.1,head_length=0.1',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
             alpha=0.95,
@@ -357,17 +374,17 @@ def get_arrowHollow(start, end,
   
 
 def plot_pathArrow(points, ax, color='white'):
-    colors = ['navy', 'blue', 'cyan', 'lime', 'green']
+    # colors = ['navy', 'blue', 'cyan', 'lime', 'green']
     if color == 'navy':
         colors = ['navy', 'cyan']
     elif color == 'blue':
-        colors = ['blue', 'lime']
+        colors = ['lime', 'blue']
     elif color == 'green':
         colors = ['green', 'yellow']
     col = mcolors.LinearSegmentedColormap.from_list(color, colors)
     cmap = col
     
-    linewidth = LINE_WIDTH
+    linewidth = 1.1*LINE_WIDTH
     
     for i in range(len(points) - 1):
         if points[i] == points[i + 1]:
@@ -385,6 +402,7 @@ def plot_pathArrow(points, ax, color='white'):
         arrow = FancyArrowPatch(
             start,
             end,
+            # arrowstyle='->,head_width=0.07,head_length=0.08',
             arrowstyle='->,head_width=0.27,head_length=0.38',
             color=cmap(i / (len(points) - 1)),
             linewidth=linewidth,
@@ -433,5 +451,5 @@ def plot_allinOne_std(x, data, std, featureNames, yName,
     if outpath is not None:
         plt.savefig(outpath, bbox_inches='tight')
     else:
-        plt.savefig(f'/data/sctp/Jan30/plot_{envName}_gnnApril6.pdf', bbox_inches='tight')
+        plt.savefig(f'/data/sctp/April30/plot_{envName}_gnnMay10.pdf', bbox_inches='tight')
     plt.close()
