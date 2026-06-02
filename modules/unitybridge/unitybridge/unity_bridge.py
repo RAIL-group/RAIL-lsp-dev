@@ -138,12 +138,14 @@ class UnityBridge(object):
         if not self.is_debug:
             unity_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             unity_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            unity_socket.settimeout(30.0)  # 30 second timeout
             unity_socket.bind((self.tcp_ip, self.listen_port))
             self.unity_subprocess = subprocess.Popen(
                 [self.unity_exe] + self.unity_args.split(" "),
                 stdout=subprocess.DEVNULL)
         else:
             unity_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            unity_socket.settimeout(30.0)  # 30 second timeout
             unity_socket.bind((self.tcp_ip, self.listen_port))
             print(unity_socket)
 

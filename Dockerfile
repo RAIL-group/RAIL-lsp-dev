@@ -36,14 +36,14 @@ RUN uv pip install -r requirements.txt
 RUN uv pip install sknw
 
 # Install PDDLStream
-RUN git clone https://github.com/caelan/pddlstream.git \
-	&& cd pddlstream && ls -a && cat .gitmodules\
-	&& sed -i 's/ss-pybullet/pybullet-planning/' .gitmodules \
-	&& sed -i 's/git@github.com:caelan\/downward.git/https:\/\/github.com\/caelan\/downward/' .gitmodules \
-	&& git submodule update --init --recursive
-RUN cd pddlstream\
-	&& ./downward/build.py
-ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
+# RUN git clone https://github.com/caelan/pddlstream.git \
+# 	&& cd pddlstream && ls -a && cat .gitmodules\
+# 	&& sed -i 's/ss-pybullet/pybullet-planning/' .gitmodules \
+# 	&& sed -i 's/git@github.com:caelan\/downward.git/https:\/\/github.com\/caelan\/downward/' .gitmodules \
+# 	&& git submodule update --init --recursive
+# RUN cd pddlstream\
+# 	&& ./downward/build.py
+# ENV PYTHONPATH="/pddlstream:${PYTHONPATH}"
 
 
 FROM base AS spot

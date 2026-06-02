@@ -84,6 +84,10 @@ build: $(unity-simulator-full-name)
 		--platform linux/amd64 \
 		--build-arg NUM_BUILD_CORES=$(NUM_BUILD_CORES) \
 		-f ./${DOCKERFILE} .
+	@uv sync	
+	@uv pip install sknw torch shapely scikit-image
+	@uv pip install -e ./mrppddl
+	@uv pip install -e ./lsp -e ./mrlsp -e ./lsp_accel -e ./mrlsp_accel -e ./common -e ./gridmap -e ./environments ./unitybridge ./learning ./mrppddlsp
 
 ## ==== Running tests & cleanup ====
 .PHONY: test
