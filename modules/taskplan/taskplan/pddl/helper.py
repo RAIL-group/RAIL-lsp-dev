@@ -8,7 +8,7 @@ from taskplan.planners.planner import NUM_MAX_FRONTIERS
 
 
 def generate_pddl_problem_from_struct(struct):
-    '''struck has keys: 'domain_name', 'problem_name', 'objects', 
+    '''struck has keys: 'domain_name', 'problem_name', 'objects',
     'init_predicates', 'init_fluents', 'goal_states', 'metric'
     init_predicates is a list of strings but init fluents is a dictionary
     '''
@@ -77,10 +77,15 @@ def get_pddl_instance(whole_graph, map_data, args, learned_data=None):
 
     # initialize pddl related contents
     pddl = {}
-    pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
+    is_llm = getattr(args, 'planner_backend', 'pddl') == 'llm'
+    cost_type = 'llm' if is_llm else args.cost_type
+    if is_llm:
+        pddl['domain'] = taskplan.pddl.domain.get_llm_domain(whole_graph)
+    else:
+        pddl['domain'] = taskplan.pddl.domain.get_domain(whole_graph)
     pddl['problem_struct'], pddl['goal'] = taskplan.pddl.problem.get_problem(
         map_data=map_data, unvisited=subgoal_IDs,
-        seed=args.current_seed, cost_type=args.cost_type,
+        seed=args.current_seed, cost_type=cost_type,
         goal_type=args.goal_type, learned_data=learned_data, goal_for=args.goal_for)
     pddl['planner'] = 'ff-astar1'  # 'max-astar'
     pddl['subgoals'] = init_subgoals_idx
@@ -322,6 +327,26 @@ def update_problem_find(problem, objs, loc, prev_rob):
         init_preds.append(pred)
     init_preds.append(('rob-at', loc))
     for obj in objs:
+        init_preds.append(('is-located', obj))
+        init_preds.append(('is-at', obj, loc))
+    problem['init_predicates'] = init_preds
+
+
+def update_problem_find_llm(problem, objs, loc, held_obj):
+    init_preds = []
+    for pred in problem['init_predicates']:
+        if pred == ('hand-is-free',):
+            continue
+        if pred == ('ban-move',):
+            continue
+        if pred == ('ban-find',):
+            continue
+        init_preds.append(pred)
+    init_preds.append(('is-located', held_obj))
+    init_preds.append(('is-holding', held_obj))
+    for obj in objs:
+        if obj == held_obj:
+            continue
         init_preds.append(('is-located', obj))
         init_preds.append(('is-at', obj, loc))
     problem['init_predicates'] = init_preds
