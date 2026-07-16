@@ -37,7 +37,7 @@ DOCKER_CORE_VOLUMES = \
 	--volume="$(RESOURCES_BASE_DIR)/notebooks:/notebooks/:rw" \
 	--volume="$(RESOURCES_BASE_DIR)/ai2thor:/root/.ai2thor/:rw" \
 	--volume="/tmp/.X11-unix:/tmp/.X11-unix:rw"
-DOCKER_BASE = docker run --platform linux/amd64 --init --ipc=host --rm \
+DOCKER_BASE = docker run --platform linux/amd64 --init --ipc=host --network=host --rm \
 	$(DOCKER_ARGS) $(DOCKER_CORE_VOLUMES) \
 	${IMAGE_NAME}:${VERSION}
 DOCKER_PYTHON = $(DOCKER_BASE) uv run python
