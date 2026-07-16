@@ -332,26 +332,6 @@ def update_problem_find(problem, objs, loc, prev_rob):
     problem['init_predicates'] = init_preds
 
 
-def update_problem_find_llm(problem, objs, loc, held_obj):
-    init_preds = []
-    for pred in problem['init_predicates']:
-        if pred == ('hand-is-free',):
-            continue
-        if pred == ('ban-move',):
-            continue
-        if pred == ('ban-find',):
-            continue
-        init_preds.append(pred)
-    init_preds.append(('is-located', held_obj))
-    init_preds.append(('is-holding', held_obj))
-    for obj in objs:
-        if obj == held_obj:
-            continue
-        init_preds.append(('is-located', obj))
-        init_preds.append(('is-at', obj, loc))
-    problem['init_predicates'] = init_preds
-
-
 def get_goals_for_one(seed, cnt_of_interest, obj_of_interest):
     random.seed(seed)
     goal_cnt = random.sample(cnt_of_interest, 1)
