@@ -508,7 +508,6 @@ def get_llm_domain(whole_graph):
         )
         :effect (and
             (is-located ?obj)
-            (not (hand-is-free))
             (not (ban-move))
             (increase (total-cost) {costs['find']})
         )
