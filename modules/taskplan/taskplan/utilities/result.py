@@ -136,3 +136,20 @@ def process_oracle_data(args):
         data,
         columns=['seed', 'ORACLE']
     ).groupby('seed', group_keys=False).tail(1)
+
+
+def process_llm_data(args):
+    """Preprocessing function for LLM planner"""
+    data = []
+
+    for line in open(args.data_file).readlines():
+        d = re.match(r'.*?s: (.*?) . llm: (.*?)\n', line)
+        if d is None:
+            continue
+        d = d.groups()
+        data.append([int(d[0]), float(d[1])])
+
+    return pd.DataFrame(
+        data,
+        columns=['seed', 'LLM_PLANNER']
+    ).groupby('seed', group_keys=False).tail(1)

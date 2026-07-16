@@ -292,4 +292,8 @@ def get_cost_string(args):
         cost_str = 'pessimistic_oracle'
     elif args.logfile_name == 'task_oracle_logfile.txt':
         cost_str = 'oracle'
+    elif args.logfile_name == 'task_llm_logfile.txt':
+        cost_str = 'llm'
+    else:
+        cost_str = 'unknown'
     return cost_str

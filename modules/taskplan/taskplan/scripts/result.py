@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument('--optimistic_oracle', action='store_true')
     parser.add_argument('--pessimistic_oracle', action='store_true')
     parser.add_argument('--oracle', action='store_true')
+    parser.add_argument('--llm', action='store_true')
     args = parser.parse_args()
 
     if args.learned:
@@ -46,4 +47,7 @@ if __name__ == "__main__":
         print(data.describe())
     elif args.oracle:
         data = taskplan.utilities.result.process_oracle_data(args)
+        print(data.describe())
+    elif args.llm:
+        data = taskplan.utilities.result.process_llm_data(args)
         print(data.describe())
