@@ -64,78 +64,79 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
                     # the optimistic assumtion would be the missing object can
                     # be found in either. So, taking the distance of from-loc
                     # to to-loc is sufficient
-                    for from_loc in cnt_names:
-                        for to_loc in cnt_names:
-                            # for the optimistic case, we add the fixed find cost
-                            # and the known cost of moving from from_loc to to_loc
-                            d = costs['find'] + costs['pick'] + map_data.known_cost[from_loc][to_loc]
-                            if cost_type == 'pessimistic':
-                                d = d + 4000
-                            elif cost_type == 'known':
-                                d1 = map_data.known_cost[from_loc][cnt_name]
-                                d2 = map_data.known_cost[cnt_name][to_loc]
-                                d = d1 + d2 + costs['find'] + costs['pick']
-                            elif cost_type == 'learned':
-                                if from_loc == 'initial_robot_pose':
-                                    from_coord = map_data.get_robot_pose()
-                                else:
-                                    from_coord = learned_data['partial_map'].node_coords[
-                                        learned_data['partial_map'].idx_map[from_loc]]
-                                if to_loc == 'initial_robot_pose':
-                                    to_coord = map_data.get_robot_pose()
-                                else:
-                                    to_coord = learned_data['partial_map'].node_coords[
-                                        learned_data['partial_map'].idx_map[to_loc]]
-                                # I need to get the room coords for the from_loc and to_loc
-                                # then I can get the expected cost of finding the object
-                                # in room level; have it saved per target object
-                                if from_loc == 'initial_robot_pose':
-                                    # find in which room the robot is at
-                                    # which room coord is closest to the robot
-                                    from_room_coords = robot_room_coord
+                    if cost_type != 'llm':
+                        for from_loc in cnt_names:
+                            for to_loc in cnt_names:
+                                # for the optimistic case, we add the fixed find cost
+                                # and the known cost of moving from from_loc to to_loc
+                                d = costs['find'] + costs['pick'] + map_data.known_cost[from_loc][to_loc]
+                                if cost_type == 'pessimistic':
+                                    d = d + 4000
+                                elif cost_type == 'known':
+                                    d1 = map_data.known_cost[from_loc][cnt_name]
+                                    d2 = map_data.known_cost[cnt_name][to_loc]
+                                    d = d1 + d2 + costs['find'] + costs['pick']
+                                elif cost_type == 'learned':
+                                    if from_loc == 'initial_robot_pose':
+                                        from_coord = map_data.get_robot_pose()
+                                    else:
+                                        from_coord = learned_data['partial_map'].node_coords[
+                                            learned_data['partial_map'].idx_map[from_loc]]
+                                    if to_loc == 'initial_robot_pose':
+                                        to_coord = map_data.get_robot_pose()
+                                    else:
+                                        to_coord = learned_data['partial_map'].node_coords[
+                                            learned_data['partial_map'].idx_map[to_loc]]
+                                    # I need to get the room coords for the from_loc and to_loc
+                                    # then I can get the expected cost of finding the object
+                                    # in room level; have it saved per target object
+                                    if from_loc == 'initial_robot_pose':
+                                        # find in which room the robot is at
+                                        # which room coord is closest to the robot
+                                        from_room_coords = robot_room_coord
 
-                                else:
-                                    from_cnt_idx = learned_data['partial_map'].idx_map[from_loc]
-                                    room_idx_pos = learned_data['partial_map'].org_edge_index[1].index(from_cnt_idx)
-                                    room_idx = learned_data['partial_map'].org_edge_index[0][room_idx_pos]
-                                    from_room_coords = learned_data['partial_map'].node_coords[room_idx]
+                                    else:
+                                        from_cnt_idx = learned_data['partial_map'].idx_map[from_loc]
+                                        room_idx_pos = learned_data['partial_map'].org_edge_index[1].index(from_cnt_idx)
+                                        room_idx = learned_data['partial_map'].org_edge_index[0][room_idx_pos]
+                                        from_room_coords = learned_data['partial_map'].node_coords[room_idx]
 
-                                if to_loc == 'initial_robot_pose':
-                                    to_room_coords = robot_room_coord
-                                else:
-                                    to_cnt_idx = learned_data['partial_map'].idx_map[to_loc]
-                                    room_idx_pos = learned_data['partial_map'].org_edge_index[1].index(to_cnt_idx)
-                                    room_idx = learned_data['partial_map'].org_edge_index[0][room_idx_pos]
-                                    to_room_coords = learned_data['partial_map'].node_coords[room_idx]
+                                    if to_loc == 'initial_robot_pose':
+                                        to_room_coords = robot_room_coord
+                                    else:
+                                        to_cnt_idx = learned_data['partial_map'].idx_map[to_loc]
+                                        room_idx_pos = learned_data['partial_map'].org_edge_index[1].index(to_cnt_idx)
+                                        room_idx = learned_data['partial_map'].org_edge_index[0][room_idx_pos]
+                                        to_room_coords = learned_data['partial_map'].node_coords[room_idx]
 
-                                # check if the find cost has already been calculated for this object for
-                                # these room pairs
-                                if (gen_name_child, from_room_coords, to_room_coords) in pre_compute:
-                                    intermediate_d = pre_compute[(gen_name_child, from_room_coords, to_room_coords)]
-                                else:
-                                    intermediate_d, pred_sub = get_expected_cost_of_finding(
-                                        learned_data['partial_map'],
-                                        learned_data['subgoals'],
-                                        child_name,
-                                        from_room_coords,  # robot_pose
-                                        to_room_coords,  # destination_pose
-                                        learned_data['learned_net'],
-                                        pred_sub)
-                                    pre_compute[(gen_name_child, from_room_coords, to_room_coords)] = intermediate_d
-                                if (from_coord, from_room_coords) in grid_cost:
-                                    part_from = grid_cost[(from_coord, from_room_coords)]
-                                else:
-                                    part_from = get_cost(map_data.occupancy_grid, from_coord, from_room_coords)
-                                    grid_cost[(from_coord, from_room_coords)] = part_from
+                                    # check if the find cost has already been calculated for this object for
+                                    # these room pairs
+                                    if (gen_name_child, from_room_coords, to_room_coords) in pre_compute:
+                                        intermediate_d = pre_compute[(gen_name_child, from_room_coords, to_room_coords)]
+                                    else:
+                                        intermediate_d, pred_sub = get_expected_cost_of_finding(
+                                            learned_data['partial_map'],
+                                            learned_data['subgoals'],
+                                            child_name,
+                                            from_room_coords,  # robot_pose
+                                            to_room_coords,  # destination_pose
+                                            learned_data['learned_net'],
+                                            pred_sub)
+                                        pre_compute[(gen_name_child, from_room_coords, to_room_coords)] = intermediate_d
+                                    if (from_coord, from_room_coords) in grid_cost:
+                                        part_from = grid_cost[(from_coord, from_room_coords)]
+                                    else:
+                                        part_from = get_cost(map_data.occupancy_grid, from_coord, from_room_coords)
+                                        grid_cost[(from_coord, from_room_coords)] = part_from
 
-                                if (to_coord, to_room_coords) in grid_cost:
-                                    part_to = grid_cost[(to_coord, to_room_coords)]
-                                else:
-                                    part_to = get_cost(map_data.occupancy_grid, to_coord, to_room_coords)
-                                    grid_cost[(to_coord, to_room_coords)] = part_to
-                                d = costs['find'] + part_from + intermediate_d + part_to
+                                    if (to_coord, to_room_coords) in grid_cost:
+                                        part_to = grid_cost[(to_coord, to_room_coords)]
+                                    else:
+                                        part_to = get_cost(map_data.occupancy_grid, to_coord, to_room_coords)
+                                        grid_cost[(to_coord, to_room_coords)] = part_to
+                                    d = costs['find'] + part_from + intermediate_d + part_to
 
-                            init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
+                                init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
                     # or else we can optimistically assume the object is in the nearest
                     # undiscovered location from the to-loc [WILL work on it later!!]
                 else:
@@ -146,12 +147,13 @@ def get_problem(map_data, unvisited, seed=0, cost_type=None,
                     # The expected find cost should be sum of the cost to
                     # cnt_name from the from_loc and then the cost to to_loc
                     # from the cnt_name
-                    for from_loc in cnt_names:
-                        for to_loc in cnt_names:
-                            d1 = map_data.known_cost[from_loc][cnt_name]
-                            d2 = map_data.known_cost[cnt_name][to_loc]
-                            d = d1 + d2
-                            init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
+                    if cost_type != 'llm':
+                        for from_loc in cnt_names:
+                            for to_loc in cnt_names:
+                                d1 = map_data.known_cost[from_loc][cnt_name]
+                                d2 = map_data.known_cost[cnt_name][to_loc]
+                                d = d1 + d2
+                                init_fluents[('find-cost', child_name, from_loc, to_loc)] = round(d, 4)
 
                 init_predicates.append(('is-pickable', child_name))
                 init_predicates.append(('obj-type', gen_name_child, child_name))
