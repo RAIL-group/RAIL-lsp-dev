@@ -8,6 +8,7 @@ from pddlstream.algorithms.search import solve_from_pddl
 
 import procthor
 import taskplan
+import taskplan.planners.llm_planner
 
 
 def evaluate_main(args):
@@ -53,8 +54,16 @@ def evaluate_main(args):
     pddl['problem'] = taskplan.pddl.helper.\
         generate_pddl_problem_from_struct(pddl['problem_struct'])
 
-    plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                 planner=pddl['planner'], max_planner_time=120)
+    if getattr(args, 'planner_backend', 'pddl') == 'llm':
+        pddl['problem_struct']['subgoals'] = [
+            name for name, idx in partial_map.idx_map.items()
+            if idx in pddl['subgoals']
+        ]
+        plan, cost = taskplan.planners.llm_planner.solve_with_llm(
+            pddl['domain'], pddl['problem_struct'], partial_map, args)
+    else:
+        plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
+                                     planner=pddl['planner'], max_planner_time=120)
 
     taskplan.utilities.utils.check_plan_validity(plan, args)
 
@@ -167,9 +176,14 @@ def get_args():
     parser.add_argument('--resolution', type=float, required=True)
     parser.add_argument('--network_file', type=str, required=False)
     parser.add_argument('--goal_type', type=str, required=False)
+    parser.add_argument('--goal_for', type=str, required=False)
     parser.add_argument('--cost_type', type=str, required=False)
     parser.add_argument('--cache_path', type=str, required=False)
     parser.add_argument('--fail_log', type=str, required=False)
+    parser.add_argument('--planner_backend', type=str, choices=['pddl', 'llm'], default='pddl')
+    parser.add_argument('--llm_base_url', type=str, default="http://localhost:11434/v1")
+    parser.add_argument('--llm_model', type=str, default="gemma-4-e4b")
+    parser.add_argument('--llm_use_thinking', action='store_true')
     return parser.parse_args()
 
 
