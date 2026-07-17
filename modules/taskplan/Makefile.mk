@@ -4,6 +4,7 @@ help::
 	@echo "  eval-learned  Evaluates learned planner."
 	@echo "  eval-known	  Evaluates known planner."
 	@echo "  eval-naive	  Evaluates naive planner."
+	@echo "  eval-llm	  Evaluates LLM task planner."
 
 # --- === Object Search and Task Planning in ProcTHOR === ---#
 BASENAME ?= taskplan
@@ -410,3 +411,45 @@ $(map-info-seeds):
 
 .PHONY: gen-map-info
 gen-map-info: $(map-info-seeds)
+
+
+# Task Plan: LLM #
+eval-task-seeds-llm = \
+	$(shell for ii in $$(seq 7000 $$((7000 + $(NUM_EVAL_SEEDS) - 1))); \
+		do echo "$(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_llm_$${ii}.png"; done)
+$(eval-task-seeds-llm): seed = $(shell echo $@ | grep -Eo '[0-9]+' | tail -1)
+$(eval-task-seeds-llm):
+	@echo "Evaluating Data [$(BASENAME) | seed: $(seed) | LLM | $(GOAL_TYPE)"]
+	@mkdir -p $(DATA_BASE_DIR)/$(BASENAME)/results/$(EXPERIMENT_NAME)
+	@$(call xhost_activate)
+	@$(DOCKER_PYTHON) -m taskplan.scripts.eval_replan \
+		$(CORE_ARGS) \
+		$(EVAL_ARGS) \
+	 	--current_seed $(seed) \
+	 	--image_filename task_llm_$(seed).png \
+		--goal_type $(GOAL_TYPE) \
+		--planner_backend llm \
+		--cost_type llm \
+	 	--logfile_name task_llm_logfile.txt
+
+.PHONY: eval-task-llm
+eval-task-llm: $(eval-task-seeds-llm)
+	$(MAKE) result-llm
+
+.PHONY: result-llm
+result-llm:
+	@$(DOCKER_PYTHON) -m taskplan.scripts.result \
+		--data_file /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/task_llm_logfile.txt \
+		--llm
+
+.PHONY: eval-llm
+eval-llm: eval-task-llm
+
+.PHONY: eval-learned
+eval-learned: eval-task-learned
+
+.PHONY: eval-known
+eval-known: eval-task-oracle
+
+.PHONY: eval-naive
+eval-naive: eval-task-optimistic-greedy
