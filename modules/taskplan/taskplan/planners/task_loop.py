@@ -1,9 +1,31 @@
 import time
+import re
 import taskplan
+import taskplan.planners.llm_planner
 
 from pddlstream.algorithms.search import solve_from_pddl
 from taskplan.utilities.utils import get_container_pose
 from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner, KnownPlanner
+
+
+def is_goal_satisfied(problem_struct):
+    for goal in problem_struct.get('goal_states', []):
+        loc_match = re.search(r'is-at \?\w+\s+([\w|]+)', goal)
+        type_match = re.search(r'obj-type-(\w+)\s+\?\w+', goal)
+        if loc_match and type_match:
+            target_loc = loc_match.group(1)
+            target_type = type_match.group(1)
+            
+            satisfied = False
+            for pred in problem_struct.get('init_predicates', []):
+                if pred[0] == 'is-at' and len(pred) == 3:
+                    obj, loc = pred[1], pred[2]
+                    if loc == target_loc and target_type in obj.lower():
+                        satisfied = True
+                        break
+            if not satisfied:
+                return False
+    return True
 
 
 def run(plan, pddl, partial_map, init_robot_pose, args):
@@ -11,6 +33,8 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
     executed_actions = []
     robot_poses = [init_robot_pose]
     action_cost = 0
+    replan_count = 0
+    max_replans = len(pddl['subgoals'])
     while plan:
         for action_idx, action in enumerate(plan):
             # Break loop at the end of plan
@@ -106,53 +130,63 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
             elif action.name == 'find':
                 obj_name = action.args[0]
                 obj_idx = partial_map.idx_map[obj_name]
-                find_start = action.args[1]
+                if len(action.args) == 3:
+                    find_start = action.args[1]
+                    find_end = action.args[2]
+                else:
+                    find_start = action.args[1]
+                    find_end = action.args[1]
                 fs_pose = get_container_pose(find_start, partial_map)
                 if fs_pose is None:
                     fs_pose = init_robot_pose
-                find_end = action.args[2]
                 fe_pose = get_container_pose(find_end, partial_map)
                 if fe_pose is None:
                     fe_pose = init_robot_pose
 
                 # Initialize the partial map
                 partial_map.target_obj = obj_idx
-                # Over here initiate the planner
-                if 'greedy' in args.logfile_name:
-                    planner = ClosestActionPlanner(args, partial_map,
-                                                   destination=fe_pose)
-                elif 'oracle' in args.logfile_name:
-                    planner = KnownPlanner(args, partial_map,
-                                           destination=fe_pose)
+
+                is_llm = getattr(args, 'planner_backend', 'pddl') == 'llm'
+                if is_llm:
+                    explored_loc = partial_map.idx_map[find_end]
+                    pddl['subgoals'].remove(explored_loc)
                 else:
-                    planner = LearnedPlanner(args, partial_map, verbose=True,
-                                             destination=fe_pose)
-                # Initiate planning loop but run for a step
-                planning_loop = taskplan.planners.planning_loop.PlanningLoop(
-                    partial_map=partial_map, robot=fs_pose,
-                    destination=fe_pose, args=args, verbose=True)
+                    # Over here initiate the planner
+                    if 'greedy' in args.logfile_name:
+                        planner = ClosestActionPlanner(args, partial_map,
+                                                       destination=fe_pose)
+                    elif 'oracle' in args.logfile_name:
+                        planner = KnownPlanner(args, partial_map,
+                                               destination=fe_pose)
+                    else:
+                        planner = LearnedPlanner(args, partial_map, verbose=True,
+                                                 destination=fe_pose)
+                    # Initiate planning loop but run for a step
+                    planning_loop = taskplan.planners.planning_loop.PlanningLoop(
+                        partial_map=partial_map, robot=fs_pose,
+                        destination=fe_pose, args=args, verbose=True)
 
-                planning_loop.subgoals = pddl['subgoals'].copy()
-                explored_loc = None
+                    planning_loop.subgoals = pddl['subgoals'].copy()
+                    explored_loc = None
 
-                for counter, step_data in enumerate(planning_loop):
-                    # Update the planner objects
-                    s_time = time.time()
-                    planner.update(
-                        step_data['graph'],
-                        step_data['subgoals'],
-                        step_data['robot_pose'])
-                    print(f"Time taken to update: {time.time() - s_time}")
+                    for counter, step_data in enumerate(planning_loop):
+                        # Update the planner objects
+                        s_time = time.time()
+                        planner.update(
+                            step_data['graph'],
+                            step_data['subgoals'],
+                            step_data['robot_pose'])
+                        print(f"Time taken to update: {time.time() - s_time}")
 
-                    # Compute the next subgoal and set to the planning loop
-                    s_time = time.time()
-                    chosen_subgoal = planner.compute_selected_subgoal()
-                    print(f"Time taken to choose subgoal: {time.time() - s_time}")
-                    planning_loop.set_chosen_subgoal(chosen_subgoal)
+                        # Compute the next subgoal and set to the planning loop
+                        s_time = time.time()
+                        chosen_subgoal = planner.compute_selected_subgoal()
+                        print(f"Time taken to choose subgoal: {time.time() - s_time}")
+                        planning_loop.set_chosen_subgoal(chosen_subgoal)
 
-                    explored_loc = chosen_subgoal.value
-                    pddl['subgoals'].remove(chosen_subgoal.value)
-                    break  # Run the loop only exploring one containers
+                        explored_loc = chosen_subgoal.value
+                        pddl['subgoals'].remove(chosen_subgoal.value)
+                        break  # Run the loop only exploring one containers
 
                 # Get which container was chosen to explore
                 # Get the objects that are connected to that container
@@ -170,20 +204,18 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
                 found_at = idx2assetID[explored_loc]
 
                 # Update problem for find action.
-                # (rob-at {found_at})
-                # For all found_objs (is-located obj)
-                #                   (is-at obj found_at)
-                # add all the contents of that container in the known space [set as located and where]
                 robot_poses.append(partial_map.container_poses[explored_loc])
+                is_llm = getattr(args, 'planner_backend', 'pddl') == 'llm'
                 taskplan.pddl.helper.update_problem_find(
                     pddl['problem_struct'], found_objects, found_at, find_start)
                 # call the next update only for learned cost_type to update
                 # the new find costs after exploring a container
-                if args.cost_type == 'learned':
+                if is_llm or args.cost_type == 'learned':
                     pddl['problem_struct']['missing_objects'] = [
                         obj for obj in pddl['problem_struct']['missing_objects']
                         if obj not in found_objects
                     ]
+                if args.cost_type == 'learned':
                     taskplan.pddl.helper.update_find_costs(
                         pddl['problem_struct'], partial_map,
                         args.network_file, pddl['subgoals'],
@@ -194,10 +226,32 @@ def run(plan, pddl, partial_map, init_robot_pose, args):
 
                 # Finally replan
                 print('Replanning .. .. ..')
-                plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
-                                             planner=pddl['planner'], max_planner_time=240)
+                if is_llm:
+                    pddl['problem_struct']['subgoals'] = [
+                        name for name, idx in partial_map.idx_map.items()
+                        if idx in pddl['subgoals']
+                    ]
+                    pddl['problem_struct']['init_predicates'] = [
+                        pred for pred in pddl['problem_struct']['init_predicates']
+                        if pred[0] not in ('ban-move', 'ban-find')
+                    ]
+                    plan, cost, has_error = taskplan.planners.llm_planner.solve_with_llm(
+                        pddl['domain'], pddl['problem_struct'], partial_map, args)
+                    if has_error:
+                        taskplan.utilities.utils.terminate_experiment(args, "LLM hallucinated invalid action arguments during replan.")
+                else:
+                    plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
+                                                 planner=pddl['planner'], max_planner_time=240)
                 cost_str = taskplan.utilities.utils.get_cost_string(args)
                 taskplan.utilities.utils.check_replan_validity(plan, args, cost_str)
+                replan_count += 1
+                if replan_count > max_replans:
+                    taskplan.utilities.utils.terminate_experiment(args, f"Max replan count ({max_replans}) exceeded. Terminating.")
                 break
+
+        if not plan:
+            is_llm = getattr(args, 'planner_backend', 'pddl') == 'llm'
+            if is_llm and not is_goal_satisfied(pddl['problem_struct']):
+                taskplan.utilities.utils.terminate_experiment(args, "Plan ended but goal not satisfied and no valid find action to replan from. Terminating experiment.")
 
     return executed_actions, robot_poses, action_cost

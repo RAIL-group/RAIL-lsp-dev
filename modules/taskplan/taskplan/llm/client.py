@@ -2,17 +2,8 @@ import os
 import httpx
 
 class OllamaClient:
-    def __init__(self, base_url="http://localhost:11434/v1", model="gemma:4b"):
-        # Map base_url to the native Ollama chat API
-        url = base_url.strip()
-        if url.endswith("/v1"):
-            self.chat_url = url[:-3] + "/api/chat"
-        elif url.endswith("/v1/"):
-            self.chat_url = url[:-4] + "/api/chat"
-        elif "/api/chat" not in url:
-            self.chat_url = url.rstrip("/") + "/api/chat"
-        else:
-            self.chat_url = url
+    def __init__(self, base_url="http://localhost:11434/api/chat", model="gemma:e4b"):
+        self.chat_url = base_url.strip()
 
         self.tags_url = self.chat_url.replace("/api/chat", "/api/tags")
         self.model = model
@@ -33,7 +24,7 @@ class OllamaClient:
             "messages": messages,
             "stream": False,
             "options": {
-                "num_ctx": 128000,
+                "num_ctx": 65536,
                 "temperature": 1.0
             }
         }

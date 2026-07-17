@@ -1,13 +1,13 @@
+import copy
+import taskplan.pddl.helper
+
 class PDDLStateValidator:
     def __init__(self, problem_struct):
         self.objects = set()
         for objs in problem_struct.get('objects', {}).values():
             self.objects.update(objs)
-        
-        self.facts = set()
-        for pred in problem_struct.get('init_predicates', []):
-            # Normalize predicates to tuples of strings
-            self.facts.add(tuple(str(x) for x in pred))
+
+        self.mock_problem = copy.deepcopy(problem_struct)
 
     def validate_and_apply(self, action):
         name = action.name.lower()
@@ -20,13 +20,7 @@ class PDDLStateValidator:
                 return False
 
         def has(pred_name, *pred_args):
-            return (pred_name, *pred_args) in self.facts
-
-        def add(pred_name, *pred_args):
-            self.facts.add((pred_name, *pred_args))
-
-        def remove(pred_name, *pred_args):
-            self.facts.discard((pred_name, *pred_args))
+            return (pred_name, *pred_args) in self.mock_problem['init_predicates']
 
         if name == 'pour-water':
             if len(args) != 3: return False
@@ -39,10 +33,7 @@ class PDDLStateValidator:
                     not has('filled-with-water', pour_to) and
                     not has('filled-with-coffee', pour_to)):
                 return False
-            add('filled-with-water', pour_to)
-            remove('filled-with-water', pour_from)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_pourwater(self.mock_problem, pour_from, pour_to)
 
         elif name == 'pour-coffee':
             if len(args) != 3: return False
@@ -55,10 +46,7 @@ class PDDLStateValidator:
                     not has('filled-with-water', pour_to) and
                     not has('filled-with-coffee', pour_to)):
                 return False
-            add('filled-with-coffee', pour_to)
-            remove('filled-with-coffee', pour_from)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_pourcoffee(self.mock_problem, pour_from, pour_to)
 
         elif name == 'make-coffee':
             if len(args) != 3: return False
@@ -71,10 +59,7 @@ class PDDLStateValidator:
                     has('is-coffeeingredient', ingredient) and
                     has('is-at', ingredient, loc)):
                 return False
-            add('filled-with-coffee', receptacle)
-            remove('filled-with-water', receptacle)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_makecoffee(self.mock_problem, receptacle)
 
         elif name == 'boil':
             if len(args) != 3: return False
@@ -87,9 +72,7 @@ class PDDLStateValidator:
                     has('rob-at', loc) and
                     not has('is-boiled', boilitem)):
                 return False
-            add('is-boiled', boilitem)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_boil(self.mock_problem, boilitem)
 
         elif name == 'peel':
             if len(args) != 3: return False
@@ -101,9 +84,7 @@ class PDDLStateValidator:
                     has('rob-at', loc) and
                     not has('is-peeled', peelitem)):
                 return False
-            add('is-peeled', peelitem)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_peel(self.mock_problem, peelitem)
 
         elif name == 'toast':
             if len(args) != 3: return False
@@ -116,9 +97,7 @@ class PDDLStateValidator:
                     has('rob-at', loc) and
                     not has('is-toasted', toastitem)):
                 return False
-            add('is-toasted', toastitem)
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_toast(self.mock_problem, toastitem)
 
         elif name == 'pick':
             if len(args) != 2: return False
@@ -129,11 +108,7 @@ class PDDLStateValidator:
                     has('rob-at', loc) and
                     has('hand-is-free')):
                 return False
-            remove('is-at', obj, loc)
-            add('is-holding', obj)
-            remove('hand-is-free')
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_pick(self.mock_problem, obj, loc)
 
         elif name == 'place':
             if len(args) != 2: return False
@@ -142,11 +117,7 @@ class PDDLStateValidator:
                     has('rob-at', loc) and
                     has('is-holding', obj)):
                 return False
-            add('is-at', obj, loc)
-            remove('is-holding', obj)
-            add('hand-is-free')
-            remove('ban-move')
-            remove('ban-find')
+            taskplan.pddl.helper.update_problem_place(self.mock_problem, obj, loc)
 
         elif name == 'move':
             if len(args) != 2: return False
@@ -157,10 +128,7 @@ class PDDLStateValidator:
                     not has('ban-move') and
                     has('rob-at', start)):
                 return False
-            remove('rob-at', start)
-            add('rob-at', end)
-            add('ban-move')
-            add('ban-find')
+            taskplan.pddl.helper.update_problem_move(self.mock_problem, end)
 
         elif name == 'find':
             if len(args) != 2: return False
@@ -176,10 +144,9 @@ class PDDLStateValidator:
                       f"pickable={has('is-pickable', obj)}, "
                       f"hand-free={has('hand-is-free')}")
                 return False
-            add('is-located', obj)
-            remove('hand-is-free')
-            add('is-holding', obj)
-            remove('ban-move')
+            
+            if ('ban-move',) in self.mock_problem['init_predicates']:
+                self.mock_problem['init_predicates'].remove(('ban-move',))
 
         else:
             print(f"Validation failed: Unknown action name '{name}'.")

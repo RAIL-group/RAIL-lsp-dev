@@ -17,7 +17,7 @@ CORE_ARGS ?= --resolution 0.05 \
 EVAL_ARGS ?= --save_dir /data/$(BASENAME)/results/$(EXPERIMENT_NAME) \
 			--network_file /data/$(BASENAME)/logs/$(EXPERIMENT_NAME)/fcnn.pt \
 			--fail_log /data/$(BASENAME)/results/$(EXPERIMENT_NAME)/fail_log.txt
-GOAL_TYPE ?= breakfast
+GOAL_TYPE ?= 1object
 
 ### Target for experiments ###
 # Data generation target
@@ -430,6 +430,7 @@ $(eval-task-seeds-llm):
 		--goal_type $(GOAL_TYPE) \
 		--planner_backend llm \
 		--cost_type llm \
+		--llm_model gemma4:e4b \
 	 	--logfile_name task_llm_logfile.txt
 
 .PHONY: eval-task-llm

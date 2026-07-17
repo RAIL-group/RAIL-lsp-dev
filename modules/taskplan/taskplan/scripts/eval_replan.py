@@ -59,8 +59,10 @@ def evaluate_main(args):
             name for name, idx in partial_map.idx_map.items()
             if idx in pddl['subgoals']
         ]
-        plan, cost = taskplan.planners.llm_planner.solve_with_llm(
+        plan, cost, has_error = taskplan.planners.llm_planner.solve_with_llm(
             pddl['domain'], pddl['problem_struct'], partial_map, args)
+        if has_error:
+            taskplan.utilities.utils.terminate_experiment(args, "LLM hallucinated invalid action arguments in initial plan.")
     else:
         plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                      planner=pddl['planner'], max_planner_time=120)
@@ -181,7 +183,7 @@ def get_args():
     parser.add_argument('--cache_path', type=str, required=False)
     parser.add_argument('--fail_log', type=str, required=False)
     parser.add_argument('--planner_backend', type=str, choices=['pddl', 'llm'], default='pddl')
-    parser.add_argument('--llm_base_url', type=str, default="http://localhost:11434/v1")
+    parser.add_argument('--llm_base_url', type=str, default="http://localhost:11434/api/chat")
     parser.add_argument('--llm_model', type=str, default="gemma-4-e4b")
     parser.add_argument('--llm_use_thinking', action='store_true')
     return parser.parse_args()

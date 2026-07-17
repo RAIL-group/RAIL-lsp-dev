@@ -17,7 +17,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
     problem_pddl = taskplan.pddl.helper.generate_pddl_problem_from_struct(clean_struct)
 
     # 2. Extract client settings from arguments with fallbacks
-    base_url = getattr(args, 'llm_base_url', "http://localhost:11434/v1")
+    base_url = getattr(args, 'llm_base_url', "http://localhost:11434/api/chat")
     model = getattr(args, 'llm_model', "gemma-4-e4b")
     use_thinking = getattr(args, 'llm_use_thinking', True)
 
@@ -49,6 +49,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
     # action or immediately after the first find action.
     validator = PDDLStateValidator(problem_struct)
     validated_actions = []
+    has_error = False
     for action in actions:
         if validator.validate_and_apply(action):
             validated_actions.append(action)
@@ -56,6 +57,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
                 break
         else:
             print(f"Truncating plan due to invalid LLM action: {action}")
+            has_error = True
             break
 
     # 6. Sum the action costs for the validated plan prefix
@@ -72,4 +74,4 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
             total_cost += float(costs.get(name, 0.0))
 
     print(f"Validated LLM plan prefix: {validated_actions} with cost: {total_cost}")
-    return validated_actions, total_cost
+    return validated_actions, total_cost, has_error
