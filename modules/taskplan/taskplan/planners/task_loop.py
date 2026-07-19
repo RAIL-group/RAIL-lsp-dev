@@ -8,23 +8,64 @@ from taskplan.utilities.utils import get_container_pose
 from taskplan.planners.planner import ClosestActionPlanner, LearnedPlanner, KnownPlanner
 
 
+def parse_sexp(s):
+    s = s.replace('(', ' ( ').replace(')', ' ) ')
+    tokens = s.split()
+    def read_from_tokens(tokens):
+        if len(tokens) == 0:
+            raise SyntaxError('unexpected EOF')
+        token = tokens.pop(0)
+        if token == '(':
+            l = []
+            while tokens[0] != ')':
+                l.append(read_from_tokens(tokens))
+            tokens.pop(0) # pop ')'
+            return l
+        elif token == ')':
+            raise SyntaxError('unexpected )')
+        else:
+            return token
+    return read_from_tokens(tokens)
+
+def evaluate_goal(goal_exp, state_preds, all_objs, env):
+    if goal_exp[0] == 'and':
+        return all(evaluate_goal(sub, state_preds, all_objs, env) for sub in goal_exp[1:])
+    elif goal_exp[0] == 'or':
+        return any(evaluate_goal(sub, state_preds, all_objs, env) for sub in goal_exp[1:])
+    elif goal_exp[0] == 'exists':
+        var_name = goal_exp[1][0]
+        body = goal_exp[2]
+        for obj in all_objs:
+            new_env = env.copy()
+            new_env[var_name] = obj
+            if evaluate_goal(body, state_preds, all_objs, new_env):
+                return True
+        return False
+    elif goal_exp[0] == 'not':
+        return not evaluate_goal(goal_exp[1], state_preds, all_objs, env)
+    else:
+        pred_name = goal_exp[0]
+        args = [env.get(arg, arg) for arg in goal_exp[1:]]
+        if pred_name.startswith('obj-type-'):
+            expected_type = pred_name[len('obj-type-'):].lower()
+            return expected_type in args[0].lower()
+        target_pred = tuple([pred_name] + args)
+        return target_pred in state_preds
+
 def is_goal_satisfied(problem_struct):
-    for goal in problem_struct.get('goal_states', []):
-        loc_match = re.search(r'is-at \?\w+\s+([\w|]+)', goal)
-        type_match = re.search(r'obj-type-(\w+)\s+\?\w+', goal)
-        if loc_match and type_match:
-            target_loc = loc_match.group(1)
-            target_type = type_match.group(1)
-            
-            satisfied = False
-            for pred in problem_struct.get('init_predicates', []):
-                if pred[0] == 'is-at' and len(pred) == 3:
-                    obj, loc = pred[1], pred[2]
-                    if loc == target_loc and target_type in obj.lower():
-                        satisfied = True
-                        break
-            if not satisfied:
+    state_preds = set([tuple(p) for p in problem_struct.get('init_predicates', [])])
+    all_objs = set()
+    for objs in problem_struct.get('objects', {}).values():
+        all_objs.update(objs)
+        
+    for goal_str in problem_struct.get('goal_states', []):
+        try:
+            goal_exp = parse_sexp(goal_str)
+            if not evaluate_goal(goal_exp, state_preds, all_objs, {}):
                 return False
+        except Exception as e:
+            print(f"Goal evaluation failed for {goal_str}: {e}")
+            return False
     return True
 
 
