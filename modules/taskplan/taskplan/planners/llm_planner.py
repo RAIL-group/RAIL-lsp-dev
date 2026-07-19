@@ -4,7 +4,6 @@ from taskplan.llm.client import OllamaClient
 from taskplan.llm import prompts
 from taskplan.llm import plan_parser
 from taskplan.llm.validator import PDDLStateValidator
-from taskplan.planners.task_loop import is_goal_satisfied
 
 
 def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
@@ -56,6 +55,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
         actions = []
 
     if not actions:
+        from taskplan.planners.task_loop import is_goal_satisfied
         if is_goal_satisfied(problem_struct):
             print("Goal is already satisfied. No actions needed.")
             return [], 0.0, None
