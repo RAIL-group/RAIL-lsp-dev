@@ -26,11 +26,15 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
     system_prompt = prompts.get_system_prompt(use_thinking=use_thinking)
 
     client = OllamaClient(base_url=base_url, model=model)
-    response_text = client.query(
-        prompt=prompt,
-        response_format={"type": "json_object"},
-        system_prompt=system_prompt
-    )
+    try:
+        response_text = client.query(
+            prompt=prompt,
+            response_format={"type": "json_object"},
+            system_prompt=system_prompt
+        )
+    except ConnectionError as e:
+        print(f"LLM query failed: {e}")
+        return [], 0.0, "LLM client timed out or connection failed."
 
     # print("--- LLM PROMPT ---", flush=True)
     # print(prompt, flush=True)
@@ -49,7 +53,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
     # action or immediately after the first find action.
     validator = PDDLStateValidator(problem_struct)
     validated_actions = []
-    has_error = False
+    error_msg = None
     for action in actions:
         if validator.validate_and_apply(action):
             validated_actions.append(action)
@@ -57,7 +61,7 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
                 break
         else:
             print(f"Truncating plan due to invalid LLM action: {action}")
-            has_error = True
+            error_msg = "LLM hallucinated invalid action arguments in initial plan."
             break
 
     # 6. Sum the action costs for the validated plan prefix
@@ -74,4 +78,4 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
             total_cost += float(costs.get(name, 0.0))
 
     print(f"Validated LLM plan prefix: {validated_actions} with cost: {total_cost}")
-    return validated_actions, total_cost, has_error
+    return validated_actions, total_cost, error_msg

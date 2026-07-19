@@ -59,10 +59,10 @@ def evaluate_main(args):
             name for name, idx in partial_map.idx_map.items()
             if idx in pddl['subgoals']
         ]
-        plan, cost, has_error = taskplan.planners.llm_planner.solve_with_llm(
+        plan, cost, error_msg = taskplan.planners.llm_planner.solve_with_llm(
             pddl['domain'], pddl['problem_struct'], partial_map, args)
-        if has_error:
-            taskplan.utilities.utils.terminate_experiment(args, "LLM hallucinated invalid action arguments in initial plan.")
+        if error_msg:
+            taskplan.utilities.utils.terminate_experiment(args, error_msg)
     else:
         plan, cost = solve_from_pddl(pddl['domain'], pddl['problem'],
                                      planner=pddl['planner'], max_planner_time=120)
