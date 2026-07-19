@@ -133,6 +133,11 @@ class PDDLStateValidator:
         elif name == 'find':
             if len(args) != 2: return False
             obj, loc = args
+            
+            if 'subgoals' in self.mock_problem and loc not in self.mock_problem['subgoals']:
+                print(f"Validation failed for find({obj}, {loc}): Location '{loc}' has already been searched or is not a valid subgoal.")
+                return False
+                
             cond = (has('rob-at', loc) and
                     not has('is-located', obj) and
                     has('is-pickable', obj) and
