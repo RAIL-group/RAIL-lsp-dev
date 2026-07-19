@@ -47,7 +47,20 @@ def solve_with_llm(domain_pddl, problem_struct, partial_map, args):
 
 
     # 4. Parse the resulting JSON plan
-    actions = plan_parser.parse_plan(response_text)
+    try:
+        actions = plan_parser.parse_plan(response_text)
+    except Exception as e:
+        print(f"Failed to parse LLM plan: {e}")
+        actions = []
+
+    if not actions:
+        import taskplan.planners.task_loop
+        if taskplan.planners.task_loop.is_goal_satisfied(problem_struct):
+            print("Goal is already satisfied. No actions needed.")
+            return [], 0.0, None
+        else:
+            print("LLM returned an empty or invalid plan, but the goal is not satisfied.")
+            return [], 0.0, "LLM failed to generate a valid plan for the unsatisfied goal."
 
     # 5. Forward-simulate and validate the actions, truncating at the first invalid
     # action or immediately after the first find action.
