@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 AS base
+FROM nvidia/cuda:13.0.3-cudnn-devel-ubuntu22.04 AS base
 
 ENV VIRTUALGL_VERSION=3.1.2
 # Enable all NVIDIA GPU capabilities (includes both CUDA and OpenGL)
@@ -29,8 +29,13 @@ RUN uv pip install pybind11 wheel setuptools
 
 
 FROM base AS base-python
-RUN uv pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0 --index-url https://download.pytorch.org/whl/cu124
-RUN uv pip install torch_geometric -f https://data.pyg.org/whl/torch-2.5.0+cu124.html
+ENV UV_HTTP_TIMEOUT=600
+ENV UV_HTTP_RETRIES=6
+ENV UV_CONCURRENT_DOWNLOADS=4
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+# RUN uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+RUN uv pip install torch_geometric
 COPY modules/requirements.txt requirements.txt
 RUN uv pip install -r requirements.txt
 RUN uv pip install sknw
