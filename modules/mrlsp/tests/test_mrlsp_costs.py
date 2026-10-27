@@ -6,7 +6,8 @@ import mrlsp_accel
 from mrlsp.core import (get_mr_ordering_cost_py,
                         get_mr_ordering_cost_cpp,
                         get_mr_lowest_cost_ordering_py,
-                        get_mr_lowest_cost_ordering_cpp)
+                        get_mr_lowest_cost_ordering_cpp,
+                        get_mr_lowest_cost_state_py)
 
 class Robot():
     def __init__(self, id):
@@ -179,40 +180,27 @@ def test_best_cost_ordering_random(num_robots, num_frontiers):
                 for f2 in frontiers + robots}
     }
 
-    # brute force solution
-    bf_cost_py, bf_ordering_py = min(
-        ((get_mr_ordering_cost_py(robots_hash, ordering, distances), ordering)
-        for ordering in itertools.permutations(frontiers)),
-        key=lambda dat: dat[0]
-    )
-    bf_cost_cpp, bf_ordering_cpp = min(
-        ((get_mr_ordering_cost_cpp(robots_hash, list(ordering), distances), ordering)
-        for ordering in itertools.permutations(frontiers)),
-        key=lambda dat: dat[0]
-    )
-    assert pytest.approx(bf_cost_cpp) == bf_cost_py
-    assert [hash(o) for o in bf_ordering_cpp] == [hash(o) for o in bf_ordering_py]
+    # brute force solution: fix the first assignments to every permutation of the frontiers (with fewer
+    # frontiers than robots, every way of giving each robot a frontier that leaves none unassigned)
+    # and complete at lowest cost
+    if num_frontiers >= num_robots:
+        first_assignments = itertools.permutations(frontiers)
+    else:
+        first_assignments = [o for o in itertools.product(frontiers, repeat=num_robots)
+                             if set(o) == set(frontiers)]
+    bf_cost_py = min(get_mr_lowest_cost_state_py(robots_hash, frontiers, distances, ordering=ordering).cost
+                     for ordering in first_assignments)
 
     # solution using our function
     cost_py, ordering_py = get_mr_lowest_cost_ordering_py(robots_hash, frontiers, distances)
-    cost_cpp, ordering_cpp = get_mr_lowest_cost_ordering_cpp(robots_hash, frontiers, distances)
-    assert cost_cpp == cost_py
-
     assert pytest.approx(cost_py) == bf_cost_py
-    if num_frontiers >= num_robots:
-        assert len(ordering_py) == num_frontiers
-        assert [o for o in ordering_py] == [hash(o) for o in bf_ordering_py]
-        assert [o for o in ordering_cpp] == [o for o in ordering_py]
-    else:
-        # If the number of frontiers is less than the number of robots, the MRFstate would distribute
-        # frontiers to all robots (more than one robots would explore a frontier) and creates an
-        # ordering. Making sure that the cost for that ordering is the same as the brute force solution
-        assert len(ordering_py) == num_robots
-        assert len(ordering_cpp) == num_robots
-        cost_py = get_mr_ordering_cost_py(robots_hash, [hash_to_frontiers[o] for o in ordering_py], distances)
-        cost_cpp = get_mr_ordering_cost_cpp(robots_hash, [hash_to_frontiers[o] for o in ordering_cpp], distances)
-        assert pytest.approx(cost_py) == bf_cost_py
-        assert pytest.approx(cost_cpp) == bf_cost_cpp
+    # The ordering holds every assignment, so following it reproduces the cost
+    assert len(ordering_py) >= min(num_frontiers, num_robots)
+    assert pytest.approx(cost_py) == get_mr_lowest_cost_state_py(
+        robots_hash, frontiers, distances, ordering=[hash_to_frontiers[o] for o in ordering_py]).cost
+
+    cost_cpp, ordering_cpp = get_mr_lowest_cost_ordering_cpp(robots_hash, frontiers, distances)
+    assert pytest.approx(cost_cpp) == cost_py
 
 
 def test_one_robot_changes_frontier_mid_way():
@@ -287,3 +275,68 @@ def test_goal_frontier_cost_accumulation():
     assert cost2_py == 126.07
     assert cost1_py == cost1_cpp
     assert cost2_py == cost2_cpp
+
+
+def test_greedy_endgame_fewer_subgoals_than_robots():
+    '''r3 never gets a subgoal from the ordering search, so the end assignment sends it to
+    its nearest subgoal (a1: 3 < a2: 4), which r1 already reaches at t=1. Sending r3 to a2
+    instead explores a2 at t=4 rather than when r1 or r2 gets there at t=50.'''
+    a1 = lsp.core.Frontier(points=np.array([[0], [0]]))
+    a2 = lsp.core.Frontier(points=np.array([[1], [1]]))
+    a1.set_props(prob_feasible=0.5, delta_success_cost=0, exploration_cost=0)
+    a2.set_props(prob_feasible=0.5, delta_success_cost=0, exploration_cost=0)
+    r1 = Robot(1)
+    r2 = Robot(2)
+    r3 = Robot(3)
+    distances = {
+        'goal': {hash(a1): 0, hash(a2): 0},
+        'all': {frozenset([hash(a1), hash(a2)]): 100,
+                frozenset([hash(r1), hash(a1)]): 1, frozenset([hash(r1), hash(a2)]): 50,
+                frozenset([hash(r2), hash(a1)]): 2, frozenset([hash(r2), hash(a2)]): 50,
+                frozenset([hash(r3), hash(a1)]): 3, frozenset([hash(r3), hash(a2)]): 4},
+    }
+    subgoals = [a1, a2]
+    robots_hash = [hash(r1), hash(r2), hash(r3)]
+
+    # r1 -> a1 (t=1), r3 -> a2 (t=4)
+    expected_cost = 1 + (1 - a1.prob_feasible) * 3
+    cost_py, ordering_py = get_mr_lowest_cost_ordering_py(robots_hash, subgoals, distances)
+    assert pytest.approx(cost_py) == expected_cost
+    assert ordering_py[2] == hash(a2)
+    cost_cpp, ordering_cpp = get_mr_lowest_cost_ordering_cpp(robots_hash, subgoals, distances)
+    assert pytest.approx(cost_cpp) == expected_cost
+    assert ordering_cpp[2] == hash(a2)
+
+
+def test_greedy_endgame_free_robot_helps_wrong_subgoal():
+    '''r1 finishes a1 at t=1 while r2 (a2, t=10) and r3 (a3, t=100) are still on the way.
+    The end assignment sends r1 to its nearest subgoal a2 (5 < 6), duplicating r2, and a3
+    is only explored at t=56. Sending r1 to a3 explores it at t=7 and r2 still gets a2 at t=10.'''
+    a1 = lsp.core.Frontier(points=np.array([[0], [0]]))
+    a2 = lsp.core.Frontier(points=np.array([[1], [1]]))
+    a3 = lsp.core.Frontier(points=np.array([[2], [2]]))
+    a1.set_props(prob_feasible=0.5, delta_success_cost=0, exploration_cost=0)
+    a2.set_props(prob_feasible=0.5, delta_success_cost=0, exploration_cost=0)
+    a3.set_props(prob_feasible=0.5, delta_success_cost=0, exploration_cost=0)
+    r1 = Robot(1)
+    r2 = Robot(2)
+    r3 = Robot(3)
+    distances = {
+        'goal': {hash(a1): 0, hash(a2): 0, hash(a3): 0},
+        'all': {frozenset([hash(a1), hash(a2)]): 5, frozenset([hash(a1), hash(a3)]): 6,
+                frozenset([hash(a2), hash(a3)]): 50,
+                frozenset([hash(r1), hash(a1)]): 1, frozenset([hash(r1), hash(a2)]): 200, frozenset([hash(r1), hash(a3)]): 200,
+                frozenset([hash(r2), hash(a1)]): 200, frozenset([hash(r2), hash(a2)]): 10, frozenset([hash(r2), hash(a3)]): 200,
+                frozenset([hash(r3), hash(a1)]): 200, frozenset([hash(r3), hash(a2)]): 200, frozenset([hash(r3), hash(a3)]): 100},
+    }
+    subgoals = [a1, a2, a3]
+    robots_hash = [hash(r1), hash(r2), hash(r3)]
+
+    # Greedy: a1 at t=1, a2 at t=6 (r1), a3 at t=56 (r1) -> 1 + 0.5 * 5 + 0.25 * 50 = 16
+    # (the greedy search instead returns 14 for ordering [a3, a2, a1], where r2 explores everything)
+    # Best:   a1 at t=1, a3 at t=7 (r1), a2 at t=10 (r2) -> 1 + 0.5 * 6 + 0.25 * 3 = 4.75
+    expected_cost = 1 + 0.5 * 6 + 0.25 * 3
+    cost_py, _ = get_mr_lowest_cost_ordering_py(robots_hash, subgoals, distances)
+    assert pytest.approx(cost_py) == expected_cost
+    cost_cpp, _ = get_mr_lowest_cost_ordering_cpp(robots_hash, subgoals, distances)
+    assert pytest.approx(cost_cpp) == expected_cost

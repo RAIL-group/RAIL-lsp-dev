@@ -21,10 +21,12 @@ class MRFState(object):
             delta_t = (old_state.cost_to_target - old_state.progress)[done_robot_id]
             delta_fi = old_state.target_robot_locations[done_robot_id]
 
-            ps = self.hash_to_subgoal[delta_fi].prob_feasible if delta_fi in self.hash_to_subgoal else 0
+            # Arriving at a robot's start or at a subgoal another robot already explored reveals nothing
+            is_newly_explored = delta_fi in old_state.unexplored
+            ps = self.hash_to_subgoal[delta_fi].prob_feasible if is_newly_explored else 0
             Rs = self.distances['goal'][delta_fi] + \
-                self.hash_to_subgoal[delta_fi].delta_success_cost if delta_fi in self.hash_to_subgoal else 0
-            Re = self.hash_to_subgoal[delta_fi].exploration_cost if delta_fi in self.hash_to_subgoal else 0
+                self.hash_to_subgoal[delta_fi].delta_success_cost if is_newly_explored else 0
+            Re = self.hash_to_subgoal[delta_fi].exploration_cost if is_newly_explored else 0
             Q_success = Rs - min(Rs, Re)
             self.cost = old_state.cost + old_state.prob * (delta_t + ps * Q_success)
             self.prob = old_state.prob * (1 - ps)
@@ -38,24 +40,10 @@ class MRFState(object):
 
             self.prev_robot_locations[done_robot_id] = self.target_robot_locations[done_robot_id]
             if new_frontier is not None:
-                # Don't assign when the frontier list is equal to the overall subgoals
-                # Except when the number of subgoal is less than the number of robots assign the new frontier
-                if (len(self.frontier_list) < len(self.hash_to_subgoal) or
-                        len(self.frontier_list) < self.num_robots):
-                    self.frontier_list +=  [hash(new_frontier)]
+                self.frontier_list += [hash(new_frontier)]
                 self.target_robot_locations[done_robot_id] = hash(new_frontier)
                 self.cost_to_target[done_robot_id] = self.get_cost_to_target(self.prev_robot_locations[done_robot_id],
                                                                             self.target_robot_locations[done_robot_id])
-
-                # If any target_robot_locations is not in unexplored, then it is already explored
-                # assign it to nearest unexplored location
-                already_explored_frontiers = [(idx, f) for idx, f in enumerate(self.target_robot_locations)
-                                            if f not in self.unexplored and f in self.hash_to_subgoal]
-                for idx, exp_f in already_explored_frontiers:
-                    new_target, distance = min([(f, self.get_cost_to_target(exp_f, f)) for f in self.unexplored],
-                                                key=lambda x: x[1])
-                    self.cost_to_target[idx] += distance
-                    self.target_robot_locations[idx] = new_target
         else:
             self.frontier_list = []
             self.distances = distances
@@ -65,13 +53,26 @@ class MRFState(object):
             self.prev_robot_locations = np.array(robots)
             self.target_robot_locations = np.array(robots)
             self.unexplored = {hash(s) for s in all_subgoals}
-            self.unassigned_subgoals = [hash(s) for s in all_subgoals]
             self.hash_to_subgoal = {hash(s): s for s in all_subgoals}
             self.prob = 1
             self.cost = 0
 
     def __lt__(self, other):
         return self.cost < other.cost
+
+    def get_subgoal_candidates(self):
+        '''Subgoals the next robot to finish can be sent to. While there is a subgoal no robot is
+        heading to for every free robot, it takes one of those (a permutation of the subgoals);
+        otherwise it can join any unexplored subgoal. [None] when it explores the last subgoal.'''
+        remaining_time = self.cost_to_target - self.progress
+        done_robot_id = np.argmin(remaining_time)
+        unexplored = self.unexplored - {self.target_robot_locations[done_robot_id]}
+        if not unexplored:
+            return [None]
+        num_free_robots = np.count_nonzero(remaining_time == remaining_time[done_robot_id])
+        unassigned = unexplored - set(self.target_robot_locations)
+        candidates = unassigned if len(unassigned) >= num_free_robots else unexplored
+        return [self.hash_to_subgoal[f] for f in candidates]
 
     def get_cost_to_target(self, from_frontier, to_frontier):
         frontier_return_cost = (min(self.distances['goal'][from_frontier]
@@ -85,16 +86,26 @@ class MRFState(object):
         knowledge_time = min(Rs,Re)
         return frontier_return_cost + kc + knowledge_time
 
-def mr_fstate_planner_compute_end_assignment(mr_fstate):
-    remaining_robot_assignment = len([f for f in mr_fstate.target_robot_locations if f not in mr_fstate.hash_to_subgoal])
-    num_steps = len(mr_fstate.unexplored) + remaining_robot_assignment
-    for i in range(num_steps):
-        delta_fi = mr_fstate.target_robot_locations[np.argmin(mr_fstate.cost_to_target - mr_fstate.progress)]
-        remaining_subgoals = sorted([(f, mr_fstate.get_cost_to_target(delta_fi, f))
-                                    for f in mr_fstate.unexplored if f != delta_fi], key=lambda x: x[1])
-        new_target = mr_fstate.hash_to_subgoal[remaining_subgoals[0][0]] if len(remaining_subgoals) > 0 else None
-        mr_fstate = MRFState(new_target, mr_fstate)
-    return mr_fstate
+def get_mr_lowest_cost_state_py(robots_hash, subgoals, distances, ordering=()):
+    '''Recursively search over the subgoal each robot is sent to whenever it is free, until
+    all subgoals are explored. The first assignments follow `ordering`, if provided.'''
+    def search(state, ordering):
+        if state.cost > search.bound:
+            return state
+
+        candidates = state.get_subgoal_candidates()
+        if candidates == [None]:
+            state = MRFState(None, state)
+            search.bound = min(search.bound, state.cost)
+            return state
+
+        if ordering:
+            candidates = ordering[:1]
+        return min(search(MRFState(s, state), ordering[1:]) for s in candidates)
+    search.bound = 1e10
+    state = MRFState(robots=robots_hash, distances=distances, all_subgoals=subgoals)
+    return search(state, list(ordering))
+
 
 def get_distances_for_mrfstate(subgoals, robots_hash_dict, distances):
     distances_py = {}
@@ -110,11 +121,8 @@ def get_distances_for_mrfstate(subgoals, robots_hash_dict, distances):
     return distances_py
 
 def get_mr_ordering_cost_py(robots_hash, subgoals, distances):
-    mr_fstate = MRFState(robots=robots_hash, distances=distances, all_subgoals=subgoals)
-    for i, s in enumerate(subgoals):
-        mr_fstate = MRFState(s, mr_fstate)
-    mr_fstate = mr_fstate_planner_compute_end_assignment(mr_fstate)
-    return mr_fstate.cost
+    '''Cost of assigning subgoals in the given order, then completing exploration at lowest cost'''
+    return get_mr_lowest_cost_state_py(robots_hash, subgoals, distances, ordering=subgoals).cost
 
 
 def get_mr_ordering_cost_cpp(robots_hash, subgoals, distances):
@@ -134,24 +142,7 @@ def get_mr_ordering_cost_cpp(robots_hash, subgoals, distances):
 
 def get_mr_lowest_cost_ordering_py(robots_hash, frontiers, distances):
     '''Recursively compute the lowest cost ordering of provided frontiers'''
-    def get_ordering_sub(frontiers, state):
-        if len(frontiers) == 1:
-            s = MRFState(frontiers[0], state)
-            s = mr_fstate_planner_compute_end_assignment(s)
-            get_ordering_sub.bound = min(get_ordering_sub.bound, s.cost)
-            return s
-
-        if state.cost > get_ordering_sub.bound:
-            return state
-
-        return min([
-            get_ordering_sub([fn for fn in frontiers if fn != f],
-                            MRFState(f, state))
-            for f in frontiers
-        ])
-    get_ordering_sub.bound = 1e10
-    state = MRFState(robots=robots_hash, distances=distances, all_subgoals=frontiers)
-    state = get_ordering_sub(frontiers, state)
+    state = get_mr_lowest_cost_state_py(robots_hash, frontiers, distances)
     return state.cost, state.frontier_list
 
 
