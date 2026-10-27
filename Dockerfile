@@ -66,6 +66,8 @@ COPY modules/common modules/common
 COPY modules/example modules/example
 COPY modules/learning modules/learning
 COPY modules/gridmap modules/gridmap
+COPY modules/mrlsp modules/mrlsp
+COPY modules/mrlsp_accel modules/mrlsp_accel
 RUN uv pip install modules/*
 
 
